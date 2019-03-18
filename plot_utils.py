@@ -77,7 +77,7 @@ def get_predictions_on_sequence(model,
             position += 1
 
     plot_predictions(original_sequence, image_name, nr_actual_predictions,
-                     model_params.frame_size, predicted_sequence, model_params.get_save_path(), starting_point,
+                     model_params.frame_size, predicted_sequence, model_params.model_path, starting_point,
                      teacher_forcing)
 
 
@@ -112,7 +112,7 @@ def get_partial_generated_sequences(model,
 
     image_name += "GenSteps:{}".format(nr_generated_steps)
     plot_predictions(original_sequence, image_name, nr_actual_predictions,
-                     model_params.frame_size, predicted_sequence, model_params.get_save_path(), starting_point,
+                     model_params.frame_size, predicted_sequence, model_params.model_path, starting_point,
                      teacher_forcing="Partial", vlines_coords=vlines_coords)
 
 

@@ -1,11 +1,12 @@
+import os
+
+import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import TensorBoard, CSVLogger
-from plot_utils import PlotCallback, get_predictions, create_dir_if_not_exists
-from test_model import test_model
+
+from plot_utils import PlotCallback, create_dir_if_not_exists
 from training_parameters import ModelTrainingParameters
 from wavenet_model import get_basic_generative_model
-import os
-import tensorflow as tf
 
 
 def configure_gpu(gpu):
@@ -28,8 +29,6 @@ def log_training_session(model_params):
 def train_model(model_params):
     log_training_session(model_parameters)
 
-    create_dir_if_not_exists(model_params.get_save_path())
-
     model = get_basic_generative_model(model_params.nr_filters,
                                        model_params.frame_size,
                                        model_params.nr_layers,
@@ -39,9 +38,9 @@ def train_model(model_params):
                                        skip_conn_filters=model_params.skip_conn_filters,
                                        regularization_coef=model_params.regularization_coef)
 
-    tensor_board_callback = TensorBoard(log_dir=model_params.get_save_path(),
+    tensor_board_callback = TensorBoard(log_dir=model_params.model_path,
                                         write_graph=True)
-    log_callback = CSVLogger(model_params.get_save_path() + "/session_log.csv")
+    log_callback = CSVLogger(model_params.model_path + "/session_log.csv")
     plot_figure_callback = PlotCallback(model_params, 1, nr_predictions_steps=100,
                                         starting_point=1200 - model_params.frame_size)
 
@@ -58,7 +57,7 @@ def train_model(model_params):
         callbacks=[tensor_board_callback, plot_figure_callback, log_callback])
 
     print('Saving model and results...')
-    model.save(model_params.save_path + '.h5')
+    model.save(model_params.model_path + '.h5')
     print('\nDone!')
 
 

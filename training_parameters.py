@@ -3,9 +3,9 @@ import datetime
 from datasets.CatLFP import CatLFP
 
 
-class ModelTrainingParameters():
-    def __init__(self):
-        self.n_epochs = 50
+class ModelTrainingParameters:
+    def __init__(self, model_path=None):
+        self.n_epochs = 5
         self.batch_size = 32
         self.nr_layers = 7
         self.frame_size = 2 ** self.nr_layers
@@ -18,10 +18,10 @@ class ModelTrainingParameters():
         self.nr_bins = 256
         self.skip_conn_filters = 32
         self.regularization_coef = 0.0001
-        self.nr_train_steps = 1850  # dataset.get_total_length("TRAIN") // batch_size // 400
+        self.nr_train_steps = 5  # dataset.get_total_length("TRAIN") // batch_size // 400
         self.nr_val_steps = 2  # np.ceil(0.1*dataset.get_total_length("VAL"))
-        self.save_path = None
-        self.dataset = CatLFP(nr_bins=self.nr_bins)
+        self._get_model_path(model_path)
+        self.dataset = CatLFP(channels_to_keep=[1], nr_bins=self.nr_bins)
 
     def get_model_name(self):
         return "Wavenet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_FS:{}_{}_Clip:{}_Rnd:{}".format(
@@ -38,11 +38,12 @@ class ModelTrainingParameters():
             self.clip,
             self.random)
 
-    def get_save_path(self):
-        if self.save_path is None:
-            self.save_path = './LFP_models/' + self.get_model_name() + '/' + datetime.datetime.now().strftime(
+    def _get_model_path(self, model_path):
+        if model_path is None:
+            self.model_path = './LFP_models/' + self.get_model_name() + '/' + datetime.datetime.now().strftime(
                 "%Y-%m-%d %H:%M")
-        return self.save_path
+        else:
+            self.model_path = model_path
 
     def get_classifying(self):
         return self.loss == "CAT"
