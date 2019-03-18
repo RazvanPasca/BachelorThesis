@@ -12,6 +12,10 @@ class CatLFP(LFPDataset):
         self._compute_values_range()
         self._pre_compute_bins()
         self._split_lfp_into_movies()
+
+        np.random.seed(random_seed)
+        self.random_seed = random_seed
+
         if channels_to_keep is None:
             self.channels_to_keep = np.array(self.nr_channels)
         else:
@@ -19,8 +23,6 @@ class CatLFP(LFPDataset):
 
         self._get_train_val_test_split_channel_wise(self.channels_to_keep, test_perc, val_perc)
 
-        np.random.seed(random_seed)
-        self.random_seed = random_seed
         self.prediction_sequences = {
             'val': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
             'train': [self.get_random_sequence_from('TRAIN') for _ in range(nr_of_seqs)]

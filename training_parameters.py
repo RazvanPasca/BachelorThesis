@@ -4,7 +4,7 @@ from datasets.CatLFP import CatLFP
 
 
 class ModelTrainingParameters:
-    def __init__(self, model_path=None):
+    def __init__(self, model_path=None, channels_to_keep=[1]):
         self.n_epochs = 5
         self.batch_size = 32
         self.nr_layers = 7
@@ -21,7 +21,8 @@ class ModelTrainingParameters:
         self.nr_train_steps = 5  # dataset.get_total_length("TRAIN") // batch_size // 400
         self.nr_val_steps = 2  # np.ceil(0.1*dataset.get_total_length("VAL"))
         self._get_model_path(model_path)
-        self.dataset = CatLFP(channels_to_keep=[1], nr_bins=self.nr_bins)
+        self.channels_to_keep = channels_to_keep
+        self.dataset = CatLFP(channels_to_keep=channels_to_keep, nr_bins=self.nr_bins)
 
     def get_model_name(self):
         return "Wavenet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_FS:{}_{}_Clip:{}_Rnd:{}".format(
@@ -40,7 +41,8 @@ class ModelTrainingParameters:
 
     def _get_model_path(self, model_path):
         if model_path is None:
-            self.model_path = './LFP_models/' + self.get_model_name() + '/' + datetime.datetime.now().strftime(
+            self.model_path = './LFP_models/' + self.get_model_name() + '/' + 'Channels:{}'.format(
+                str(self.channels_to_keep)) + '/' + datetime.datetime.now().strftime(
                 "%Y-%m-%d %H:%M")
         else:
             self.model_path = model_path

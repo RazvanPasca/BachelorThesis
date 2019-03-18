@@ -4,6 +4,7 @@ from keras.models import load_model
 
 from plot_utils import get_partial_generated_sequences, generate_prediction_name, \
     create_dir_if_not_exists
+from train_model import configure_gpu
 from training_parameters import ModelTrainingParameters
 
 
@@ -33,6 +34,7 @@ def test_model(model_params, model_path=None):
 
 
 if __name__ == '__main__':
+    configure_gpu(0)
     model_path = "/home/pasca/School/Licenta/Naturix/LFP_models/Wavenet_L:7_Ep:50_StpEp:1850_Lr:1e-05_BS:32_Fltrs:16_SkipFltrs:32_L2:0.0001_FS:8_CAT_Clip:True_Rnd:True/2019-03-13 16:30"
     model_parameters = ModelTrainingParameters(model_path)
     test_model(model_parameters, model_path)
