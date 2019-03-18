@@ -6,8 +6,25 @@ __pycache__/
 # C extensions
 *.so
 
+#Un-needed scripts
+crop_images.py
+resize_images.py
+
+#Tensorflow models
+*.h5
+
+#Images and csv
+*.png
+*.jpg
+*.bmp
+*.csv
+
+#Tensorboard events
+events.*
+
 # Distribution / packaging
 .Python
+.idea
 build/
 develop-eggs/
 dist/

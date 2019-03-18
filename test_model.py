@@ -39,4 +39,4 @@ if __name__ == '__main__':
     create_dir_if_not_exists(model_parameters.get_save_path())
     create_dir_if_not_exists(model_parameters.get_save_path() + "/Generated")
     test_model(model_parameters, model_path)
-    #test_test_model(model_parameters, model_path)
+    # test_test_model(model_parameters, model_path)

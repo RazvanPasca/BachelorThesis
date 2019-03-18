@@ -18,6 +18,13 @@ def configure_gpu(gpu):
     set_session(sess)
 
 
+def log_training_session(model_params):
+    print("Frame size is {}".format(model_params.frame_size))
+    print(model_params.get_model_name())
+    print('Total training steps:', model_params.nr_train_steps)
+    print('Total validation steps:', model_params.nr_val_steps)
+
+
 def train_model(model_params):
     log_training_session(model_parameters)
 
@@ -55,17 +62,7 @@ def train_model(model_params):
     print('\nDone!')
 
 
-def log_training_session(model_params):
-    print("Frame size is {}".format(model_params.frame_size))
-    print(model_params.get_model_name())
-    print('Total training steps:', model_params.nr_train_steps)
-    print('Total validation steps:', model_params.nr_val_steps)
-
-
 if __name__ == '__main__':
     configure_gpu(0)
-
     model_parameters = ModelTrainingParameters()
-
     train_model(model_parameters)
-    test_model(model_parameters)
