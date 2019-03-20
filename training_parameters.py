@@ -1,5 +1,7 @@
 import datetime
 
+import numpy
+
 from datasets.CatLFP import CatLFP
 
 
@@ -18,11 +20,11 @@ class ModelTrainingParameters:
         self.nr_bins = 256
         self.skip_conn_filters = 32
         self.regularization_coef = 0.0001
-        self.nr_train_steps = 5  # dataset.get_total_length("TRAIN") // batch_size // 400
-        self.nr_val_steps = 2  # np.ceil(0.1*dataset.get_total_length("VAL"))
-        self._get_model_path(model_path)
-        self.channels_to_keep = channels_to_keep
         self.dataset = CatLFP(channels_to_keep=channels_to_keep, nr_bins=self.nr_bins)
+        self.nr_train_steps = 5  # self.dataset.get_total_length("TRAIN") // self.batch_size
+        self.nr_val_steps = 2  # numpy.ceil(0.1 * self.dataset.get_total_length("VAL"))
+        self.channels_to_keep = channels_to_keep
+        self._get_model_path(model_path)
 
     def get_model_name(self):
         return "Wavenet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_FS:{}_{}_Clip:{}_Rnd:{}".format(
@@ -42,8 +44,7 @@ class ModelTrainingParameters:
     def _get_model_path(self, model_path):
         if model_path is None:
             self.model_path = './LFP_models/' + self.get_model_name() + '/' + 'Channels:{}'.format(
-                str(self.channels_to_keep)) + '/' + datetime.datetime.now().strftime(
-                "%Y-%m-%d %H:%M")
+                str(self.channels_to_keep)) + '/' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         else:
             self.model_path = model_path
 

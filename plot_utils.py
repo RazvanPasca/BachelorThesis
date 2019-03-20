@@ -23,24 +23,25 @@ def plot_predictions(original_sequence, image_title, nr_predictions, frame_size,
                      teacher_forcing, vlines_coords=None):
     title = image_title + "TF:{}".format(teacher_forcing)
     x1 = range(starting_point + frame_size, starting_point + nr_predictions + frame_size)
+    x2 = range(starting_point + frame_size, starting_point + nr_predictions + frame_size)
     y1 = original_sequence[starting_point + frame_size:starting_point + nr_predictions + frame_size]
     label1 = "Original sequence"
     label2 = "Predicted sequence"
-    plot_2_overlapped_series(x1, y1, label1, x1, predicted_sequence, label2, title, save_path, vlines_coords)
+    plot_2_overlapped_series(x1, y1, label1, x2, predicted_sequence, label2, title, save_path, vlines_coords)
 
 
 def plot_2_overlapped_series(x1, y1, label1, x2, y2, label2, image_title, save_path, vlines_coords=None):
     plt.figure(figsize=(16, 12))
     plt.title(image_title)
     plt.plot(x1, y1, label=label1)
-    plt.plot(x2, y2, label=label2)
+    plt.plot(x2, y2, label=label2, color="orange")
+    plt.scatter(x2, y2, color='green', marker="x")
     ymin = min(np.min(y1), np.min(y2))
     ymax = max(np.max(y1), np.max(y2))
     if vlines_coords is not None:
         plt.vlines(vlines_coords, ymin=ymin, ymax=ymax)
     plt.legend()
     plt.savefig(save_path + '/' + image_title + ".png")
-    # plt.show()
     plt.close()
 
 
@@ -68,7 +69,8 @@ def get_predictions_on_sequence(model,
             position += 1
 
     else:
-        input_sequence = np.reshape(original_sequence[:model_params.frame_size], (-1, model_params.frame_size, 1))
+        input_sequence = np.reshape(original_sequence[starting_point:starting_point + model_params.frame_size],
+                                    (-1, model_params.frame_size, 1))
         for step in range(starting_point, starting_point + nr_actual_predictions):
             predicted = decode_model_output(model.predict(input_sequence), model_params.get_classifying(),
                                             model_params.dataset.bins)
@@ -110,6 +112,18 @@ def get_partial_generated_sequences(model,
             input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted, (-1, 1, 1)), axis=1)
             position += 1
 
+    vlines_coords.append(starting_point + position + model_params.frame_size)
+    input_sequence = np.reshape(
+        original_sequence[starting_point + position:starting_point + position + model_params.frame_size],
+        (-1, model_params.frame_size, 1))
+
+    for _ in range(nr_actual_predictions - position):
+        predicted = decode_model_output(model.predict(input_sequence), model_params.get_classifying(),
+                                        model_params.dataset.bins)
+        predicted_sequence[position] = predicted
+        input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted, (-1, 1, 1)), axis=1)
+        position += 1
+
     image_name += "GenSteps:{}".format(nr_generated_steps)
     plot_predictions(original_sequence, image_name, nr_actual_predictions,
                      model_params.frame_size, predicted_sequence, model_params.model_path, starting_point,
@@ -119,7 +133,11 @@ def get_partial_generated_sequences(model,
 def generate_prediction_name(seq_addr):
     name = ''
     for key in seq_addr:
-        name += '{}:{}_'.format(key, str(seq_addr[key]))
+        if key == "SOURCE":
+            pass
+        else:
+            name += '{}:{}_'.format(key, str(seq_addr[key]))
+    # name = seq_addr["SOURCE"] + "/" + name
     return name
 
 
@@ -128,7 +146,8 @@ def get_predictions(model, model_params, epoch, starting_point, nr_prediction_st
     for source in pred_seqs:
         for sequence, addr in pred_seqs[source]:
             image_name = generate_prediction_name(addr)
-            image_name = "E:{}_".format(epoch) + image_name
+            image_name = "/" + addr["SOURCE"] + "/" + "E:{}_".format(epoch) + image_name
+            create_dir_if_not_exists(model_params.model_path + "/" + addr["SOURCE"])
             get_predictions_on_sequence(model, model_params, sequence, nr_prediction_steps, image_name, starting_point,
                                         True, nr_generated_steps)
             get_predictions_on_sequence(model, model_params, sequence, nr_prediction_steps, image_name, starting_point,
