@@ -31,8 +31,14 @@ class LFPDataset:
 
         self.nr_channels = len(self.channels)
         if normalization is not None:
-            self.channels -= np.min(self.channels, axis=1, keepdims=True)
-            self.channels /= np.max(self.channels, axis=1, keepdims=True)
+            if normalization == "Zsc":
+                mean = np.mean(self.channels, axis=1, keepdims=True)
+                std = np.std(self.channels, axis=1, keepdims=True)
+                self.channels -= mean
+                self.channels /= std
+            else:
+                self.channels -= np.min(self.channels, axis=1, keepdims=True)
+                self.channels /= np.max(self.channels, axis=1, keepdims=True)
 
     def _parse_stimulus_data(self, condition_file_path):
         with open(os.path.join(os.path.dirname(self.description_file_path), condition_file_path),
