@@ -165,7 +165,7 @@ class CatLFP(LFPDataset):
                 3 dimensions to pick the random sequence
 
         Returns:
-            Random sequence from the datasource n
+            Random sequence from the datasource
 
              Dictionary with the format of
              'M': movie_index,
