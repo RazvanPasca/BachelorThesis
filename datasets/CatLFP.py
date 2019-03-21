@@ -5,23 +5,23 @@ import numpy as np
 
 
 class CatLFP(LFPDataset):
-    def __init__(self, channels_to_keep=None, val_perc=0.20, test_perc=0.20, random_seed=42, nr_bins=256, nr_of_seqs=3):
+    def __init__(self, channels_to_keep=None, val_perc=0.20, test_perc=0.0, random_seed=42, nr_bins=256, nr_of_seqs=3):
         super().__init__(CAT_DATASET_PATH)
         self.nr_bins = nr_bins
+
+        np.random.seed(random_seed)
+        self.random_seed = random_seed
 
         self._compute_values_range()
         self._pre_compute_bins()
         self._split_lfp_into_movies()
-
-        np.random.seed(random_seed)
-        self.random_seed = random_seed
 
         if channels_to_keep is None:
             self.channels_to_keep = np.array(self.nr_channels)
         else:
             self.channels_to_keep = np.array(channels_to_keep)
 
-        self._get_train_val_test_split_channel_wise(self.channels_to_keep, test_perc, val_perc)
+        self._get_train_val_test_split_channel_wise(self.channels_to_keep, val_perc, test_perc)
 
         self.prediction_sequences = {
             'val': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
@@ -93,7 +93,10 @@ class CatLFP(LFPDataset):
         self.train = interm_data[:, train_indexes, :].reshape(self.number_of_conditions, nr_train_channels, -1, 28000)
         self.validation = interm_data[:, val_indexes, :].reshape(self.number_of_conditions, nr_val_channels, -1,
                                                                  28000)
-        self.test = interm_data[:, test_indexes, :].reshape(self.number_of_conditions, nr_test_channels, -1, 28000)
+        if nr_test_channels <= 0:
+            pass
+        else:
+            self.test = interm_data[:, test_indexes, :].reshape(self.number_of_conditions, nr_test_channels, -1, 28000)
 
     def frame_generator(self, frame_size, batch_size, classifying, data):
         x = []

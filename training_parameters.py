@@ -43,8 +43,8 @@ class ModelTrainingParameters:
 
     def _get_model_path(self, model_path):
         if model_path is None:
-            self.model_path = './LFP_models/' + self.get_model_name() + '/' + 'Channels:{}'.format(
-                str(self.channels_to_keep)) + '/' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+            self.model_path = './LFP_models' + "/" + 'Channels:{}'.format(str(self.channels_to_keep)) + \
+                              self.get_model_name() + '/' + datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         else:
             self.model_path = model_path
 

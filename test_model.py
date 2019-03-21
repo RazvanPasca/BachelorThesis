@@ -24,11 +24,11 @@ def test_model(model_params):
             dir_name = "/" + name_prefix + "/" + addr["SOURCE"] + "/"
             create_dir_if_not_exists(model_path + dir_name)
             image_name = dir_name + image_name
-            for nr_generated_steps in range(1, 20, 2):
-                get_partial_generated_sequences(model, model_params, sequence, nr_predictions=50,
-                                                image_name=image_name,
-                                                starting_point=1200,
-                                                nr_generated_steps=nr_generated_steps)
+
+            get_partial_generated_sequences(model, model_params, sequence, nr_predictions=50,
+                                            image_name=image_name,
+                                            starting_point=1200-model_params.frame_size,
+                                            nr_steps_to_generate=1)
 
     print("Finished testing model")
 

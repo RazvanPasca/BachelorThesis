@@ -10,10 +10,10 @@ def create_dir_if_not_exists(directory_path):
         os.makedirs(directory_path)
 
 
-def decode_model_output(model_logits, classifying, bins):
-    if classifying:
+def decode_model_output(model_logits, model_params):
+    if model_params.get_classifying():
         bin_index = np.argmax(model_logits)
-        a = (bins[bin_index - 1] + bins[bin_index]) / 2
+        a = (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
         return a
     return model_logits
 
@@ -22,9 +22,9 @@ def plot_predictions(original_sequence, image_title, nr_predictions, frame_size,
                      starting_point,
                      teacher_forcing, vlines_coords=None):
     title = image_title + "TF:{}".format(teacher_forcing)
-    x1 = range(starting_point + frame_size, starting_point + nr_predictions + frame_size)
+    x1 = range(starting_point + frame_size - 5, starting_point + nr_predictions + frame_size + 1)
     x2 = range(starting_point + frame_size, starting_point + nr_predictions + frame_size)
-    y1 = original_sequence[starting_point + frame_size:starting_point + nr_predictions + frame_size]
+    y1 = original_sequence[x1]
     label1 = "Original sequence"
     label2 = "Predicted sequence"
     plot_2_overlapped_series(x1, y1, label1, x2, predicted_sequence, label2, title, save_path, vlines_coords)
@@ -33,13 +33,14 @@ def plot_predictions(original_sequence, image_title, nr_predictions, frame_size,
 def plot_2_overlapped_series(x1, y1, label1, x2, y2, label2, image_title, save_path, vlines_coords=None):
     plt.figure(figsize=(16, 12))
     plt.title(image_title)
-    plt.plot(x1, y1, label=label1)
-    plt.plot(x2, y2, label=label2, color="orange")
-    plt.scatter(x2, y2, color='green', marker="x")
+    plt.plot(x1, y1, label=label1, color="green")
+    plt.plot(x2, y2, label=label2, color="red")
+    plt.scatter(x2, y2, color='blue', marker="x")
+    plt.scatter(x1, y1, color='magenta', marker="x")
     ymin = min(np.min(y1), np.min(y2))
     ymax = max(np.max(y1), np.max(y2))
     if vlines_coords is not None:
-        plt.vlines(vlines_coords, ymin=ymin, ymax=ymax)
+        plt.vlines(vlines_coords, ymin=ymin, ymax=ymax, lw=0.1)
     plt.legend()
     plt.savefig(save_path + '/' + image_title + ".png")
     plt.close()
@@ -63,8 +64,7 @@ def get_predictions_on_sequence(model,
         for step in range(starting_point, starting_point + nr_actual_predictions):
             input_sequence = np.reshape(original_sequence[step:step + model_params.frame_size],
                                         (-1, model_params.frame_size, 1))
-            predicted = decode_model_output(model.predict(input_sequence), model_params.get_classifying(),
-                                            model_params.dataset.bins)
+            predicted = decode_model_output(model.predict(input_sequence), model_params)
             predicted_sequence[position] = predicted
             position += 1
 
@@ -72,8 +72,7 @@ def get_predictions_on_sequence(model,
         input_sequence = np.reshape(original_sequence[starting_point:starting_point + model_params.frame_size],
                                     (-1, model_params.frame_size, 1))
         for step in range(starting_point, starting_point + nr_actual_predictions):
-            predicted = decode_model_output(model.predict(input_sequence), model_params.get_classifying(),
-                                            model_params.dataset.bins)
+            predicted = decode_model_output(model.predict(input_sequence), model_params)
             predicted_sequence[position] = predicted
             input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted, (-1, 1, 1)), axis=1)
             position += 1
@@ -89,42 +88,29 @@ def get_partial_generated_sequences(model,
                                     nr_predictions,
                                     image_name,
                                     starting_point,
-                                    nr_generated_steps):
+                                    nr_steps_to_generate):
     nr_actual_predictions = min(nr_predictions, original_sequence.size - starting_point - model_params.frame_size - 1)
     predicted_sequence = np.zeros(nr_actual_predictions)
-    position = 0
-
-    nr_generated_steps = min(nr_generated_steps, nr_actual_predictions)
 
     vlines_coords = []
 
-    while position + nr_generated_steps < nr_actual_predictions:
+    if nr_steps_to_generate > nr_actual_predictions:
+        raise ValueError("Can't generate more steps per slice than the number of predictions")
 
-        input_sequence = np.reshape(
-            original_sequence[starting_point + position:starting_point + position + model_params.frame_size],
-            (-1, model_params.frame_size, 1))
-        vlines_coords.append(starting_point + position + model_params.frame_size)
+    input_sequence = []
+    for prediction_nr in range(nr_actual_predictions):
+        if prediction_nr % nr_steps_to_generate == 0:
+            input_sequence = np.reshape(
+                original_sequence[
+                starting_point + prediction_nr:starting_point + prediction_nr + model_params.frame_size],
+                (-1, model_params.frame_size, 1))
+            vlines_coords.append(starting_point + prediction_nr + model_params.frame_size - 1)
 
-        for step in range(nr_generated_steps):
-            predicted = decode_model_output(model.predict(input_sequence), model_params.get_classifying(),
-                                            model_params.dataset.bins)
-            predicted_sequence[position] = predicted
-            input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted, (-1, 1, 1)), axis=1)
-            position += 1
-
-    vlines_coords.append(starting_point + position + model_params.frame_size)
-    input_sequence = np.reshape(
-        original_sequence[starting_point + position:starting_point + position + model_params.frame_size],
-        (-1, model_params.frame_size, 1))
-
-    for _ in range(nr_actual_predictions - position):
-        predicted = decode_model_output(model.predict(input_sequence), model_params.get_classifying(),
-                                        model_params.dataset.bins)
-        predicted_sequence[position] = predicted
+        predicted = decode_model_output(model.predict(input_sequence), model_params)
+        predicted_sequence[prediction_nr] = predicted
         input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted, (-1, 1, 1)), axis=1)
-        position += 1
 
-    image_name += "GenSteps:{}".format(nr_generated_steps)
+    image_name += "GenSteps:{}_".format(nr_steps_to_generate)
     plot_predictions(original_sequence, image_name, nr_actual_predictions,
                      model_params.frame_size, predicted_sequence, model_params.model_path, starting_point,
                      teacher_forcing="Partial", vlines_coords=vlines_coords)
