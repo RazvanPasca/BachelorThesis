@@ -5,7 +5,7 @@ from keras.models import load_model
 
 from plot_utils import get_predictions_with_losses, generate_prediction_name, \
     create_dir_if_not_exists
-from train_model import configure_gpu
+from tf_utils import configure_gpu
 from training_parameters import ModelTrainingParameters
 
 

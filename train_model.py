@@ -1,22 +1,10 @@
-import os
-
-import tensorflow as tf
-from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import TensorBoard, CSVLogger
 
-from plot_utils import PlotCallback, create_dir_if_not_exists
+from plot_utils import PlotCallback
+from test_model import test_model
+from tf_utils import configure_gpu
 from training_parameters import ModelTrainingParameters
 from wavenet_model import get_basic_generative_model
-
-
-def configure_gpu(gpu):
-    global config
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-    sess = tf.Session(config=config)
-    set_session(sess)
 
 
 def log_training_session(model_params):
@@ -65,3 +53,4 @@ if __name__ == '__main__':
     configure_gpu(0)
     model_parameters = ModelTrainingParameters(channels_to_keep=[1])
     train_model(model_parameters)
+    test_model(model_parameters)
