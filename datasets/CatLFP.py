@@ -5,13 +5,14 @@ import numpy as np
 
 
 class CatLFP(LFPDataset):
-    def __init__(self, channels_to_keep=None, val_perc=0.20, test_perc=0.0, random_seed=42, nr_bins=256, nr_of_seqs=3):
-        super().__init__(CAT_DATASET_PATH)
+    def __init__(self, channels_to_keep=None, val_perc=0.20, test_perc=0.0, random_seed=42, nr_bins=256, nr_of_seqs=3,
+                 normalization="Zsc"):
+        super().__init__(CAT_DATASET_PATH, normalization=normalization)
         self.nr_bins = nr_bins
 
         np.random.seed(random_seed)
         self.random_seed = random_seed
-
+        self.normalization = normalization
         self._compute_values_range()
         self._pre_compute_bins()
         self._split_lfp_into_movies()

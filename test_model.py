@@ -40,7 +40,7 @@ def test_model(model_params):
     name_prefix = "Generated:" + datetime.datetime.now().strftime(
         "%Y-%m-%d-%H:%M")
 
-    file_path = model_parameters.model_path + "/Error_statistics.txt"
+    file_path = model_params.model_path + "/Error_statistics.txt"
     prepare_file_for_writing(file_path, "Nr estimates, Generated window size, Normalized average error\n")
 
     for source in pred_seqs:
@@ -55,7 +55,7 @@ def test_model(model_params):
             #                             generated_window_size=generated_window_size)
 
     for generated_window_size in range(1, 100, 5):
-        get_error_estimates(model, model_parameters, 10, generated_window_size,
+        get_error_estimates(model, model_params, 10, generated_window_size,
                             file_path)
 
     print("Finished testing model")
