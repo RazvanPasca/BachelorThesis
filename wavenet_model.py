@@ -31,7 +31,7 @@ def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef):
 
 
 def get_basic_generative_model(nr_filters, input_size, nr_layers, lr, loss, clipping, skip_conn_filters,
-                               regularization_coef, output_size=256):
+                               regularization_coef, nr_output_classes):
     if loss is "MSE":
         model_loss = losses.MSE
     elif loss is "MAE":
@@ -60,7 +60,7 @@ def get_basic_generative_model(nr_filters, input_size, nr_layers, lr, loss, clip
     net = Flatten()(net)
 
     if model_loss is losses.sparse_categorical_crossentropy:
-        net = Dense(output_size, activation=softmax, name="Model_Output")(net)
+        net = Dense(nr_output_classes, activation=softmax, name="Model_Output")(net)
     else:
         net = Dense(1, name="Model_Output", kernel_regularizer=l2(regularization_coef))(net)
 

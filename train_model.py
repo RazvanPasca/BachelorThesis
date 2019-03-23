@@ -24,7 +24,8 @@ def train_model(model_params):
                                        loss=model_params.loss,
                                        clipping=model_params.clip,
                                        skip_conn_filters=model_params.skip_conn_filters,
-                                       regularization_coef=model_params.regularization_coef)
+                                       regularization_coef=model_params.regularization_coef,
+                                       nr_output_classes=model_params.nr_bins)
 
     tensor_board_callback = TensorBoard(log_dir=model_params.model_path,
                                         write_graph=True)
