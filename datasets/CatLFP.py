@@ -8,9 +8,9 @@ class CatLFP(LFPDataset):
     def __init__(self, channels_to_keep=None, val_perc=0.20, test_perc=0.0, random_seed=42, nr_bins=256, nr_of_seqs=3,
                  normalization="Zsc"):
         super().__init__(CAT_DATASET_PATH, normalization=normalization)
-        self.nr_bins = nr_bins
-
         np.random.seed(random_seed)
+
+        self.nr_bins = nr_bins
         self.random_seed = random_seed
         self.normalization = normalization
         self._compute_values_range()
@@ -79,25 +79,24 @@ class CatLFP(LFPDataset):
         self.test = self.all_lfp_data[:, :, test_indexes, :]
 
     def _get_train_val_test_split_channel_wise(self, channels_to_keep, val_perc, test_perc):
-        nr_test_channels = round(test_perc * self.trials_per_condition)
-        nr_val_channels = round(val_perc * self.trials_per_condition)
-        nr_train_channels = self.trials_per_condition - nr_test_channels - nr_val_channels
+        nr_test_trials = round(test_perc * self.trials_per_condition)
+        nr_val_trials = round(val_perc * self.trials_per_condition)
+        nr_train_trials = self.trials_per_condition - nr_test_trials - nr_val_trials
 
         channel_indexes = np.arange(0, self.trials_per_condition)
         np.random.shuffle(channel_indexes)
-        train_indexes = channel_indexes[:nr_train_channels]
-        val_indexes = channel_indexes[nr_train_channels:nr_train_channels + nr_val_channels]
-        test_indexes = channel_indexes[-nr_test_channels:]
+        train_indexes = channel_indexes[:nr_train_trials]
+        val_indexes = channel_indexes[nr_train_trials:nr_train_trials + nr_val_trials]
+        test_indexes = channel_indexes[-nr_test_trials:]
 
         interm_data = self.all_lfp_data[:, :, channels_to_keep, :]
 
-        self.train = interm_data[:, train_indexes, :].reshape(self.number_of_conditions, nr_train_channels, -1, 28000)
-        self.validation = interm_data[:, val_indexes, :].reshape(self.number_of_conditions, nr_val_channels, -1,
-                                                                 28000)
-        if nr_test_channels <= 0:
+        self.train = interm_data[:, train_indexes, :].reshape(self.number_of_conditions, nr_train_trials, -1, 28000)
+        self.validation = interm_data[:, val_indexes, :].reshape(self.number_of_conditions, nr_val_trials, -1, 28000)
+        if nr_test_trials <= 0:
             pass
         else:
-            self.test = interm_data[:, test_indexes, :].reshape(self.number_of_conditions, nr_test_channels, -1, 28000)
+            self.test = interm_data[:, test_indexes, :].reshape(self.number_of_conditions, nr_test_trials, -1, 28000)
 
     def frame_generator(self, frame_size, batch_size, classifying, data):
         x = []
@@ -136,8 +135,7 @@ class CatLFP(LFPDataset):
         plt.plot(signal, label="LFP signal")
         plt.legend()
         if save:
-            plt.savefig(
-                "/home/pasca/School/Licenta/Datasets/CER01A50/Plots/" + "{}/".format(movie) + plot_title + ".png")
+            plt.savefig("~/School/Licenta/Datasets/Cat/Plots/{}/{}.png".format(movie, plot_title))
         if show:
             plt.show()
 
