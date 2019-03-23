@@ -11,14 +11,14 @@ class ModelTrainingParameters:
         self.batch_size = 32
         self.nr_layers = 7
         self.frame_size = 2 ** self.nr_layers
-        self.nr_filters = 16
+        self.nr_filters = 32
         self.frame_shift = 8
         self.lr = 0.00001
         self.loss = 'CAT'
         self.clip = True
         self.random = True
-        self.nr_bins = 256
-        self.skip_conn_filters = 32
+        self.nr_bins = 512
+        self.skip_conn_filters = 64
         self.regularization_coef = 0.0001
         self.normalization = "Zsc"
         self.dataset = CatLFP(channels_to_keep=channels_to_keep, nr_bins=self.nr_bins, normalization=self.normalization)
@@ -38,7 +38,7 @@ class ModelTrainingParameters:
             self.skip_conn_filters,
             self.regularization_coef,
             self.normalization,
-            self.loss,
+            self.loss + ":{}".format(self.nr_bins) if self.get_classifying() else self.loss,
             self.clip,
             self.random)
 
