@@ -80,7 +80,7 @@ class ModelTrainingParameters:
         return self.loss == "CAT"
 
     def serialize_to_json(self, path):
-        attrs_dict = self.__dict__
+        attrs_dict = dict(self.__dict__)
         attrs_dict["dataset"] = type(attrs_dict["dataset"]).__name__
         with open(os.path.join(path, "train_params_cfg.json"), 'w+') as g:
             g.write(json.dumps(attrs_dict, sort_keys=True, indent=4))
