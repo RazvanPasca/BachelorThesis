@@ -37,7 +37,9 @@ class ModelTrainingParameters:
         klass = getattr(getattr(__import__("datasets"), self.dataset), self.dataset)
 
         self.frame_size = 2 ** self.nr_layers
-        self.dataset = klass(self.channels_to_keep, self.nr_bins, self.normalization)
+        self.dataset = klass(channels_to_keep=self.channels_to_keep,
+                             nr_bins=self.nr_bins,
+                             normalization=self.normalization)
         self.nr_train_steps = numpy.ceil(0.1 * self.dataset.get_total_length("TRAIN")) // self.batch_size
         self.nr_val_steps = numpy.ceil(0.1 * self.dataset.get_total_length("VAL")) // self.batch_size
         self._compute_model_path(model_path)
