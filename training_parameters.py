@@ -17,7 +17,7 @@ class ModelTrainingParameters:
         self.nr_filters = None
         self.lr = None
         self.n_epochs = None
-        self.nr_layers = None
+        self.nr_layers = 0
         self.batch_size = None
         self.normalization = None
         self.nr_bins = None
@@ -28,15 +28,11 @@ class ModelTrainingParameters:
         if model_path is not None:
             config_path = os.path.join(model_path, "train_params_cfg.json")
             if os.path.exists(config_path):
-                with open(config_path, 'r') as f:
-                    json_config = json.loads(f.read())
-                for prop, val in json_config.items():
-                    setattr(self, prop, val)
+                self._load_configuration_from_json(config_path)
+            else:
+                self._load_configuration_from_json(LOCAL_CONFIG_PATH)
         else:
-            with open(LOCAL_CONFIG_PATH, 'r') as f:
-                json_config = json.loads(f.read())
-            for prop, val in json_config.items():
-                setattr(self, prop, val)
+            self._load_configuration_from_json(LOCAL_CONFIG_PATH)
 
         klass = getattr(getattr(__import__("datasets"), self.dataset), self.dataset)
 
@@ -45,6 +41,12 @@ class ModelTrainingParameters:
         self.nr_train_steps = numpy.ceil(0.1 * self.dataset.get_total_length("TRAIN")) // self.batch_size
         self.nr_val_steps = numpy.ceil(0.1 * self.dataset.get_total_length("VAL")) // self.batch_size
         self._compute_model_path(model_path)
+
+    def _load_configuration_from_json(self, config_path):
+        with open(config_path, 'r') as f:
+            json_config = json.loads(f.read())
+        for prop, val in json_config.items():
+            setattr(self, prop, val)
 
     def get_model_name(self):
         return "WvNet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_Norm:{}_{}_Clip:{}_Rnd:{}".format(
