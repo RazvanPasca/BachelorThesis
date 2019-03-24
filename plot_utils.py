@@ -169,6 +169,8 @@ class PlotCallback(callbacks.Callback):
         self.starting_point = starting_point
 
     def on_train_begin(self, logs={}):
+        create_dir_if_not_exists(self.model_params.model_path)
+        self.model_params.serialize_to_json(self.model_params.model_path)
         return
 
     def on_epoch_end(self, epoch, logs={}):

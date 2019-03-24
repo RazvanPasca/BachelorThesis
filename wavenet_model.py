@@ -32,11 +32,11 @@ def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef):
 
 def get_basic_generative_model(nr_filters, input_size, nr_layers, lr, loss, clipping, skip_conn_filters,
                                regularization_coef, nr_output_classes):
-    if loss is "MSE":
+    if loss == "MSE":
         model_loss = losses.MSE
-    elif loss is "MAE":
+    elif loss == "MAE":
         model_loss = losses.MAE
-    elif loss is "CAT":
+    elif loss == "CAT":
         model_loss = losses.sparse_categorical_crossentropy
     else:
         raise ValueError('Use one of the following loss functions: MSE, MAE, CAT (categorical crossentropy)')

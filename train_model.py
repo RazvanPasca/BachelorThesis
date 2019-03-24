@@ -52,6 +52,6 @@ def train_model(model_params):
 
 if __name__ == '__main__':
     configure_gpu(0)
-    model_parameters = ModelTrainingParameters(channels_to_keep=[1])
+    model_parameters = ModelTrainingParameters()
     train_model(model_parameters)
     test_model(model_parameters)

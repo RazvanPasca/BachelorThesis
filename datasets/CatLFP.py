@@ -1,3 +1,5 @@
+import os
+
 from datasets.LFPDataset import LFPDataset
 from datasets.DATASET_PATHS import CAT_DATASET_PATH
 import matplotlib.pyplot as plt
@@ -125,7 +127,7 @@ class CatLFP(LFPDataset):
     def get_dataset_piece(self, movie, trial, channel):
         return self.all_lfp_data[movie, trial, channel, :]
 
-    def plot_signal(self, movie, trial, channel, start=0, stop=None, save=False, show=True):
+    def plot_signal(self, movie, trial, channel, start=0, stop=None, save_path=None, show=True):
         if stop is None:
             stop = self.trial_length
         plt.figure(figsize=(16, 12))
@@ -134,8 +136,8 @@ class CatLFP(LFPDataset):
         signal = self.get_dataset_piece(movie, trial, channel)[start:stop]
         plt.plot(signal, label="LFP signal")
         plt.legend()
-        if save:
-            plt.savefig("~/School/Licenta/Datasets/Cat/Plots/{}/{}.png".format(movie, plot_title))
+        if save_path is not None:
+            plt.savefig(os.path.join(save_path, "Cat/Plots/{}/{}.png".format(movie, plot_title)))
         if show:
             plt.show()
 

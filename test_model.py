@@ -1,4 +1,5 @@
 import datetime
+import os
 
 import numpy as np
 from keras.models import load_model
@@ -46,13 +47,13 @@ def test_model(model_params):
     for source in pred_seqs:
         for sequence, addr in pred_seqs[source]:
             image_name = generate_prediction_name(addr)
-            dir_name = "/" + name_prefix + "/" + addr["SOURCE"] + "/"
-            create_dir_if_not_exists(model_path + dir_name)
-            image_name = dir_name + image_name
-            # for generated_window_size in range(1, 100, 5):
-            # get_predictions_with_losses(model, model_params, sequence, nr_predictions=100,
-            #                             image_name=image_name, starting_point=1200 - model_params.frame_size,
-            #                             generated_window_size=generated_window_size)
+            dir_name = name_prefix + "/" + addr["SOURCE"] + "/"
+            create_dir_if_not_exists(os.path.join(model_path, dir_name))
+            image_name = os.path.join(dir_name, image_name)
+            for generated_window_size in range(1, 100, 5):
+                get_predictions_with_losses(model, model_params, sequence, nr_predictions=100,
+                                            image_name=image_name, starting_point=1200 - model_params.frame_size,
+                                            generated_window_size=generated_window_size)
 
     for generated_window_size in range(1, 100, 5):
         get_error_estimates(model, model_params, 10, generated_window_size,
@@ -68,6 +69,6 @@ def prepare_file_for_writing(file_path, text):
 
 if __name__ == '__main__':
     configure_gpu(0)
-    model_path = "/home/pasca/School/Licenta/Naturix/LFP_models/Wavenet_L:7_Ep:50_StpEp:1850_Lr:1e-05_BS:32_Fltrs:16_SkipFltrs:32_L2:0.0001_FS:8_CAT_Clip:True_Rnd:True/2019-03-13 16:30"
+    model_path = "/home/gabir/Repos/BachelorThesis/MouseControl/Channels:[1]/WvNet_L:7_Ep:300_StpEp:1603.0_Lr:1e-05_BS:32_Fltrs:32_SkipFltrs:64_L2:0.0001_Norm:Zsc_CAT:512_Clip:True_Rnd:True/2019-03-23 16:08"
     model_parameters = ModelTrainingParameters(model_path)
     test_model(model_parameters)
