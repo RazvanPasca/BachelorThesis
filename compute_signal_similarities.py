@@ -1,35 +1,37 @@
-from itertools import product
-
 import numpy as np
+import seaborn as sns
+from matplotlib import pyplot as plt
 
-from datasets.CatLFP import CatLFP
-
-dataset = CatLFP()
+from datasets.DATASET_PATHS import GABI_CAT_DATASET_PATH as CAT_DATASET_PATH
+from datasets.DATASET_PATHS import GABI_MOUSE_DATASET_PATH as MOUSE_DATASET_PATH
+from datasets.DATASET_PATHS import GABI_MOUSEACH_DATASET_PATH as MOUSEACH_DATASET_PATH
+from datasets.LFPDataset import LFPDataset
 
 
 def rmse(a, b):
     return np.sqrt(np.mean((a - b) ** 2))
 
 
-movies = range(0, 3)
-trials = range(dataset.trials_per_condition)
-channels = range(dataset.nr_channels)
+def compute_similarity_matrix(ds):
+    row = []
+    for i, channel1 in enumerate(ds.channels):
+        column = []
+        for j, channel2 in enumerate(ds.channels):
+            column.append(rmse(channel1, channel2))
+        row.append(np.array(column))
+    return np.array(row)
 
-combinations = list(product(*[movies, trials, channels]))
 
-pair_sim_list = []
+def compute_heatmap_on_dataset(ds):
+    sim_matrix = compute_similarity_matrix(ds)
+    sns.set()
+    sns.heatmap(sim_matrix)
+    plt.show()
 
-for movie1, trial1, channel1 in combinations[:-1]:
-    for movie2, trial2, channel2 in combinations[1:]:
-        signal1 = dataset.get_dataset_piece(movie1, trial1, channel1)
-        signal2 = dataset.get_dataset_piece(movie2, trial2, channel2)
-        sim = rmse(signal1, signal2)
-        s1 = "M:{}_T:{}_C:{}".format(movie1, trial1, channel1)
-        s2 = "M:{}_T:{}_C:{}".format(movie2, trial2, channel2)
-        pair_sim_list.append((s1 + "|" + s2, sim))
 
-pair_sim_list.sort(key=lambda x: x[1])
-
-with open("similarities.txt", "a+") as file:
-    for pair in pair_sim_list:
-        file.write(pair[0] + ": " + str(pair[1]) + '\n')
+dataset = LFPDataset(CAT_DATASET_PATH)
+compute_heatmap_on_dataset(dataset)
+dataset = LFPDataset(MOUSE_DATASET_PATH)
+compute_heatmap_on_dataset(dataset)
+dataset = LFPDataset(MOUSEACH_DATASET_PATH)
+compute_heatmap_on_dataset(dataset)
