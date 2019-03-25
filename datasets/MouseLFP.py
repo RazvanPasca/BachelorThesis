@@ -1,3 +1,5 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -25,7 +27,7 @@ class MouseLFP(LFPDataset):
         self._split_lfp_data()
 
         if channels_to_keep is None:
-            self.channels_to_keep = np.array(self.nr_channels)
+            self.channels_to_keep = np.array(range(self.nr_channels))
         else:
             self.channels_to_keep = np.array(channels_to_keep)
 
@@ -126,17 +128,17 @@ class MouseLFP(LFPDataset):
     def get_dataset_piece(self, condition, trial, channel):
         return self.all_lfp_data[condition, trial, channel, :]
 
-    def plot_signal(self, condition, trial, channel, start=0, stop=None, save=False, show=True):
+    def plot_signal(self, condition, trial, channel, start=0, stop=None, save_path=None, show=True):
         if stop is None:
             stop = self.trial_length
         plt.figure(figsize=(16, 12))
         plot_title = "Condition:{}_Channel:{}_Trial:{}_Start:{}_Stop:{}".format(condition, channel, trial, start, stop)
         plt.title(plot_title)
         signal = self.get_dataset_piece(condition, trial, channel)[start:stop]
-        plt.plot(signal, label="LFP signal")
+        plt.plot(signal, label="Mouse LFP signal")
         plt.legend()
-        if save:
-            plt.savefig("./Datasets/Mouse/Plots/{0}.png".format(str(condition) + plot_title))
+        if save_path is not None:
+            plt.savefig(os.path.join(save_path, "Mouse/Plots/{0}.png".format(str(condition) + plot_title)))
         if show:
             plt.show()
 
