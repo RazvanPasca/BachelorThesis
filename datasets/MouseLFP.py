@@ -53,7 +53,7 @@ class MouseLFP(LFPDataset):
                     # "trial = self.channels[:, events[0]['timestamp']:(events[0]['timestamp'] + 4175)]"
                     conditions.append(trial)
             self.all_lfp_data.append(np.array(conditions))
-        self.all_lfp_data = np.array(self.all_lfp_data)
+        self.all_lfp_data = np.array(self.all_lfp_data, dtype=np.float64)
         self.channels = None
 
     def _pre_compute_bins(self):

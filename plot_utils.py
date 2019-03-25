@@ -10,12 +10,18 @@ def create_dir_if_not_exists(directory_path):
         os.makedirs(directory_path)
 
 
+def prepare_file_for_writing(file_path, text):
+    with open(file_path, "w") as f:
+        f.write(text)
+
+
 def decode_model_output(model_logits, model_params):
     if model_params.get_classifying():
         bin_index = np.argmax(model_logits)
         a = (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
         return a
-    return model_logits
+    else:
+        return model_logits
 
 
 def plot_predictions(original_sequence, image_title, nr_predictions, frame_size, predicted_sequence,
@@ -65,42 +71,8 @@ def plot_2_overlapped_series(x1, y1, label1, x2, y2, label2, image_title, save_p
     plt.close()
 
 
-def get_predictions_on_sequence(model,
-                                model_params,
-                                original_sequence,
-                                nr_predictions,
-                                image_name,
-                                starting_point=0,
-                                teacher_forcing=True):
-    nr_actual_predictions = min(nr_predictions, original_sequence.size - starting_point - model_params.frame_size - 1)
-    predicted_sequence = np.zeros(nr_actual_predictions)
-    position = 0
-
-    if teacher_forcing:
-        for step in range(starting_point, starting_point + nr_actual_predictions):
-            input_sequence = np.reshape(original_sequence[step:step + model_params.frame_size],
-                                        (-1, model_params.frame_size, 1))
-            predicted = decode_model_output(model.predict(input_sequence), model_params)
-            predicted_sequence[position] = predicted
-            position += 1
-
-    else:
-        input_sequence = np.reshape(original_sequence[starting_point:starting_point + model_params.frame_size],
-                                    (-1, model_params.frame_size, 1))
-        for step in range(starting_point, starting_point + nr_actual_predictions):
-            predicted = decode_model_output(model.predict(input_sequence), model_params)
-            predicted_sequence[position] = predicted
-            input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted, (-1, 1, 1)), axis=1)
-            position += 1
-
-    plot_predictions(original_sequence, image_name, nr_actual_predictions,
-                     model_params.frame_size, predicted_sequence, model_params.model_path, starting_point,
-                     teacher_forcing)
-
-
 def get_predictions_with_losses(model, model_params, original_sequence, nr_predictions, image_name, starting_point,
                                 generated_window_size, plot=True):
-
     nr_actual_predictions = min(nr_predictions, original_sequence.size - starting_point - model_params.frame_size - 1)
     predicted_sequence = np.zeros(nr_actual_predictions)
     predictions_losses = np.zeros(nr_actual_predictions)
@@ -121,6 +93,7 @@ def get_predictions_with_losses(model, model_params, original_sequence, nr_predi
         predicted = decode_model_output(model.predict(input_sequence), model_params)
         predicted_sequence[prediction_nr] = predicted
         input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted, (-1, 1, 1)), axis=1)
+
 
         curr_loss = np.abs(predicted - original_sequence[starting_point + prediction_nr + model_params.frame_size])
         predictions_losses[prediction_nr] = curr_loss if prediction_nr % generated_window_size == 0 else \
@@ -148,15 +121,17 @@ def generate_prediction_name(seq_addr):
 
 def get_predictions(model, model_params, epoch, starting_point, nr_prediction_steps):
     pred_seqs = model_params.dataset.prediction_sequences
+
     for source in pred_seqs:
         for sequence, addr in pred_seqs[source]:
             image_name = generate_prediction_name(addr)
             image_name = "/" + addr["SOURCE"] + "/" + "E:{}_".format(epoch) + image_name
             create_dir_if_not_exists(model_params.model_path + "/" + addr["SOURCE"])
-            get_predictions_on_sequence(model, model_params, sequence, nr_prediction_steps, image_name, starting_point,
-                                        True)
-            get_predictions_on_sequence(model, model_params, sequence, nr_prediction_steps, image_name, starting_point,
-                                        False)
+
+            get_predictions_with_losses(model, model_params, sequence, nr_prediction_steps, image_name, starting_point,
+                                        1, plot=True)
+            get_predictions_with_losses(model, model_params, sequence, nr_prediction_steps, image_name, starting_point,
+                                        nr_prediction_steps, plot=True)
 
 
 class PlotCallback(callbacks.Callback):
