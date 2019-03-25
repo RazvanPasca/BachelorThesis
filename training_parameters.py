@@ -1,7 +1,7 @@
 import os
 import datetime
 import json
-import numpy
+import numpy as np
 
 LOCAL_CONFIG_PATH = "train_params_cfg.json"
 
@@ -22,6 +22,7 @@ class ModelTrainingParameters:
         self.normalization = None
         self.nr_bins = None
         self.channels_to_keep = None
+        self.movies_to_keep = None
         self.n_epochs = None
         self.frame_shift = None
 
@@ -34,15 +35,28 @@ class ModelTrainingParameters:
         else:
             self._load_configuration_from_json(LOCAL_CONFIG_PATH)
 
-        klass = getattr(getattr(__import__("datasets"), self.dataset), self.dataset)
-
         self.frame_size = 2 ** self.nr_layers
-        self.dataset = klass(channels_to_keep=self.channels_to_keep,
-                             nr_bins=self.nr_bins,
-                             normalization=self.normalization)
-        self.nr_train_steps = numpy.ceil(0.1 * self.dataset.get_total_length("TRAIN")) // self.batch_size
-        self.nr_val_steps = numpy.ceil(0.1 * self.dataset.get_total_length("VAL")) // self.batch_size
+
+        klass = getattr(getattr(__import__("datasets"), self.dataset), self.dataset)
+        self._prepare_dataset(klass)
+
+        self.nr_train_steps = np.ceil(
+            self.train_coverage_per_epoch * self.dataset.get_total_length("TRAIN")) // self.batch_size
+        self.nr_val_steps = np.ceil(
+            self.val_coverage_per_epoch * self.dataset.get_total_length("VAL")) // self.batch_size
+
         self._compute_model_path(model_path)
+
+    def _prepare_dataset(self, klass):
+        if "CatLFP" == self.dataset:
+            self.dataset = klass(movies_to_keep=self.movies_to_keep,
+                                 channels_to_keep=self.channels_to_keep,
+                                 nr_bins=self.nr_bins,
+                                 normalization=self.normalization)
+        else:
+            self.dataset = klass(channels_to_keep=self.channels_to_keep,
+                                 nr_bins=self.nr_bins,
+                                 normalization=self.normalization)
 
     def _load_configuration_from_json(self, config_path):
         with open(config_path, 'r') as f:
@@ -68,11 +82,13 @@ class ModelTrainingParameters:
     def _compute_model_path(self, model_path):
         if model_path is None:
             self.model_path = os.path.abspath(os.path.join(self.save_path,
-                                                           "{}/Channels:{}/{}/{}".format(type(self.dataset).__name__,
-                                                                                         str(self.channels_to_keep),
-                                                                                         self.get_model_name(),
-                                                                                         datetime.datetime.now().strftime(
-                                                                                             "%Y-%m-%d %H:%M"))))
+                                                           "{}/Movies:{}/Channels:{}/{}/{}".format(
+                                                               type(self.dataset).__name__,
+                                                               str(self.movies_to_keep),
+                                                               str(self.channels_to_keep),
+                                                               self.get_model_name(),
+                                                               datetime.datetime.now().strftime(
+                                                                   "%Y-%m-%d %H:%M"))))
         else:
             self.model_path = model_path
 

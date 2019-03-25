@@ -10,8 +10,8 @@ from tf_utils import configure_gpu
 from training_parameters import ModelTrainingParameters
 
 
-def get_error_estimates(model, model_parameters, nr_of_estimates, generated_window_size, file_to_save):
-    sequence, addr = model_parameters.dataset.get_random_sequence_from("VAL")
+def get_error_estimates(model, model_parameters, nr_of_estimates, generated_window_size, file_to_save, source):
+    sequence, addr = model_parameters.dataset.get_random_sequence_from(source)
 
     avg_prediction_losses = np.zeros(nr_of_estimates)
     for estimate in range(nr_of_estimates):
@@ -41,9 +41,6 @@ def test_model(model_params):
     name_prefix = "Generated:" + datetime.datetime.now().strftime(
         "%Y-%m-%d-%H:%M")
 
-    file_path = model_params.model_path + "/Error_statistics.txt"
-    prepare_file_for_writing(file_path, "Nr estimates, Generated window size, Normalized average error\n")
-
     for source in pred_seqs:
         for sequence, addr in pred_seqs[source]:
             image_name = generate_prediction_name(addr)
@@ -55,9 +52,12 @@ def test_model(model_params):
                                             image_name=image_name, starting_point=1200 - model_params.frame_size,
                                             generated_window_size=generated_window_size)
 
-    for generated_window_size in range(1, 100, 5):
-        get_error_estimates(model, model_params, 10, generated_window_size,
-                            file_path)
+    for source in ["VAL", "TRAIN"]:
+        file_path = model_params.model_path + "/Error_statistics_{}.txt".format(source)
+        prepare_file_for_writing(file_path, "Nr estimates, Generated window size, Normalized average error\n")
+        for generated_window_size in range(1, 100, 5):
+            get_error_estimates(model, model_params, 1000, generated_window_size,
+                                file_path, source)
 
     print("Finished testing model")
 

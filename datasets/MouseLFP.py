@@ -27,7 +27,7 @@ class MouseLFP(LFPDataset):
         self._split_lfp_data()
 
         if channels_to_keep is None:
-            self.channels_to_keep = np.array(self.nr_channels)
+            self.channels_to_keep = np.array(range(self.nr_channels))
         else:
             self.channels_to_keep = np.array(channels_to_keep)
 
