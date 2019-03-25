@@ -68,7 +68,7 @@ def prepare_file_for_writing(file_path, text):
 
 
 if __name__ == '__main__':
-    configure_gpu(0)
     model_path = "/home/gabir/Repos/BachelorThesis/MouseControl/Channels:[1]/WvNet_L:7_Ep:300_StpEp:1603.0_Lr:1e-05_BS:32_Fltrs:32_SkipFltrs:64_L2:0.0001_Norm:Zsc_CAT:512_Clip:True_Rnd:True/2019-03-23 16:08"
     model_parameters = ModelTrainingParameters(model_path)
+    configure_gpu(model_parameters.gpu)
     test_model(model_parameters)

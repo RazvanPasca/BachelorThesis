@@ -42,7 +42,7 @@ def train_model(model_params):
                                                                         model_params.batch_size,
                                                                         model_params.get_classifying()),
         validation_steps=model_params.nr_val_steps,
-        verbose=1,
+        verbose=2,
         callbacks=[tensor_board_callback, plot_figure_callback, log_callback])
 
     print('Saving model and results...')
@@ -51,7 +51,7 @@ def train_model(model_params):
 
 
 if __name__ == '__main__':
-    configure_gpu(0)
     model_parameters = ModelTrainingParameters()
+    configure_gpu(model_parameters.gpu)
     train_model(model_parameters)
     test_model(model_parameters)

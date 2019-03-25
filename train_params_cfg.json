@@ -22,5 +22,6 @@
   "dataset": "CatLFP",
   "train_coverage_per_epoch": 0.10,
   "val_coverage_per_epoch": 0.10,
-  "save_path": "./models"
+  "save_path": "./models",
+  "gpu": 0
 }
