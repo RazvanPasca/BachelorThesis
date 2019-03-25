@@ -6,7 +6,7 @@ import os
 
 class LFPDataset:
 
-    def __init__(self, dataset_path, saved_as_npy=True):
+    def __init__(self, dataset_path, saved_as_npy=True, normalization=None):
         self.description_file_path = dataset_path
         if saved_as_npy:
             self.load_from_npy(dataset_path)
@@ -30,6 +30,15 @@ class LFPDataset:
             self.stimulus_on_at, self.stimulus_off_at = self._parse_stimulus_on_off(lfp_file_data)
 
         self.nr_channels = len(self.channels)
+        if normalization is not None:
+            if normalization == "Zsc":
+                mean = np.mean(self.channels, axis=1, keepdims=True)
+                std = np.std(self.channels, axis=1, keepdims=True)
+                self.channels -= mean
+                self.channels /= std
+            else:
+                self.channels -= np.min(self.channels, axis=1, keepdims=True)
+                self.channels /= np.max(self.channels, axis=1, keepdims=True)
 
     def _parse_stimulus_data(self, condition_file_path):
         with open(os.path.join(os.path.dirname(self.description_file_path), condition_file_path),

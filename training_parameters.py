@@ -1,30 +1,71 @@
+import os
 import datetime
+import json
+import numpy as np
 
-from datasets.CatLFP import CatLFP
+LOCAL_CONFIG_PATH = "train_params_cfg.json"
 
 
-class ModelTrainingParameters():
-    def __init__(self):
-        self.n_epochs = 50
-        self.batch_size = 32
-        self.nr_layers = 7
-        self.frame_size = 2 ** self.nr_layers
-        self.nr_filters = 16
-        self.frame_shift = 8
-        self.lr = 0.00001
-        self.loss = 'CAT'
-        self.clip = True
-        self.random = True
-        self.nr_bins = 256
-        self.skip_conn_filters = 32
-        self.regularization_coef = 0.0001
-        self.nr_train_steps = 1850  # dataset.get_total_length("TRAIN") // batch_size // 400
-        self.nr_val_steps = 2  # np.ceil(0.1*dataset.get_total_length("VAL"))
+class ModelTrainingParameters:
+    def __init__(self, model_path=None):
         self.save_path = None
-        self.dataset = CatLFP(nr_bins=self.nr_bins)
+        self.random = None
+        self.clip = None
+        self.loss = None
+        self.regularization_coef = None
+        self.skip_conn_filters = None
+        self.nr_filters = None
+        self.lr = None
+        self.n_epochs = None
+        self.nr_layers = 0
+        self.batch_size = None
+        self.normalization = None
+        self.nr_bins = None
+        self.channels_to_keep = None
+        self.movies_to_keep = None
+        self.n_epochs = None
+        self.frame_shift = None
+
+        if model_path is not None:
+            config_path = os.path.join(model_path, "train_params_cfg.json")
+            if os.path.exists(config_path):
+                self._load_configuration_from_json(config_path)
+            else:
+                self._load_configuration_from_json(LOCAL_CONFIG_PATH)
+        else:
+            self._load_configuration_from_json(LOCAL_CONFIG_PATH)
+
+        self.frame_size = 2 ** self.nr_layers
+
+        klass = getattr(getattr(__import__("datasets"), self.dataset), self.dataset)
+        self._prepare_dataset(klass)
+
+        self.nr_train_steps = np.ceil(
+            self.train_coverage_per_epoch * self.dataset.get_total_length("TRAIN")) // self.batch_size
+        self.nr_val_steps = np.ceil(
+            self.val_coverage_per_epoch * self.dataset.get_total_length("VAL")) // self.batch_size
+
+        self._compute_model_path(model_path)
+
+    def _prepare_dataset(self, klass):
+        if "CatLFP" == self.dataset:
+            self.dataset = klass(movies_to_keep=self.movies_to_keep,
+                                 channels_to_keep=self.channels_to_keep,
+                                 nr_bins=self.nr_bins,
+                                 normalization=self.normalization)
+        else:
+            self.dataset = klass(channels_to_keep=self.channels_to_keep,
+                                 nr_bins=self.nr_bins,
+                                 normalization=self.normalization)
+
+    def _load_configuration_from_json(self, config_path):
+        with open(config_path, 'r') as f:
+            json_config = json.loads(f.read())
+        for prop, val in json_config.items():
+            setattr(self, prop, val)
 
     def get_model_name(self):
-        return "Wavenet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_FS:{}_{}_Clip:{}_Rnd:{}".format(
+        return "WvNet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_Norm:{}_{}_Clip:{}_Rnd:{}".format(
             self.nr_layers,
             self.n_epochs,
             self.nr_train_steps,
@@ -33,16 +74,29 @@ class ModelTrainingParameters():
             self.nr_filters,
             self.skip_conn_filters,
             self.regularization_coef,
-            self.frame_shift,
-            self.loss,
+            self.normalization,
+            self.loss + ":{}".format(self.nr_bins) if self.get_classifying() else self.loss,
             self.clip,
             self.random)
 
-    def get_save_path(self):
-        if self.save_path is None:
-            self.save_path = './LFP_models/' + self.get_model_name() + '/' + datetime.datetime.now().strftime(
-                "%Y-%m-%d %H:%M")
-        return self.save_path
+    def _compute_model_path(self, model_path):
+        if model_path is None:
+            self.model_path = os.path.abspath(os.path.join(self.save_path,
+                                                           "{}/Movies:{}/Channels:{}/{}/{}".format(
+                                                               type(self.dataset).__name__,
+                                                               str(self.movies_to_keep),
+                                                               str(self.channels_to_keep),
+                                                               self.get_model_name(),
+                                                               datetime.datetime.now().strftime(
+                                                                   "%Y-%m-%d %H:%M"))))
+        else:
+            self.model_path = model_path
 
     def get_classifying(self):
         return self.loss == "CAT"
+
+    def serialize_to_json(self, path):
+        attrs_dict = dict(self.__dict__)
+        attrs_dict["dataset"] = type(attrs_dict["dataset"]).__name__
+        with open(os.path.join(path, "train_params_cfg.json"), 'w+') as g:
+            g.write(json.dumps(attrs_dict, sort_keys=True, indent=4))

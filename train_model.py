@@ -1,21 +1,10 @@
-from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import TensorBoard, CSVLogger
-from plot_utils import PlotCallback, get_predictions, create_dir_if_not_exists
+
+from plot_utils import PlotCallback
 from test_model import test_model
+from tf_utils import configure_gpu
 from training_parameters import ModelTrainingParameters
 from wavenet_model import get_basic_generative_model
-import os
-import tensorflow as tf
-
-
-def configure_gpu(gpu):
-    global config
-    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-    sess = tf.Session(config=config)
-    set_session(sess)
 
 
 def log_training_session(model_params):
@@ -28,8 +17,6 @@ def log_training_session(model_params):
 def train_model(model_params):
     log_training_session(model_parameters)
 
-    create_dir_if_not_exists(model_params.get_save_path())
-
     model = get_basic_generative_model(model_params.nr_filters,
                                        model_params.frame_size,
                                        model_params.nr_layers,
@@ -37,12 +24,13 @@ def train_model(model_params):
                                        loss=model_params.loss,
                                        clipping=model_params.clip,
                                        skip_conn_filters=model_params.skip_conn_filters,
-                                       regularization_coef=model_params.regularization_coef)
+                                       regularization_coef=model_params.regularization_coef,
+                                       nr_output_classes=model_params.nr_bins)
 
-    tensor_board_callback = TensorBoard(log_dir=model_params.get_save_path(),
+    tensor_board_callback = TensorBoard(log_dir=model_params.model_path,
                                         write_graph=True)
-    log_callback = CSVLogger(model_params.get_save_path() + "/session_log.csv")
-    plot_figure_callback = PlotCallback(model_params, 1, nr_predictions_steps=100,
+    log_callback = CSVLogger(model_params.model_path + "/session_log.csv")
+    plot_figure_callback = PlotCallback(model_params, 1, nr_predictions_steps=50,
                                         starting_point=1200 - model_params.frame_size)
 
     model.fit_generator(
@@ -54,15 +42,16 @@ def train_model(model_params):
                                                                         model_params.batch_size,
                                                                         model_params.get_classifying()),
         validation_steps=model_params.nr_val_steps,
-        verbose=1,
+        verbose=2,
         callbacks=[tensor_board_callback, plot_figure_callback, log_callback])
 
     print('Saving model and results...')
-    model.save(model_params.save_path + '.h5')
+    model.save(model_params.model_path + '.h5')
     print('\nDone!')
 
 
 if __name__ == '__main__':
-    configure_gpu(0)
     model_parameters = ModelTrainingParameters()
+    configure_gpu(model_parameters.gpu)
     train_model(model_parameters)
+    test_model(model_parameters)

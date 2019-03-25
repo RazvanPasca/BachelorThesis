@@ -1,3 +1,5 @@
+import os
+
 from datasets.LFPDataset import LFPDataset
 from datasets.DATASET_PATHS import CAT_DATASET_PATH
 import matplotlib.pyplot as plt
@@ -5,17 +7,30 @@ import numpy as np
 
 
 class CatLFP(LFPDataset):
-    def __init__(self, val_perc=0.20, test_perc=0.20, random_seed=42, nr_bins=256, nr_of_seqs=3):
-        super().__init__(CAT_DATASET_PATH)
-        self.nr_bins = nr_bins
+    def __init__(self, movies_to_keep=None, channels_to_keep=None, val_perc=0.20, test_perc=0.0, random_seed=42,
+                 nr_bins=256, nr_of_seqs=3, normalization="Zsc"):
+        super().__init__(CAT_DATASET_PATH, normalization=normalization)
+        np.random.seed(random_seed)
 
+        self.nr_bins = nr_bins
+        self.random_seed = random_seed
+        self.normalization = normalization
         self._compute_values_range()
         self._pre_compute_bins()
         self._split_lfp_into_movies()
-        self._get_train_val_test_split(test_perc, val_perc)
 
-        np.random.seed(random_seed)
-        self.random_seed = random_seed
+        if channels_to_keep is None:
+            self.channels_to_keep = np.array(range(self.nr_channels))
+        else:
+            self.channels_to_keep = np.array(channels_to_keep)
+
+        if movies_to_keep is None:
+            self.movies_to_keep = np.array(range(self.number_of_conditions))
+        else:
+            self.movies_to_keep = np.array(movies_to_keep)
+
+        self._get_train_val_test_split_channel_wise(self.movies_to_keep, self.channels_to_keep, val_perc, test_perc)
+
         self.prediction_sequences = {
             'val': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
             'train': [self.get_random_sequence_from('TRAIN') for _ in range(nr_of_seqs)]
@@ -55,12 +70,46 @@ class CatLFP(LFPDataset):
             self.test = self.all_lfp_data[:, :, :,
                         self.train_length + self.val_length:self.train_length + self.val_length + self.test_length]
 
+    def _get_train_val_test_split_channel_wise(self, movies_to_keep, channels_to_keep, val_perc, test_perc):
+        nr_test_trials = round(test_perc * self.trials_per_condition)
+        nr_val_trials = round(val_perc * self.trials_per_condition)
+        nr_train_trials = self.trials_per_condition - nr_test_trials - nr_val_trials
+
+        trial_indexes_shuffled = np.arange(0, self.trials_per_condition)
+        np.random.shuffle(trial_indexes_shuffled)
+        train_indexes = trial_indexes_shuffled[:nr_train_trials]
+        val_indexes = trial_indexes_shuffled[nr_train_trials:nr_train_trials + nr_val_trials]
+        test_indexes = trial_indexes_shuffled[-nr_test_trials:]
+
+        interm_data = self.all_lfp_data[movies_to_keep, :, channels_to_keep, :]
+
+        self.train = interm_data[:, train_indexes, :].reshape(movies_to_keep.size, nr_train_trials, -1, 28000)
+
+        self.validation = interm_data[:, val_indexes, :].reshape(movies_to_keep.size, nr_val_trials, -1, 28000)
+
+        assert (
+            np.all(self.train[0, 0, 0] == self.all_lfp_data[movies_to_keep[0], train_indexes[0], channels_to_keep[0]]))
+
+        assert (np.all(self.train[movies_to_keep.size - 1, train_indexes.size - 1, channels_to_keep.size - 1] ==
+                       self.all_lfp_data[
+                           movies_to_keep[-1], train_indexes[-1], channels_to_keep[-1]]))
+
+        assert (np.all(self.validation[0, 0, 0] == self.all_lfp_data[
+            movies_to_keep[0], val_indexes[0], channels_to_keep[0]]))
+
+        assert (np.all(self.validation[movies_to_keep.size - 1, val_indexes.size - 1, channels_to_keep.size - 1] ==
+                       self.all_lfp_data[
+                           movies_to_keep[-1], val_indexes[-1], channels_to_keep[-1]]))
+
+        if nr_test_trials > 0:
+            self.test = interm_data[:, test_indexes, :].reshape(movies_to_keep.size, nr_test_trials, -1, 28000)
+
     def frame_generator(self, frame_size, batch_size, classifying, data):
         x = []
         y = []
         while 1:
-            batch_start = np.random.choice(range(0, data.shape[-1] - frame_size))
             random_sequence, _ = self.get_random_sequence(data)
+            batch_start = np.random.choice(range(0, random_sequence.size - frame_size))
             frame = random_sequence[batch_start:batch_start + frame_size]
             next_step_value = random_sequence[batch_start + frame_size]
             x.append(frame.reshape(frame_size, 1))
@@ -82,7 +131,7 @@ class CatLFP(LFPDataset):
     def get_dataset_piece(self, movie, trial, channel):
         return self.all_lfp_data[movie, trial, channel, :]
 
-    def plot_signal(self, movie, trial, channel, start=0, stop=None, save=False, show=True):
+    def plot_signal(self, movie, trial, channel, start=0, stop=None, save_path=None, show=True):
         if stop is None:
             stop = self.trial_length
         plt.figure(figsize=(16, 12))
@@ -91,9 +140,8 @@ class CatLFP(LFPDataset):
         signal = self.get_dataset_piece(movie, trial, channel)[start:stop]
         plt.plot(signal, label="LFP signal")
         plt.legend()
-        if save:
-            plt.savefig(
-                "/home/pasca/School/Licenta/Datasets/CER01A50/Plots/" + "{}/".format(movie) + plot_title + ".png")
+        if save_path is not None:
+            plt.savefig(os.path.join(save_path, "Cat/Plots/{}/{}.png".format(movie, plot_title)))
         if show:
             plt.show()
 
@@ -112,9 +160,26 @@ class CatLFP(LFPDataset):
         return sequence, sequence_addr
 
     def get_random_sequence(self, data_source):
-        channel_index = np.random.choice(self.nr_channels)
-        movie_index = np.random.choice(self.number_of_conditions)
-        trial_index = np.random.choice(self.trials_per_condition)
+        """Function which receives data source as parameter and chooses randomly and index
+        from each of the first 3 dimensions and returns the corresponding sequence
+        and a dictionary containing the source indexes
+
+        Args:
+            data_source:a 4D numpy array: (movies, trials, channels, nr_samples)
+                A random index is chosen from each of the first
+                3 dimensions to pick the random sequence
+
+        Returns:
+            Random sequence from the datasource
+
+             Dictionary with the format of
+             'M': movie_index,
+             'T': trial_index,
+             'C': channel_index
+        """
+        movie_index = np.random.choice(data_source.shape[0])
+        trial_index = np.random.choice(data_source.shape[1])
+        channel_index = np.random.choice(data_source.shape[2])
         return self.get_sequence(movie_index, trial_index, channel_index, data_source)
 
     def get_sequence(self, movie_index, trial_index, channel_index, data_source):
