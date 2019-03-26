@@ -66,5 +66,5 @@ def get_basic_generative_model(nr_filters, input_size, nr_layers, lr, loss, clip
 
     model = Model(inputs=input_, outputs=net)
     optimizer = optimizers.adam(lr=lr, clipvalue=clipvalue)
-    model.compile(loss=model_loss, optimizer=optimizer)
+    model.compile(loss=model_loss, optimizer=optimizer, metrics=["accuracy"])
     return model
