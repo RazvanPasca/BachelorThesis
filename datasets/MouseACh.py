@@ -1,4 +1,4 @@
-from datasets.DATASET_PATHS import MOUSEACH_DATASET_PATH
+from datasets.DATASET_PATHS import GABI_MOUSEACH_DATASET_PATH as MOUSEACH_DATASET_PATH
 from datasets.MouseLFP import MouseLFP
 
 

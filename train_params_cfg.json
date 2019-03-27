@@ -5,7 +5,10 @@
   "movies_to_keep": [
     0
   ],
-  "n_epochs": 200,
+  "conditions_to_keep": [
+    1,4,7,10,13,16,19,22
+  ],
+  "n_epochs": 400,
   "batch_size": 32,
   "nr_layers": 7,
   "frame_size": 128,
@@ -17,9 +20,9 @@
   "random": true,
   "nr_bins": 256,
   "skip_conn_filters": 64,
-  "regularization_coef": 0.0001,
+  "regularization_coef": 0.0000,
   "normalization": "Zsc",
-  "dataset": "CatLFP",
+  "dataset": "MouseControl",
   "train_coverage_per_epoch": 0.10,
   "val_coverage_per_epoch": 0.10,
   "save_path": "./models",
