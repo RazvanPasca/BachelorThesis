@@ -1,4 +1,4 @@
-from keras.callbacks import TensorBoard, CSVLogger
+from keras.callbacks import TensorBoard, CSVLogger, ModelCheckpoint
 
 from plot_utils import PlotCallback
 from test_model import test_model
@@ -15,7 +15,7 @@ def log_training_session(model_params):
 
 
 def train_model(model_params):
-    log_training_session(model_parameters)
+    log_training_session(model_params)
 
     model = get_basic_generative_model(model_params.nr_filters,
                                        model_params.frame_size,
@@ -32,6 +32,9 @@ def train_model(model_params):
     log_callback = CSVLogger(model_params.model_path + "/session_log.csv")
     plot_figure_callback = PlotCallback(model_params, 1, nr_predictions_steps=50,
                                         starting_point=1200 - model_params.frame_size)
+    save_model_callback = ModelCheckpoint(
+        filepath="{}/best_model.h5".format(model_params.model_path), monitor="val_loss",
+        save_best_only=True)
 
     model.fit_generator(
         model_params.dataset.train_frame_generator(model_params.frame_size,
@@ -43,10 +46,9 @@ def train_model(model_params):
                                                                         model_params.get_classifying()),
         validation_steps=model_params.nr_val_steps,
         verbose=2,
-        callbacks=[tensor_board_callback, plot_figure_callback, log_callback])
+        callbacks=[tensor_board_callback, plot_figure_callback, log_callback, save_model_callback])
 
     print('Saving model and results...')
-    model.save(model_params.model_path + '.h5')
     print('\nDone!')
 
 

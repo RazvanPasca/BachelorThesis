@@ -34,13 +34,14 @@ def get_error_estimates(model, model_parameters, nr_of_estimates, generated_wind
 def test_model(model_params):
     model_path = model_params.model_path
 
-    model = load_model(model_path + '.h5')
+    model = load_model(model_path + '/best_model.h5')
     model.summary()
     pred_seqs = model_params.dataset.prediction_sequences
 
     name_prefix = "Generated:" + datetime.datetime.now().strftime(
         "%Y-%m-%d-%H:%M")
 
+    print("Started testing model...")
     for source in pred_seqs:
         for sequence, addr in pred_seqs[source]:
             image_name = generate_prediction_name(addr)
