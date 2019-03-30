@@ -23,7 +23,7 @@ class MouseLFP(LFPDataset):
         self.nr_channels -= len(self.channels)
         self.nr_of_orientations = 8
         self.nr_of_stimulus_luminosity_levels = 3
-        self.nr_of_conditions = 24
+        self.number_of_conditions = 24
         self.trial_length = 2672  # 4175
         self._compute_values_range()
         self._pre_compute_bins()
@@ -35,9 +35,10 @@ class MouseLFP(LFPDataset):
             self.channels_to_keep = np.array(channels_to_keep)
 
         if conditions_to_keep is None:
-            self.conditions_to_keep = np.array(range(self.nr_of_conditions))
+            self.conditions_to_keep = np.array(range(self.number_of_conditions))
         else:
-            self.conditions_to_keep = np.array(conditions_to_keep)
+            self.conditions_to_keep = np.array(conditions_to_keep)-1
+            self.number_of_conditions = len(conditions_to_keep)
 
         self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
 
@@ -48,7 +49,7 @@ class MouseLFP(LFPDataset):
 
     def _split_lfp_data(self):
         self.all_lfp_data = []
-        for condition in range(1, self.nr_of_conditions + 1):
+        for condition in range(1, self.number_of_conditions + 1):
             conditions = []
             for stimulus_condition in self.stimulus_conditions:
                 if stimulus_condition['Condition number'] == str(condition):
@@ -86,7 +87,7 @@ class MouseLFP(LFPDataset):
             self.test = self.all_lfp_data[:, :, :,
                         self.train_length + self.val_length:self.train_length + self.val_length + self.test_length]
         # else:
-        # nr_of_trials = self.trials_per_condition * self.nr_of_conditions
+        # nr_of_trials = self.trials_per_condition * self.number_of_conditions
         # validation_sequence_length = np.round((self.trial_length * val_perc)/3)
         # self.train = []
         # self.validation = []
