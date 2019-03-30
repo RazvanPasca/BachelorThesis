@@ -22,6 +22,7 @@ class ModelTrainingParameters:
         self.normalization = None
         self.nr_bins = None
         self.channels_to_keep = None
+        self.conditions_to_keep = None
         self.movies_to_keep = None
         self.n_epochs = None
         self.frame_shift = None
@@ -54,7 +55,8 @@ class ModelTrainingParameters:
                                  nr_bins=self.nr_bins,
                                  normalization=self.normalization)
         else:
-            self.dataset = klass(channels_to_keep=self.channels_to_keep,
+            self.dataset = klass(conditions_to_keep=self.conditions_to_keep,
+                                 channels_to_keep=self.channels_to_keep,
                                  nr_bins=self.nr_bins,
                                  normalization=self.normalization)
 
