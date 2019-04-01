@@ -19,8 +19,8 @@ class MouseLFP(LFPDataset):
         self.nr_bins = nr_bins
         self.random_seed = random_seed
         self.normalization = normalization
-        self.channels = self.channels[:-1]  # Discard channel 33 which records heart beats
-        self.nr_channels -= len(self.channels)
+        #self.channels = self.channels[:-1]  # Discard channel 33 which records heart beats
+        #self.nr_channels -= len(self.channels)
         self.nr_of_orientations = 8
         self.nr_of_stimulus_luminosity_levels = 3
         self.number_of_conditions = 24
@@ -42,8 +42,8 @@ class MouseLFP(LFPDataset):
 
         indexes = [[0, 100], [200, 300], [400, 500]]
         # self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
-        self._get_train_val_test_split_with_indexes(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc,
-                                                    indexes)
+        self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
+
 
         self.prediction_sequences = {
             'val': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
