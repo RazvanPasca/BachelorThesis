@@ -7,12 +7,15 @@ from datasets.LFPDataset import LFPDataset
 
 
 class MouseLFP(LFPDataset):
-    def __init__(self, dataset_path, channels_to_keep=None, val_perc=0.20, test_perc=0.0, random_seed=42, nr_bins=256,
+    def __init__(self, dataset_path, frame_size=512, channels_to_keep=None, conditions_to_keep=None, val_perc=0.20,
+                 test_perc=0.0,
+                 random_seed=42, nr_bins=256,
                  nr_of_seqs=3,
                  normalization="Zsc"):
         super().__init__(dataset_path, normalization=normalization)
         np.random.seed(random_seed)
 
+        self.frame_size = 512
         self.nr_bins = nr_bins
         self.random_seed = random_seed
         self.normalization = normalization
@@ -20,7 +23,7 @@ class MouseLFP(LFPDataset):
         self.nr_channels -= len(self.channels)
         self.nr_of_orientations = 8
         self.nr_of_stimulus_luminosity_levels = 3
-        self.nr_of_conditions = 24
+        self.number_of_conditions = 24
         self.trial_length = 2672  # 4175
         self._compute_values_range()
         self._pre_compute_bins()
@@ -31,7 +34,13 @@ class MouseLFP(LFPDataset):
         else:
             self.channels_to_keep = np.array(channels_to_keep)
 
-        self._get_train_val_test_split_channel_wise(self.channels_to_keep, val_perc, test_perc)
+        if conditions_to_keep is None:
+            self.conditions_to_keep = np.array(range(self.number_of_conditions))
+        else:
+            self.conditions_to_keep = np.array(conditions_to_keep)-1
+            self.number_of_conditions = len(conditions_to_keep)
+
+        self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
 
         self.prediction_sequences = {
             'val': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
@@ -40,7 +49,7 @@ class MouseLFP(LFPDataset):
 
     def _split_lfp_data(self):
         self.all_lfp_data = []
-        for condition in range(1, self.nr_of_conditions + 1):
+        for condition in range(1, self.number_of_conditions + 1):
             conditions = []
             for stimulus_condition in self.stimulus_conditions:
                 if stimulus_condition['Condition number'] == str(condition):
@@ -77,8 +86,19 @@ class MouseLFP(LFPDataset):
             self.validation = self.all_lfp_data[:, :, :, self.train_length:self.train_length + self.val_length]
             self.test = self.all_lfp_data[:, :, :,
                         self.train_length + self.val_length:self.train_length + self.val_length + self.test_length]
+        # else:
+        # nr_of_trials = self.trials_per_condition * self.number_of_conditions
+        # validation_sequence_length = np.round((self.trial_length * val_perc)/3)
+        # self.train = []
+        # self.validation = []
+        # self.test = []
+        # for x in range(0, nr_of_trials):
+        #     validation_sequences_start = np.random.randint(self.frame_size, self.trial_length - (
+        #                 validation_sequence_length + self.frame_size), 3)
+        #
+        #     self.train +=
 
-    def _get_train_val_test_split_channel_wise(self, channels_to_keep, val_perc, test_perc):
+    def _get_train_val_test_split_channel_wise(self, channels_to_keep, conditions_to_keep, val_perc, test_perc):
         nr_test_trials = round(test_perc * self.trials_per_condition)
         nr_val_trials = round(val_perc * self.trials_per_condition)
         nr_train_trials = self.trials_per_condition - nr_test_trials - nr_val_trials
@@ -89,7 +109,7 @@ class MouseLFP(LFPDataset):
         val_indexes = channel_indexes[nr_train_trials:nr_train_trials + nr_val_trials]
         test_indexes = channel_indexes[-nr_test_trials:]
 
-        interm_data = self.all_lfp_data[:, :, channels_to_keep, :]
+        interm_data = self.all_lfp_data[conditions_to_keep, :, channels_to_keep, :]
 
         self.train = interm_data[:, train_indexes, :].reshape(self.number_of_conditions, nr_train_trials, -1,
                                                               self.trial_length)

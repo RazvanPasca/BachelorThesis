@@ -1,7 +1,7 @@
 import os
 
 from datasets.LFPDataset import LFPDataset
-from datasets.DATASET_PATHS import PASCA_CAT_DATASET_PATH
+from datasets.DATASET_PATHS import GABI_CAT_DATASET_PATH as CAT_DATASET_PATH
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -9,7 +9,7 @@ import numpy as np
 class CatLFP(LFPDataset):
     def __init__(self, movies_to_keep=None, channels_to_keep=None, val_perc=0.20, test_perc=0.0, random_seed=42,
                  nr_bins=256, nr_of_seqs=3, normalization="Zsc"):
-        super().__init__(PASCA_CAT_DATASET_PATH, normalization=normalization)
+        super().__init__(CAT_DATASET_PATH, normalization=normalization)
         np.random.seed(random_seed)
 
         self.nr_bins = nr_bins
