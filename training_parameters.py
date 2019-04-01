@@ -10,7 +10,7 @@ class ModelTrainingParameters:
     def __init__(self, model_path=None):
         self.save_path = None
         self.random = None
-        self.clip = None
+        self.clipvalue = None
         self.loss = None
         self.regularization_coef = None
         self.skip_conn_filters = None
@@ -78,7 +78,7 @@ class ModelTrainingParameters:
             self.regularization_coef,
             self.normalization,
             self.loss + ":{}".format(self.nr_bins) if self.get_classifying() else self.loss,
-            self.clip,
+            self.clipvalue,
             self.random)
 
     def _compute_model_path(self, model_path):

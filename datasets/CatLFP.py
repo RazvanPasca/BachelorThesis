@@ -1,7 +1,7 @@
 import os
 
 from datasets.LFPDataset import LFPDataset
-from datasets.DATASET_PATHS import GABI_CAT_DATASET_PATH as CAT_DATASET_PATH
+from datasets.DATASET_PATHS import PASCA_CAT_DATASET_PATH as CAT_DATASET_PATH
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -88,8 +88,7 @@ class CatLFP(LFPDataset):
 
         self.validation = interm_data[:, val_indexes, :].reshape(movies_to_keep.size, nr_val_trials, -1, 28000)
 
-        assert (
-            np.all(self.train[0, 0, 0] == self.all_lfp_data[movies_to_keep[0], train_indexes[0], channels_to_keep[0]]))
+        assert (np.all(self.train[0, 0, 0] == self.all_lfp_data[movies_to_keep[0], train_indexes[0], channels_to_keep[0]]))
 
         assert (np.all(self.train[movies_to_keep.size - 1, train_indexes.size - 1, channels_to_keep.size - 1] ==
                        self.all_lfp_data[

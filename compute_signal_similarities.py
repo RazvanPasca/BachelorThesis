@@ -2,14 +2,20 @@ import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from datasets.DATASET_PATHS import PASCA_CAT_DATASET_PATH as CAT_DATASET_PATH
+from datasets.CatLFP import CatLFP
+from datasets.DATASET_PATHS import PASCA_CAT_DATASET_PATH
 from datasets.DATASET_PATHS import PASCA_MOUSE_DATASET_PATH as MOUSE_DATASET_PATH
 from datasets.DATASET_PATHS import PASCA_MOUSEACH_DATASET_PATH as MOUSEACH_DATASET_PATH
 from datasets.LFPDataset import LFPDataset
+from datasets.MouseLFP import MouseLFP
 
 
 def rmse(a, b):
     return np.sqrt(np.mean((a - b) ** 2))
+
+
+def corr(a, b):
+    return np.dot(a, b)
 
 
 def compute_similarity_matrix(ds):
@@ -25,7 +31,7 @@ def compute_similarity_matrix(ds):
 def compute_heatmap_on_dataset(ds):
     sim_matrix = compute_similarity_matrix(ds)
     sns.set()
-    sns.heatmap(sim_matrix)
+    sns.heatmap(sim_matrix, cmap="coolwarm")
     plt.show()
     return sim_matrix
 
@@ -35,17 +41,35 @@ def compute_signals_correlation(ds, name):
     means = np.mean(sim_matrix, axis=0)
     corr_indexes_sorted = np.argsort(means)
 
-    with open("{}:Signal_correlations.txt".format(name), "w+") as f:
+    with open("{}:Signals_correlations.txt".format(name), "w+") as f:
         for index in corr_indexes_sorted[::-1]:
-            f.write("Channel:{}, Mean rmse: {}\n".format(index, means[index]))
+            f.write("Channel:{}, Cross correlation: {}\n".format(index, means[index]))
+
+
+def find_samples_over_x(dataset, x):
+    samples = dataset.channels[2]
+    values_over_x = (samples > x).sum() if x > 0 else (samples < x).sum()
+    # print(np.max(samples), np.min(samples))
+    print(x, values_over_x)
+    return values_over_x
 
 
 if __name__ == '__main__':
-    dataset = LFPDataset(CAT_DATASET_PATH)
-    compute_signals_correlation(dataset, "CAT")
-
-    dataset = LFPDataset(MOUSE_DATASET_PATH)
-    compute_signals_correlation(dataset, "MOUSE Control")
-
-    dataset = LFPDataset(MOUSEACH_DATASET_PATH)
-    compute_signals_correlation(dataset, "MOUSE ACh")
+    dataset = CatLFP(movies_to_keep=[1], channels_to_keep=[0], normalization="Zsc")
+    # compute_signals_correlation(dataset, "MOUSE ACh")
+    # compute_heatmap_on_dataset(dataset)
+    # find_samples_over_x(dataset, 5)
+    # find_samples_over_x(dataset, 4)
+    # x1 = find_samples_over_x(dataset, 3)
+    # find_samples_over_x(dataset, 2)
+    # find_samples_over_x(dataset, 1)
+    # find_samples_over_x(dataset, 0)
+    # find_samples_over_x(dataset, -1)
+    # find_samples_over_x(dataset, -2)
+    # x2 = find_samples_over_x(dataset, -3)
+    # print((x1 + x2) / dataset.channels[2].size)
+    dataset.plot_signal(0, 0, 0)
+    # find_samples_over_x(dataset, -4)
+    # find_samples_over_x(dataset, -5)
+    # plt.hist(dataset.channels[2].flatten(), bins=50, range=(-7, 7))
+    # plt.show()

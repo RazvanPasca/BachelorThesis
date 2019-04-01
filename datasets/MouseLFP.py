@@ -37,10 +37,13 @@ class MouseLFP(LFPDataset):
         if conditions_to_keep is None:
             self.conditions_to_keep = np.array(range(self.number_of_conditions))
         else:
-            self.conditions_to_keep = np.array(conditions_to_keep)-1
+            self.conditions_to_keep = np.array(conditions_to_keep) - 1
             self.number_of_conditions = len(conditions_to_keep)
 
-        self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
+        indexes = [[0, 100], [200, 300], [400, 500]]
+        # self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
+        self._get_train_val_test_split_with_indexes(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc,
+                                                    indexes)
 
         self.prediction_sequences = {
             'val': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
@@ -103,11 +106,11 @@ class MouseLFP(LFPDataset):
         nr_val_trials = round(val_perc * self.trials_per_condition)
         nr_train_trials = self.trials_per_condition - nr_test_trials - nr_val_trials
 
-        channel_indexes = np.arange(0, self.trials_per_condition)
-        np.random.shuffle(channel_indexes)
-        train_indexes = channel_indexes[:nr_train_trials]
-        val_indexes = channel_indexes[nr_train_trials:nr_train_trials + nr_val_trials]
-        test_indexes = channel_indexes[-nr_test_trials:]
+        trial_indexes = np.arange(0, self.trials_per_condition)
+        np.random.shuffle(trial_indexes)
+        train_indexes = trial_indexes[:nr_train_trials]
+        val_indexes = trial_indexes[nr_train_trials:nr_train_trials + nr_val_trials]
+        test_indexes = trial_indexes[-nr_test_trials:]
 
         interm_data = self.all_lfp_data[conditions_to_keep, :, channels_to_keep, :]
 
@@ -120,6 +123,27 @@ class MouseLFP(LFPDataset):
         else:
             self.test = interm_data[:, test_indexes, :].reshape(self.number_of_conditions, nr_test_trials, -1,
                                                                 self.trial_length)
+
+    def _get_train_val_test_split_with_indexes(self, channels_to_keep, conditions_to_keep, val_perc, test_perc,
+                                               indexes):
+        self._get_train_val_test_split_channel_wise(channels_to_keep, conditions_to_keep, val_perc, test_perc)
+        train_slices = []
+        val_slices = []
+
+        train_shape = self.train.shape
+        val_shape = self.validation.shape
+        slice_length = indexes[0][1] - indexes[0][0]
+
+        for index_pair in indexes:
+            train_slices.append(self.train[:, :, :, index_pair[0]:index_pair[1]])
+            val_slices.append(self.validation[:, :, :, index_pair[0]:index_pair[1]])
+
+        train_slices = np.array(train_slices)
+        val_slices = np.array(val_slices)
+        self.train = train_slices.reshape(train_shape[0], train_shape[1], -1, slice_length)
+        self.validation = val_slices.reshape(val_shape[0], val_shape[1], -1, slice_length)
+
+        assert (np.all(self.train[0, 0,]))
 
     def frame_generator(self, frame_size, batch_size, classifying, data):
         x = []
