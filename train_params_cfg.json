@@ -1,27 +1,24 @@
 {
   "channels_to_keep": [
-    0
+    1
   ],
-  "movies_to_keep": [
-    0
-  ],
-  "n_epochs": 200,
+  "n_epochs": 10,
   "batch_size": 32,
-  "nr_layers": 7,
+  "nr_layers": 8,
   "frame_size": 128,
-  "nr_filters": 64,
+  "nr_filters": 32,
   "frame_shift": 8,
   "lr": 1e-05,
   "loss": "CAT",
-  "clip": true,
+  "clipvalue": 0.5,
   "random": true,
   "nr_bins": 256,
   "skip_conn_filters": 64,
   "regularization_coef": 0.0001,
   "normalization": "Zsc",
-  "dataset": "CatLFP",
-  "train_coverage_per_epoch": 0.10,
-  "val_coverage_per_epoch": 0.10,
-  "save_path": "./models",
+  "dataset": "MouseControl",
+  "train_coverage_per_epoch": 0.005,
+  "val_coverage_per_epoch": 0.010,
+  "save_path": "./LFP_models",
   "gpu": 0
 }

@@ -94,7 +94,6 @@ def get_predictions_with_losses(model, model_params, original_sequence, nr_predi
         predicted_sequence[prediction_nr] = predicted
         input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted, (-1, 1, 1)), axis=1)
 
-
         curr_loss = np.abs(predicted - original_sequence[starting_point + prediction_nr + model_params.frame_size])
         predictions_losses[prediction_nr] = curr_loss if prediction_nr % generated_window_size == 0 else \
             predictions_losses[prediction_nr - 1] + curr_loss

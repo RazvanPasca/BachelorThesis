@@ -24,13 +24,14 @@ def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef):
 
         out = Conv1D(n_filters, 1, padding='same',
                      kernel_regularizer=l2(regularization_coef))(merged)
+
         full_out = Add(name="Block_{}_Out".format(dilation_rate))([out, residual])
         return full_out, skip_out
 
     return f
 
 
-def get_basic_generative_model(nr_filters, input_size, nr_layers, lr, loss, clipping, skip_conn_filters,
+def get_basic_generative_model(nr_filters, input_size, nr_layers, lr, loss, clipvalue, skip_conn_filters,
                                regularization_coef, nr_output_classes):
     if loss == "MSE":
         model_loss = losses.MSE
@@ -40,11 +41,6 @@ def get_basic_generative_model(nr_filters, input_size, nr_layers, lr, loss, clip
         model_loss = losses.sparse_categorical_crossentropy
     else:
         raise ValueError('Use one of the following loss functions: MSE, MAE, CAT (categorical crossentropy)')
-
-    if clipping:
-        clipvalue = .5
-    else:
-        clipvalue = 20
 
     input_ = Input(shape=(input_size, 1))
     A, B = wavenet_block(nr_filters, 2, 1, regularization_coef=regularization_coef)(input_)
