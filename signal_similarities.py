@@ -3,11 +3,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 from datasets.CatLFP import CatLFP
-from datasets.DATASET_PATHS import PASCA_CAT_DATASET_PATH
-from datasets.DATASET_PATHS import PASCA_MOUSE_DATASET_PATH as MOUSE_DATASET_PATH
-from datasets.DATASET_PATHS import PASCA_MOUSEACH_DATASET_PATH as MOUSEACH_DATASET_PATH
-from datasets.LFPDataset import LFPDataset
-from datasets.MouseLFP import MouseLFP
+from signal_low_pass import butter_lowpass_filter
 
 
 def rmse(a, b):
@@ -55,7 +51,7 @@ def find_samples_over_x(dataset, x):
 
 
 if __name__ == '__main__':
-    dataset = CatLFP(movies_to_keep=[1], channels_to_keep=[0], normalization="Zsc")
+    # dataset = CatLFP(movies_to_keep=[1], channels_to_keep=[0], normalization="Zsc")
     # compute_signals_correlation(dataset, "MOUSE ACh")
     # compute_heatmap_on_dataset(dataset)
     # find_samples_over_x(dataset, 5)
@@ -68,7 +64,7 @@ if __name__ == '__main__':
     # find_samples_over_x(dataset, -2)
     # x2 = find_samples_over_x(dataset, -3)
     # print((x1 + x2) / dataset.channels[2].size)
-    dataset.plot_signal(0, 0, 0)
+    dataset = CatLFP(channels_to_keep=[32], low_pass_filter=True)
     # find_samples_over_x(dataset, -4)
     # find_samples_over_x(dataset, -5)
     # plt.hist(dataset.channels[2].flatten(), bins=50, range=(-7, 7))

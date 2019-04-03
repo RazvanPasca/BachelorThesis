@@ -11,16 +11,17 @@ class MouseLFP(LFPDataset):
                  test_perc=0.0,
                  random_seed=42, nr_bins=256,
                  nr_of_seqs=3,
-                 normalization="Zsc"):
-        super().__init__(dataset_path, normalization=normalization)
+                 normalization="Zsc",
+                 low_pass_filter=False):
+        super().__init__(dataset_path, normalization=normalization, low_pass_filter=low_pass_filter)
         np.random.seed(random_seed)
 
-        self.frame_size = 512
+        self.frame_size = frame_size
         self.nr_bins = nr_bins
         self.random_seed = random_seed
         self.normalization = normalization
-        #self.channels = self.channels[:-1]  # Discard channel 33 which records heart beats
-        #self.nr_channels -= len(self.channels)
+        # self.channels = self.channels[:-1]  # Discard channel 33 which records heart beats
+        self.nr_channels = len(self.channels)
         self.nr_of_orientations = 8
         self.nr_of_stimulus_luminosity_levels = 3
         self.number_of_conditions = 24
@@ -44,11 +45,12 @@ class MouseLFP(LFPDataset):
         # self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
         self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
 
-
         self.prediction_sequences = {
             'val': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
             'train': [self.get_random_sequence_from('TRAIN') for _ in range(nr_of_seqs)]
         }
+
+        print("dada")
 
     def _split_lfp_data(self):
         self.all_lfp_data = []
@@ -79,27 +81,6 @@ class MouseLFP(LFPDataset):
         if target_val not in self.cached_val_bin:
             self.cached_val_bin[target_val] = np.digitize(target_val, self.bins, right=False)
         return self.cached_val_bin[target_val]
-
-    def _get_train_val_test_split(self, val_perc, test_perc, random=False):
-        self.val_length = round(val_perc * self.trial_length)
-        self.test_length = round(test_perc * self.trial_length)
-        self.train_length = self.trial_length - (self.val_length + self.test_length)
-        if not random:
-            self.train = self.all_lfp_data[:, :, :, :self.train_length]
-            self.validation = self.all_lfp_data[:, :, :, self.train_length:self.train_length + self.val_length]
-            self.test = self.all_lfp_data[:, :, :,
-                        self.train_length + self.val_length:self.train_length + self.val_length + self.test_length]
-        # else:
-        # nr_of_trials = self.trials_per_condition * self.number_of_conditions
-        # validation_sequence_length = np.round((self.trial_length * val_perc)/3)
-        # self.train = []
-        # self.validation = []
-        # self.test = []
-        # for x in range(0, nr_of_trials):
-        #     validation_sequences_start = np.random.randint(self.frame_size, self.trial_length - (
-        #                 validation_sequence_length + self.frame_size), 3)
-        #
-        #     self.train +=
 
     def _get_train_val_test_split_channel_wise(self, channels_to_keep, conditions_to_keep, val_perc, test_perc):
         nr_test_trials = round(test_perc * self.trials_per_condition)

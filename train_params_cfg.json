@@ -1,10 +1,10 @@
 {
   "channels_to_keep": [
-    1
+    32
   ],
   "n_epochs": 10,
   "batch_size": 32,
-  "nr_layers": 8,
+  "nr_layers": 6,
   "frame_size": 128,
   "nr_filters": 32,
   "frame_shift": 8,
@@ -20,5 +20,6 @@
   "train_coverage_per_epoch": 0.005,
   "val_coverage_per_epoch": 0.010,
   "save_path": "./LFP_models",
+  "low_pass_filter": true,
   "gpu": 0
 }

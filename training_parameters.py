@@ -53,12 +53,14 @@ class ModelTrainingParameters:
             self.dataset = klass(movies_to_keep=self.movies_to_keep,
                                  channels_to_keep=self.channels_to_keep,
                                  nr_bins=self.nr_bins,
-                                 normalization=self.normalization)
+                                 normalization=self.normalization,
+                                 low_pass_filter=self.low_pass_filter)
         else:
             self.dataset = klass(conditions_to_keep=self.conditions_to_keep,
                                  channels_to_keep=self.channels_to_keep,
                                  nr_bins=self.nr_bins,
-                                 normalization=self.normalization)
+                                 normalization=self.normalization,
+                                 low_pass_filter=self.low_pass_filter)
 
     def _load_configuration_from_json(self, config_path):
         with open(config_path, 'r') as f:

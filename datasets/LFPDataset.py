@@ -3,10 +3,12 @@ import json
 import numpy as np
 import os
 
+from signal_low_pass import butter_lowpass_filter
+
 
 class LFPDataset:
 
-    def __init__(self, dataset_path, saved_as_npy=True, normalization=None):
+    def __init__(self, dataset_path, saved_as_npy=True, normalization=None, low_pass_filter=False):
         self.description_file_path = dataset_path
         if saved_as_npy:
             self.load_from_npy(dataset_path)
@@ -29,7 +31,10 @@ class LFPDataset:
             self.channels = self._parse_channels_data(lfp_file_data.get('bin_file_names'))
             self.stimulus_on_at, self.stimulus_off_at = self._parse_stimulus_on_off(lfp_file_data)
 
+        self.cutoff_freq = 45
         self.nr_channels = len(self.channels)
+        self.low_pass_filter = low_pass_filter
+
         if normalization is not None:
             if normalization == "Zsc":
                 mean = np.mean(self.channels, axis=1, keepdims=True)
@@ -39,6 +44,10 @@ class LFPDataset:
             else:
                 self.channels -= np.min(self.channels, axis=1, keepdims=True)
                 self.channels /= np.max(self.channels, axis=1, keepdims=True)
+
+        if low_pass_filter:
+            for i, channel in enumerate(self.channels):
+                self.channels[i] = butter_lowpass_filter(channel, self.cutoff_freq, 1000)
 
     def _parse_stimulus_data(self, condition_file_path):
         with open(os.path.join(os.path.dirname(self.description_file_path), condition_file_path),

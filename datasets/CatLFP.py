@@ -8,8 +8,8 @@ import numpy as np
 
 class CatLFP(LFPDataset):
     def __init__(self, movies_to_keep=None, channels_to_keep=None, val_perc=0.20, test_perc=0.0, random_seed=42,
-                 nr_bins=256, nr_of_seqs=3, normalization="Zsc"):
-        super().__init__(CAT_DATASET_PATH, normalization=normalization)
+                 nr_bins=256, nr_of_seqs=3, normalization="Zsc", low_pass_filter=False):
+        super().__init__(CAT_DATASET_PATH, normalization=normalization, low_pass_filter=low_pass_filter)
         np.random.seed(random_seed)
 
         self.nr_bins = nr_bins
@@ -88,7 +88,8 @@ class CatLFP(LFPDataset):
 
         self.validation = interm_data[:, val_indexes, :].reshape(movies_to_keep.size, nr_val_trials, -1, 28000)
 
-        assert (np.all(self.train[0, 0, 0] == self.all_lfp_data[movies_to_keep[0], train_indexes[0], channels_to_keep[0]]))
+        assert (
+            np.all(self.train[0, 0, 0] == self.all_lfp_data[movies_to_keep[0], train_indexes[0], channels_to_keep[0]]))
 
         assert (np.all(self.train[movies_to_keep.size - 1, train_indexes.size - 1, channels_to_keep.size - 1] ==
                        self.all_lfp_data[
