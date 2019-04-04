@@ -51,7 +51,7 @@ def test_model(model_params):
             dir_name = name_prefix + "/" + addr["SOURCE"] + "/"
             create_dir_if_not_exists(os.path.join(model_path, dir_name))
             image_name = os.path.join(dir_name, image_name)
-            for generated_window_size in range(1, 100, 5):
+            for generated_window_size in range(1, 100, 2):
                 get_predictions_with_losses(model,
                                             model_params,
                                             sequence,
@@ -63,10 +63,10 @@ def test_model(model_params):
     for source in ["VAL", "TRAIN"]:
         file_path = model_params.model_path + "/Error_statistics_{}.txt".format(source)
         prepare_file_for_writing(file_path, "Nr estimates, Generated window size, Normalized average error\n")
-        for generated_window_size in range(1, 100, 5):
+        for generated_window_size in range(1, 100, 2):
             get_error_estimates(model,
                                 model_params,
-                                1000,
+                                250,
                                 generated_window_size,
                                 file_path, source)
 
