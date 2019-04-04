@@ -55,12 +55,14 @@ def plot_2_overlapped_series(x1, y1, label1, x2, y2, label2, image_title, save_p
     l, r = plt.xlim()
     low_lim = np.min(y1)
     hi_lim = np.max(y1)
+
+    low_lim = low_lim - abs(low_lim / 2)
+    hi_lim = hi_lim + abs(hi_lim / 2)
+    plt.ylim(low_lim, hi_lim)
     ymin = min(low_lim, np.min(y2))
     ymax = max(hi_lim, np.max(y2))
-    plt.ylim(low_lim - low_lim / 2, hi_lim + hi_lim / 2)
-
     if vlines_coords is not None:
-        plt.vlines(vlines_coords, ymin=ymin, ymax=ymax, lw=0.1)
+        plt.vlines(vlines_coords, ymin=ymin, ymax=ymax, lw=0.2)
     plt.legend()
 
     if prediction_losses is not None:
@@ -71,7 +73,7 @@ def plot_2_overlapped_series(x1, y1, label1, x2, y2, label2, image_title, save_p
         ymax = np.nanmax(prediction_losses)
 
         if vlines_coords is not None:
-            plt.vlines(vlines_coords[:-1], ymin=ymin, ymax=ymax, lw=0.1)
+            plt.vlines(vlines_coords[:-1], ymin=ymin, ymax=ymax, lw=0.2)
 
     plt.savefig(save_path + '/' + image_title + ".png")
     plt.close()
