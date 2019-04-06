@@ -8,7 +8,7 @@ from signal_low_pass import butter_lowpass_filter
 
 class LFPDataset:
 
-    def __init__(self, dataset_path, saved_as_npy=True, normalization=None, low_pass_filter=False):
+    def __init__(self, dataset_path, saved_as_npy=True, normalization=None, cutoff_freq=20):
         self.description_file_path = dataset_path
         if saved_as_npy:
             self.load_from_npy(dataset_path)
@@ -31,9 +31,9 @@ class LFPDataset:
             self.channels = self._parse_channels_data(lfp_file_data.get('bin_file_names'))
             self.stimulus_on_at, self.stimulus_off_at = self._parse_stimulus_on_off(lfp_file_data)
 
-        self.cutoff_freq = 45
+        self.cutoff_freq = cutoff_freq
         self.nr_channels = len(self.channels)
-        self.low_pass_filter = low_pass_filter
+        self.low_pass_filter = cutoff_freq > 0
 
         if normalization is not None:
             if normalization == "Zsc":
@@ -45,7 +45,7 @@ class LFPDataset:
                 self.channels -= np.min(self.channels, axis=1, keepdims=True)
                 self.channels /= np.max(self.channels, axis=1, keepdims=True)
 
-        if low_pass_filter:
+        if self.low_pass_filter:
             for i, channel in enumerate(self.channels):
                 self.channels[i] = butter_lowpass_filter(channel, self.cutoff_freq, 1000)
 

@@ -54,13 +54,13 @@ class ModelTrainingParameters:
                                  channels_to_keep=self.channels_to_keep,
                                  nr_bins=self.nr_bins,
                                  normalization=self.normalization,
-                                 low_pass_filter=self.low_pass_filter)
+                                 cutoff_freq=self.cutoff_freq)
         else:
             self.dataset = klass(conditions_to_keep=self.conditions_to_keep,
                                  channels_to_keep=self.channels_to_keep,
                                  nr_bins=self.nr_bins,
                                  normalization=self.normalization,
-                                 low_pass_filter=self.low_pass_filter)
+                                 cutoff_freq=self.cutoff_freq)
 
     def _load_configuration_from_json(self, config_path):
         with open(config_path, 'r') as f:
@@ -69,7 +69,7 @@ class ModelTrainingParameters:
             setattr(self, prop, val)
 
     def get_model_name(self):
-        return "WvNet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_Norm:{}_{}_Clip:{}_Rnd:{}".format(
+        return "WvNet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_Norm:{}_{}_Clip:{}_Rnd:{}_LPass:{}".format(
             self.nr_layers,
             self.n_epochs,
             self.nr_train_steps,
@@ -81,7 +81,8 @@ class ModelTrainingParameters:
             self.normalization,
             self.loss + ":{}".format(self.nr_bins) if self.get_classifying() else self.loss,
             self.clipvalue,
-            self.random)
+            self.random,
+            self.cutoff_freq)
 
     def _compute_model_path(self, model_path):
         if model_path is None:

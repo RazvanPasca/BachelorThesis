@@ -12,8 +12,8 @@ class MouseLFP(LFPDataset):
                  random_seed=42, nr_bins=256,
                  nr_of_seqs=3,
                  normalization="Zsc",
-                 low_pass_filter=False):
-        super().__init__(dataset_path, normalization=normalization, low_pass_filter=low_pass_filter)
+                 cutoff_freq=50):
+        super().__init__(dataset_path, normalization=normalization, cutoff_freq=cutoff_freq)
         np.random.seed(random_seed)
 
         self.frame_size = frame_size

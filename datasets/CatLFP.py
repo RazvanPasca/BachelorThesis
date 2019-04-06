@@ -8,8 +8,8 @@ import numpy as np
 
 class CatLFP(LFPDataset):
     def __init__(self, movies_to_keep=None, channels_to_keep=None, val_perc=0.20, test_perc=0.0, random_seed=42,
-                 nr_bins=256, nr_of_seqs=3, normalization="Zsc", low_pass_filter=False):
-        super().__init__(CAT_DATASET_PATH, normalization=normalization, low_pass_filter=low_pass_filter)
+                 nr_bins=256, nr_of_seqs=3, normalization="Zsc", cutoff_freq=50):
+        super().__init__(CAT_DATASET_PATH, normalization=normalization, cutoff_freq=cutoff_freq)
         np.random.seed(random_seed)
 
         self.nr_bins = nr_bins
