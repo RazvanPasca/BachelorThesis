@@ -1,10 +1,10 @@
 from keras.callbacks import TensorBoard, CSVLogger, ModelCheckpoint
 
-from plot_utils import PlotCallback
+from plot_utils import PlotCallback, TensorBoardWrapper
 from test_model import test_model
 from tf_utils import configure_gpu
 from training_parameters import ModelTrainingParameters
-from wavenet_model import get_basic_generative_model
+from model import get_basic_generative_model
 
 
 def log_training_session(model_params):
@@ -27,8 +27,15 @@ def train_model(model_params):
                                        regularization_coef=model_params.regularization_coef,
                                        nr_output_classes=model_params.nr_bins)
 
-    tensor_board_callback = TensorBoard(log_dir=model_params.model_path,
-                                        write_graph=True)
+    tensor_board_callback = TensorBoardWrapper(
+        batch_gen=model_params.dataset.validation_frame_generator(model_params.frame_size,
+                                                                  model_params.batch_size,
+                                                                  model_params.get_classifying()),
+        nb_steps=1,
+        log_dir=model_params.model_path,
+        write_graph=True,
+        histogram_freq=1,
+        batch_size=model_params.batch_size)
     log_callback = CSVLogger(model_params.model_path + "/session_log.csv")
     plot_figure_callback = PlotCallback(model_params, 5, nr_predictions_steps=100,
                                         starting_point=1200 - model_params.frame_size)

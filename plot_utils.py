@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from keras import callbacks
+from keras.callbacks import TensorBoard
 
 
 def create_dir_if_not_exists(directory_path):
@@ -140,6 +141,23 @@ def get_predictions(model, model_params, epoch, starting_point, nr_prediction_st
                                         1, plot=True)
             get_predictions_with_losses(model, model_params, sequence, nr_prediction_steps, image_name, starting_point,
                                         nr_prediction_steps, plot=True)
+
+
+class TensorBoardWrapper(TensorBoard):
+    '''Sets the self.validation_data property for use with TensorBoard callback.'''
+
+    def __init__(self, batch_gen, nb_steps, **kwargs):
+        super().__init__(**kwargs)
+        self.batch_gen = batch_gen  # The generator.
+        self.nb_steps = nb_steps  # Number of times to call next() on the generator.
+
+    def on_epoch_end(self, epoch, logs=None):
+        # Fill in the `validation_data` property. Obviously this is specific to how your generator works.
+        # Below is an example that yields images and classification tags.
+        # After it's filled in, the regular on_epoch_end method has access to the validation_data.
+        x, y = next(self.batch_gen)
+        self.validation_data = (x, y.reshape(-1, 1), np.ones((self.batch_size)))
+        return super().on_epoch_end(epoch, logs)
 
 
 class PlotCallback(callbacks.Callback):

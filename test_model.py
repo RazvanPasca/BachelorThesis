@@ -10,6 +10,8 @@ from tf_utils import configure_gpu
 from training_parameters import ModelTrainingParameters
 
 
+
+
 def get_error_estimates(model, model_parameters, nr_of_estimates, generated_window_size, file_to_save, source):
     sequence, addr = model_parameters.dataset.get_random_sequence_from(source)
 
