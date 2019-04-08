@@ -49,6 +49,7 @@ def train_model(model_params):
         callbacks=[tensor_board_callback, plot_figure_callback, log_callback, save_model_callback])
 
     print('Saving model and results...')
+    model.save(model_params.model_path + "/" + "final_model.h5")
     print('\nDone!')
 
 

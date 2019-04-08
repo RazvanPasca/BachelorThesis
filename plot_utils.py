@@ -27,10 +27,9 @@ def decode_model_output(model_logits, model_params):
 def plot_predictions(original_sequence, image_title, nr_predictions, frame_size, predicted_sequence,
                      save_path,
                      starting_point,
-                     teacher_forcing,
                      prediction_losses=None,
                      vlines_coords=None):
-    title = image_title + "TF:{}".format(teacher_forcing)
+    title = image_title
     x1 = range(starting_point + frame_size - 5, starting_point + nr_predictions + frame_size)
     x2 = range(starting_point + frame_size, starting_point + nr_predictions + frame_size)
     y1 = original_sequence[x1]
@@ -110,7 +109,7 @@ def get_predictions_with_losses(model, model_params, original_sequence, nr_predi
         image_name += "GenSteps:{}_".format(generated_window_size)
         plot_predictions(original_sequence, image_name, nr_actual_predictions,
                          model_params.frame_size, predicted_sequence, model_params.model_path, starting_point,
-                         teacher_forcing="Partial", prediction_losses=predictions_losses,
+                         prediction_losses=predictions_losses,
                          vlines_coords=vlines_coords)
 
     return predictions_losses
@@ -131,9 +130,11 @@ def get_predictions(model, model_params, epoch, starting_point, nr_prediction_st
 
     for source in pred_seqs:
         for sequence, addr in pred_seqs[source]:
-            image_name = generate_prediction_name(addr)
-            image_name = "/" + addr["SOURCE"] + "/" + "E:{}_".format(epoch) + image_name
-            create_dir_if_not_exists(model_params.model_path + "/" + addr["SOURCE"])
+            image_prefix = generate_prediction_name(addr)
+            image_prefix = addr["SOURCE"] + "/" + image_prefix
+            image_name = image_prefix + "/" + "E:{}".format(epoch)
+
+            create_dir_if_not_exists(model_params.model_path + "/" + image_prefix)
 
             get_predictions_with_losses(model, model_params, sequence, nr_prediction_steps, image_name, starting_point,
                                         1, plot=True)

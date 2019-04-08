@@ -47,10 +47,12 @@ def test_model(model_params):
     print("Started testing model...")
     for source in pred_seqs:
         for sequence, addr in pred_seqs[source]:
-            image_name = generate_prediction_name(addr)
-            dir_name = name_prefix + "/" + addr["SOURCE"] + "/"
-            create_dir_if_not_exists(os.path.join(model_path, dir_name))
-            image_name = os.path.join(dir_name, image_name)
+            image_prefix = generate_prediction_name(addr)
+            image_prefix = name_prefix + "/" + addr["SOURCE"] + "/" + image_prefix
+            image_name = image_prefix + "/"
+
+            create_dir_if_not_exists(model_params.model_path + "/" + image_prefix)
+
             for generated_window_size in range(1, 100, 2):
                 get_predictions_with_losses(model,
                                             model_params,
@@ -74,7 +76,7 @@ def test_model(model_params):
 
 
 if __name__ == '__main__':
-    model_path = "/home/pasca/School/Licenta/Naturix/LFP_models/MouseControl/Movies:None/Channels:[1]/WvNet_L:8_Ep:300_StpEp:1603.0_Lr:1e-05_BS:32_Fltrs:32_SkipFltrs:64_L2:0.0001_Norm:Zsc_CAT:512_Clip:True_Rnd:True/2019-03-25 16:09"
+    model_path = "/home/pasca/School/Licenta/Naturix/LFP_models/MouseControl/Movies:None/Channels:[32]/WvNet_L:6_Ep:10_StpEp:80.0_Lr:1e-05_BS:32_Fltrs:32_SkipFltrs:64_L2:0.0001_Norm:Zsc_CAT:256_Clip:0.5_Rnd:True_LPass:40/2019-04-08 14:51"
     model_parameters = ModelTrainingParameters(model_path)
     configure_gpu(model_parameters.gpu)
     test_model(model_parameters)
