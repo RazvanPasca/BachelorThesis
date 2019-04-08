@@ -28,10 +28,7 @@ def train_model(model_params):
                                        nr_output_classes=model_params.nr_bins)
 
     tensor_board_callback = TensorBoard(log_dir=model_params.model_path,
-                                        write_graph=True,
-                                        write_images=True,
-                                        histogram_freq=5)
-
+                                        write_graph=True)
     log_callback = CSVLogger(model_params.model_path + "/session_log.csv")
     plot_figure_callback = PlotCallback(model_params, 5, nr_predictions_steps=100,
                                         starting_point=1200 - model_params.frame_size)
