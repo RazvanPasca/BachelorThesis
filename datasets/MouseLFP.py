@@ -1,3 +1,4 @@
+import datetime
 import os
 
 import matplotlib.pyplot as plt
@@ -20,7 +21,6 @@ class MouseLFP(LFPDataset):
         self.nr_bins = nr_bins
         self.random_seed = random_seed
         self.normalization = normalization
-        # self.channels = self.channels[:-1]  # Discard channel 33 which records heart beats
         self.nr_channels = len(self.channels)
         self.nr_of_orientations = 8
         self.nr_of_stimulus_luminosity_levels = 3
@@ -50,7 +50,7 @@ class MouseLFP(LFPDataset):
             'train': [self.get_random_sequence_from('TRAIN') for _ in range(nr_of_seqs)]
         }
 
-        print("dada")
+        np.random.seed(datetime.datetime.now().microsecond)
 
     def _split_lfp_data(self):
         self.all_lfp_data = []

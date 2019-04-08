@@ -1,3 +1,4 @@
+import datetime
 import os
 
 from datasets.LFPDataset import LFPDataset
@@ -10,8 +11,8 @@ class CatLFP(LFPDataset):
     def __init__(self, movies_to_keep=None, channels_to_keep=None, val_perc=0.20, test_perc=0.0, random_seed=42,
                  nr_bins=256, nr_of_seqs=3, normalization="Zsc", cutoff_freq=50):
         super().__init__(CAT_DATASET_PATH, normalization=normalization, cutoff_freq=cutoff_freq)
-        np.random.seed(random_seed)
 
+        np.random.seed(random_seed)
         self.nr_bins = nr_bins
         self.random_seed = random_seed
         self.normalization = normalization
@@ -35,6 +36,8 @@ class CatLFP(LFPDataset):
             'val': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
             'train': [self.get_random_sequence_from('TRAIN') for _ in range(nr_of_seqs)]
         }
+
+        np.random.seed(datetime.datetime.now().microsecond)
 
     def _split_lfp_into_movies(self):
         self.all_lfp_data = []
