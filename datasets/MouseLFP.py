@@ -33,7 +33,7 @@ class MouseLFP(LFPDataset):
         else:
             self.channels_to_keep = np.array(channels_to_keep)
 
-        self._compute_values_range(channels_to_keep=[15])
+        self._compute_values_range(channels_to_keep=self.channels_to_keep)
         self._pre_compute_bins()
         self._split_lfp_data()
 
@@ -75,11 +75,6 @@ class MouseLFP(LFPDataset):
         min_train_seq = np.floor(self.values_range[0])
         max_train_seq = np.ceil(self.values_range[1])
         self.bins = np.linspace(min_train_seq, max_train_seq, self.nr_bins)
-        pyplot.hist(self.channels[15], self.nr_bins)
-        pyplot.title(
-            "After applying norm with Lpass{} and {}".format(self.cutoff_freq, self.normalization))
-        pyplot.show()
-
         self.bin_size = self.bins[1] - self.bins[0]
 
     def _encode_input_to_bin(self, target_val):
@@ -102,6 +97,10 @@ class MouseLFP(LFPDataset):
         test_indexes = trial_indexes[-nr_test_trials:]
 
         interm_data = self.all_lfp_data[conditions_to_keep, :, channels_to_keep, :]
+
+        self.channels_lookup = {}
+        for i, channel in enumerate(channels_to_keep):
+            self.channels_lookup[i] = channel
 
         self.train = interm_data[:, train_indexes, :].reshape(self.number_of_conditions, nr_train_trials, -1,
                                                               self.trial_length)
@@ -216,6 +215,6 @@ class MouseLFP(LFPDataset):
         data_address = {
             'Condition': condition_index,
             'T': trial_index,
-            'C': channel_index
+            'C': self.channels_lookup[channel_index]
         }
-        return data_source[data_address['Condition'], data_address['T'], data_address['C'], :], data_address
+        return data_source[data_address['Condition'], data_address['T'], channel_index, :], data_address
