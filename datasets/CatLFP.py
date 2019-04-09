@@ -49,7 +49,7 @@ class CatLFP(LFPDataset):
                     condition.append(trial)
             self.all_lfp_data.append(np.array(condition))
 
-        self.all_lfp_data = np.array(self.all_lfp_data, dtype=np.float64)
+        self.all_lfp_data = np.array(self.all_lfp_data, dtype=np.float32)
         self.channels = None
 
     def _pre_compute_bins(self):

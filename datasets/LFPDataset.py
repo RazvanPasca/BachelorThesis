@@ -68,7 +68,7 @@ class LFPDataset:
         return val
 
     def mu_law_encoding(self, x, mu=255):
-        bin = np.int8(rescale(x, 1, -1, mu, 0))
+        bin = np.rint(rescale(x, 1, -1, mu, 0))
         return bin
 
     def inv_mu_law_fn(self, x, mu=255):

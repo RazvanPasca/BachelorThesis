@@ -12,11 +12,11 @@
   "clip_grad_by_value": 5,
   "nr_bins": 256,
   "regularization_coef": 0.0001,
-  "normalization": "Zsc",
+  "normalization": "MuLaw",
   "dataset": "MouseControl",
   "train_coverage_per_epoch": 0.005,
   "val_coverage_per_epoch": 0.010,
   "save_path": "./LFP_models",
-  "cutoff_freq": 40,
+  "cutoff_freq": -1,
   "gpu": 0
 }

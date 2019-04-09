@@ -67,7 +67,7 @@ class MouseLFP(LFPDataset):
                     # "trial = self.channels[:, events[0]['timestamp']:(events[0]['timestamp'] + 4175)]"
                     conditions.append(trial)
             self.all_lfp_data.append(np.array(conditions))
-        self.all_lfp_data = np.array(self.all_lfp_data, dtype=np.float64)
+        self.all_lfp_data = np.array(self.all_lfp_data, dtype=np.float32)
         self.channels = None
 
     def _pre_compute_bins(self):
@@ -76,7 +76,10 @@ class MouseLFP(LFPDataset):
         max_train_seq = np.ceil(self.values_range[1])
         self.bins = np.linspace(min_train_seq, max_train_seq, self.nr_bins)
         pyplot.hist(self.channels[15], self.nr_bins)
+        pyplot.title(
+            "After applying norm with Lpass{} and {}".format(self.cutoff_freq, self.normalization))
         pyplot.show()
+
         self.bin_size = self.bins[1] - self.bins[0]
 
     def _encode_input_to_bin(self, target_val):
