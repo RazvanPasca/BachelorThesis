@@ -3,7 +3,7 @@ import json
 import numpy as np
 import os
 
-from signal_low_pass import butter_lowpass_filter
+from signal_utils import butter_lowpass_filter, rescale
 
 
 class LFPDataset:
@@ -35,19 +35,47 @@ class LFPDataset:
         self.nr_channels = len(self.channels)
         self.low_pass_filter = cutoff_freq > 0
 
+        if self.low_pass_filter:
+            for i, channel in enumerate(self.channels):
+                self.channels[i] = butter_lowpass_filter(channel, self.cutoff_freq, 1000)
+
+        self.mu_law = False
         if normalization is not None:
             if normalization == "Zsc":
                 mean = np.mean(self.channels, axis=1, keepdims=True)
                 std = np.std(self.channels, axis=1, keepdims=True)
                 self.channels -= mean
                 self.channels /= std
-            else:
+
+            elif normalization == "Brute":
                 self.channels -= np.min(self.channels, axis=1, keepdims=True)
                 self.channels /= np.max(self.channels, axis=1, keepdims=True)
 
-        if self.low_pass_filter:
-            for i, channel in enumerate(self.channels):
-                self.channels[i] = butter_lowpass_filter(channel, self.cutoff_freq, 1000)
+            elif normalization == "MuLaw":
+                """I want to bring it in (-1,1) to be able to apply MuLaw after"""
+                self.limits = {}
+                self.mu_law = True
+                for i, channel in enumerate(self.channels):
+                    np_min = np.min(channel)
+                    np_max = np.max(channel)
+                    self.limits[i] = (np_min, np_max)
+                    self.channels[i] = self.mu_law_fn(
+                        rescale(channel, old_max=np_max, old_min=np_min, new_max=1, new_min=-1))
+
+    def mu_law_fn(self, x, mu=255):
+        """Maps [-1,1] to [0,255] as classes to be used for cross entropy"""
+        val = np.sign(x) * (np.log(1 + mu * np.absolute(x)) / np.log(1 + mu))
+        return val
+
+    def mu_law_encoding(self, x, mu=255):
+        bin = np.int8(rescale(x, 1, -1, mu, 0))
+        return bin
+
+    def inv_mu_law_fn(self, x, mu=255):
+        """Maps [0,255] discretized to [-1,1] which then needs to be rescaled when decoding the output
+        using the max and min values of the provenience channel"""
+        val = np.sign(x) * (1 / mu) * (((1 + mu) ** np.abs(x)) - 1)
+        return val
 
     def _parse_stimulus_data(self, condition_file_path):
         with open(os.path.join(os.path.dirname(self.description_file_path), condition_file_path),
@@ -121,7 +149,11 @@ class LFPDataset:
         else:
             raise ValueError("Please pick a valid partition from: TRAIN, VAL and TEST")
 
-    def _compute_values_range(self):
-        min_val = np.min(self.channels)
-        max_val = np.max(self.channels)
+    def _compute_values_range(self, channels_to_keep=None):
+        if channels_to_keep is None:
+            min_val = np.min(self.channels)
+            max_val = np.max(self.channels)
+        else:
+            min_val = np.min(self.channels[channels_to_keep])
+            max_val = np.max(self.channels[channels_to_keep])
         self.values_range = min_val, max_val

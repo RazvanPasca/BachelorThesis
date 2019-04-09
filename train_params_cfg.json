@@ -1,25 +1,22 @@
 {
   "channels_to_keep": [
-    31
+    32
   ],
   "n_epochs": 10,
   "batch_size": 32,
   "nr_layers": 6,
-  "frame_size": 128,
   "nr_filters": 32,
-  "frame_shift": 8,
+  "skip_conn_filters": 64,
   "lr": 1e-05,
   "loss": "CAT",
-  "clipvalue": 0.5,
-  "random": true,
+  "clip_grad_by_value": 5,
   "nr_bins": 256,
-  "skip_conn_filters": 64,
   "regularization_coef": 0.0001,
   "normalization": "Zsc",
   "dataset": "MouseControl",
   "train_coverage_per_epoch": 0.005,
   "val_coverage_per_epoch": 0.010,
   "save_path": "./LFP_models",
-  "cutoff_freq": 50,
+  "cutoff_freq": 40,
   "gpu": 0
 }

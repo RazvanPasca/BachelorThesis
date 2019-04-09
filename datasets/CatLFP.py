@@ -61,7 +61,10 @@ class CatLFP(LFPDataset):
 
     def _encode_input_to_bin(self, target_val):
         if target_val not in self.cached_val_bin:
-            self.cached_val_bin[target_val] = np.digitize(target_val, self.bins, right=False)
+            if self.mu_law:
+                self.cached_val_bin[target_val] = self.mu_law_encoding(target_val)
+            else:
+                self.cached_val_bin[target_val] = np.digitize(target_val, self.bins, right=False)
         return self.cached_val_bin[target_val]
 
     def _get_train_val_test_split(self, val_perc, test_perc, random=False):

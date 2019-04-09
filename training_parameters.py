@@ -9,8 +9,7 @@ LOCAL_CONFIG_PATH = "train_params_cfg.json"
 class ModelTrainingParameters:
     def __init__(self, model_path=None):
         self.save_path = None
-        self.random = None
-        self.clipvalue = None
+        self.clip_grad_by_value = None
         self.loss = None
         self.regularization_coef = None
         self.skip_conn_filters = None
@@ -25,7 +24,6 @@ class ModelTrainingParameters:
         self.conditions_to_keep = None
         self.movies_to_keep = None
         self.n_epochs = None
-        self.frame_shift = None
 
         if model_path is not None:
             config_path = os.path.join(model_path, "train_params_cfg.json")
@@ -69,7 +67,7 @@ class ModelTrainingParameters:
             setattr(self, prop, val)
 
     def get_model_name(self):
-        return "WvNet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_Norm:{}_{}_Clip:{}_Rnd:{}_LPass:{}".format(
+        return "WvNet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_Norm:{}_{}_GradClip:{}_LPass:{}".format(
             self.nr_layers,
             self.n_epochs,
             self.nr_train_steps,
@@ -80,8 +78,7 @@ class ModelTrainingParameters:
             self.regularization_coef,
             self.normalization,
             self.loss + ":{}".format(self.nr_bins) if self.get_classifying() else self.loss,
-            self.clipvalue,
-            self.random,
+            self.clip_grad_by_value,
             self.cutoff_freq)
 
     def _compute_model_path(self, model_path):

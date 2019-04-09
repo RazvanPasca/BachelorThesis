@@ -22,7 +22,7 @@ def train_model(model_params):
                                        model_params.nr_layers,
                                        lr=model_params.lr,
                                        loss=model_params.loss,
-                                       clipvalue=model_params.clipvalue,
+                                       clipvalue=model_params.clip_grad_by_value,
                                        skip_conn_filters=model_params.skip_conn_filters,
                                        regularization_coef=model_params.regularization_coef,
                                        nr_output_classes=model_params.nr_bins)

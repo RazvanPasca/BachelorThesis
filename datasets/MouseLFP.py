@@ -3,6 +3,7 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import pyplot
 
 from datasets.LFPDataset import LFPDataset
 
@@ -26,14 +27,15 @@ class MouseLFP(LFPDataset):
         self.nr_of_stimulus_luminosity_levels = 3
         self.number_of_conditions = 24
         self.trial_length = 2672  # 4175
-        self._compute_values_range()
-        self._pre_compute_bins()
-        self._split_lfp_data()
 
         if channels_to_keep is None:
             self.channels_to_keep = np.array(range(self.nr_channels))
         else:
             self.channels_to_keep = np.array(channels_to_keep)
+
+        self._compute_values_range(channels_to_keep=[15])
+        self._pre_compute_bins()
+        self._split_lfp_data()
 
         if conditions_to_keep is None:
             self.conditions_to_keep = np.array(range(self.number_of_conditions))
@@ -41,8 +43,6 @@ class MouseLFP(LFPDataset):
             self.conditions_to_keep = np.array(conditions_to_keep) - 1
             self.number_of_conditions = len(conditions_to_keep)
 
-        indexes = [[0, 100], [200, 300], [400, 500]]
-        # self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
         self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
 
         self.prediction_sequences = {
@@ -75,11 +75,16 @@ class MouseLFP(LFPDataset):
         min_train_seq = np.floor(self.values_range[0])
         max_train_seq = np.ceil(self.values_range[1])
         self.bins = np.linspace(min_train_seq, max_train_seq, self.nr_bins)
+        pyplot.hist(self.channels[15], self.nr_bins)
+        pyplot.show()
         self.bin_size = self.bins[1] - self.bins[0]
 
     def _encode_input_to_bin(self, target_val):
         if target_val not in self.cached_val_bin:
-            self.cached_val_bin[target_val] = np.digitize(target_val, self.bins, right=False)
+            if self.mu_law:
+                self.cached_val_bin[target_val] = self.mu_law_encoding(target_val)
+            else:
+                self.cached_val_bin[target_val] = np.digitize(target_val, self.bins, right=False)
         return self.cached_val_bin[target_val]
 
     def _get_train_val_test_split_channel_wise(self, channels_to_keep, conditions_to_keep, val_perc, test_perc):

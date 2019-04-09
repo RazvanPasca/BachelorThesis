@@ -5,6 +5,8 @@ import numpy as np
 from keras import callbacks
 from keras.callbacks import TensorBoard
 
+from signal_utils import rescale
+
 
 def create_dir_if_not_exists(directory_path):
     if not os.path.exists(directory_path):
@@ -16,10 +18,15 @@ def prepare_file_for_writing(file_path, text):
         f.write(text)
 
 
-def decode_model_output(model_logits, model_params):
+def decode_model_output(model_logits, model_params, channel):
     if model_params.get_classifying():
         bin_index = np.argmax(model_logits)
-        a = (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
+        if model_params.dataset.mu_law:
+            a = model_params.dataset.inv_mu_law_fn(bin_index)
+            limits_channel_ = model_params.dataset.limits[channel]
+            a = rescale(a, old_max=1, old_min=-1, new_max=limits_channel_[1], new_min=limits_channel_[0])
+        else:
+            a = (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
         return a
     else:
         return model_logits
@@ -79,6 +86,18 @@ def plot_2_overlapped_series(x1, y1, label1, x2, y2, label2, image_title, save_p
     plt.close()
 
 
+def get_channel_index_from_name(name):
+    index = name.find("C:")
+    index_ = index + 2
+    c = name[index_]
+
+    while c.isdigit():
+        index_ += 1
+        c = name[index_]
+
+    return int(name[index + 2:index_])
+
+
 def get_predictions_with_losses(model, model_params, original_sequence, nr_predictions, image_name, starting_point,
                                 generated_window_size, plot=True):
     nr_actual_predictions = min(nr_predictions, original_sequence.size - starting_point - model_params.frame_size - 1)
@@ -98,7 +117,9 @@ def get_predictions_with_losses(model, model_params, original_sequence, nr_predi
                 (-1, model_params.frame_size, 1))
             vlines_coords.append(starting_point + prediction_nr + model_params.frame_size - 1)
 
-        predicted = decode_model_output(model.predict(input_sequence), model_params)
+        channel_index = get_channel_index_from_name(image_name)
+
+        predicted = decode_model_output(model.predict(input_sequence), model_params, channel=channel_index)
         predicted_sequence[prediction_nr] = predicted
         input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted, (-1, 1, 1)), axis=1)
 
