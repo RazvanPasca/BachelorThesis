@@ -1,10 +1,11 @@
 from keras.callbacks import TensorBoard, CSVLogger, ModelCheckpoint
+from keras.losses import mean_squared_error, sparse_categorical_crossentropy
 
 from plot_utils import PlotCallback, TensorBoardWrapper
 from test_model import test_model
 from tf_utils import configure_gpu
 from training_parameters import ModelTrainingParameters
-from model import get_basic_generative_model
+from model import get_wavenet_model
 
 
 def log_training_session(model_params):
@@ -17,25 +18,31 @@ def log_training_session(model_params):
 def train_model(model_params):
     log_training_session(model_params)
 
-    model = get_basic_generative_model(model_params.nr_filters,
-                                       model_params.frame_size,
-                                       model_params.nr_layers,
-                                       lr=model_params.lr,
-                                       loss=model_params.loss,
-                                       clipvalue=model_params.clip_grad_by_value,
-                                       skip_conn_filters=model_params.skip_conn_filters,
-                                       regularization_coef=model_params.regularization_coef,
-                                       nr_output_classes=model_params.nr_bins)
+    model = get_wavenet_model(model_params.nr_filters,
+                              model_params.frame_size,
+                              model_params.nr_layers,
+                              lr=model_params.lr,
+                              loss=model_params.loss,
+                              clipvalue=model_params.clip_grad_by_value,
+                              skip_conn_filters=model_params.skip_conn_filters,
+                              regularization_coef=model_params.regularization_coef,
+                              nr_output_classes=model_params.nr_bins,
+                              multiloss_weights=model_params.multiloss_weights)
 
-    tensor_board_callback = TensorBoardWrapper(
-        batch_gen=model_params.dataset.validation_frame_generator(model_params.frame_size,
-                                                                  model_params.batch_size,
-                                                                  model_params.get_classifying()),
-        nb_steps=1,
-        log_dir=model_params.model_path,
-        write_graph=True,
-        histogram_freq=1,
-        batch_size=model_params.batch_size)
+    #TODO make activation callback work with multiple output
+
+    # tensorboard_callback = TensorBoardWrapper(
+    #     batch_gen=model_params.dataset.validation_frame_generator(model_params.frame_size,
+    #                                                               model_params.batch_size,
+    #                                                               model_params.get_classifying()),
+    #     nb_steps=1,
+    #     log_dir=model_params.model_path,
+    #     write_graph=True,
+    #     histogram_freq=1,
+    #     batch_size=model_params.batch_size)
+
+    tensorboard_callback = TensorBoard(log_dir=model_params.model_path,
+                                       write_graph=True, )
     log_callback = CSVLogger(model_params.model_path + "/session_log.csv")
     plot_figure_callback = PlotCallback(model_params, 5, nr_predictions_steps=100,
                                         starting_point=1200 - model_params.frame_size)
@@ -53,7 +60,7 @@ def train_model(model_params):
                                                                         model_params.get_classifying()),
         validation_steps=model_params.nr_val_steps,
         verbose=2,
-        callbacks=[tensor_board_callback, plot_figure_callback, log_callback, save_model_callback])
+        callbacks=[tensorboard_callback, plot_figure_callback, log_callback, save_model_callback])
 
     print('Saving model and results...')
     model.save(model_params.model_path + "/" + "final_model.h5")

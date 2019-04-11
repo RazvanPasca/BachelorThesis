@@ -5,8 +5,6 @@ import numpy as np
 from keras import callbacks
 from keras.callbacks import TensorBoard
 
-from signal_utils import rescale
-
 
 def create_dir_if_not_exists(directory_path):
     if not os.path.exists(directory_path):
@@ -19,14 +17,11 @@ def prepare_file_for_writing(file_path, text):
 
 
 def decode_model_output(model_logits, model_params, channel):
-    if model_params.get_classifying():
+    if model_params.get_classifying() == 2:
+        return model_logits[0]
+    elif model_params.get_classifying() == 1:
         bin_index = np.argmax(model_logits)
-        if model_params.dataset.mu_law:
-            a = model_params.dataset.inv_mu_law_fn(bin_index)
-            # limits_channel_ = model_params.dataset.limits[channel]
-            # a = rescale(a, old_max=1, old_min=-1, new_max=limits_channel_[1], new_min=limits_channel_[0])
-        else:
-            a = (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
+        a = (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
         return a
     else:
         return model_logits
@@ -177,7 +172,7 @@ class TensorBoardWrapper(TensorBoard):
         # Below is an example that yields images and classification tags.
         # After it's filled in, the regular on_epoch_end method has access to the validation_data.
         x, y = next(self.batch_gen)
-        self.validation_data = (x, y.reshape(-1, 1), np.ones((self.batch_size)))
+        self.validation_data = (x, y, np.ones(self.batch_size))
         return super().on_epoch_end(epoch, logs)
 
 

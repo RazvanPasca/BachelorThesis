@@ -1,20 +1,24 @@
 {
   "channels_to_keep": [
-    32
+    15
   ],
   "n_epochs": 10,
-  "batch_size": 32,
+  "batch_size": 64,
   "nr_layers": 6,
   "nr_filters": 32,
   "skip_conn_filters": 64,
   "lr": 1e-05,
-  "loss": "CAT",
+  "loss": "MAE_CE",
   "clip_grad_by_value": 5,
   "nr_bins": 256,
   "regularization_coef": 0.0001,
-  "normalization": "MuLaw",
+  "normalization": "Zsc",
   "dataset": "MouseControl",
   "train_coverage_per_epoch": 0.005,
+  "multiloss_weights": {
+    "Regression": 1,
+    "Sfmax": 1
+  },
   "val_coverage_per_epoch": 0.010,
   "save_path": "./LFP_models",
   "cutoff_freq": -1,

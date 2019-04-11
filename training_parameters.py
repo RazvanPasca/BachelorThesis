@@ -95,7 +95,12 @@ class ModelTrainingParameters:
             self.model_path = model_path
 
     def get_classifying(self):
-        return self.loss == "CAT"
+        if self.loss == "CE":
+            return 1
+        elif self.loss == "MSE_CE" or self.loss == "MAE_CE":
+            return 2
+        else:
+            return -1
 
     def serialize_to_json(self, path):
         attrs_dict = dict(self.__dict__)
