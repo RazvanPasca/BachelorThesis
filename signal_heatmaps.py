@@ -4,9 +4,9 @@ from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import linkage
 from scipy.spatial.distance import pdist, squareform
 
-from datasets.DATASET_PATHS import GABI_CAT_DATASET_PATH as CAT_DATASET_PATH
-from datasets.DATASET_PATHS import GABI_MOUSE_DATASET_PATH as MOUSE_DATASET_PATH
-from datasets.DATASET_PATHS import GABI_MOUSEACH_DATASET_PATH as MOUSEACH_DATASET_PATH
+from datasets.DATASET_PATHS import PASCA_CAT_DATASET_PATH as CAT_DATASET_PATH
+from datasets.DATASET_PATHS import PASCA_MOUSE_DATASET_PATH as MOUSE_DATASET_PATH
+from datasets.DATASET_PATHS import PASCA_MOUSEACH_DATASET_PATH as MOUSEACH_DATASET_PATH
 from datasets.LFPDataset import LFPDataset
 
 
@@ -81,12 +81,10 @@ def compute_serial_matrix(dist_mat, method="ward"):
 if __name__ == '__main__':
     dataset = LFPDataset(MOUSEACH_DATASET_PATH)
     dataset.channels = dataset.channels[:-1]
-    dataset.nr_channels -=1
+    dataset.nr_channels -= 1
     compute_distance_matrix(dataset, 'correlation')
 
     dataset = LFPDataset(MOUSE_DATASET_PATH)
     dataset.channels = dataset.channels[:-1]
-    dataset.nr_channels -=1
+    dataset.nr_channels -= 1
     compute_distance_matrix(dataset, 'correlation')
-
-

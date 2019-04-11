@@ -18,13 +18,20 @@ def prepare_file_for_writing(file_path, text):
 
 def decode_model_output(model_logits, model_params, channel):
     if model_params.get_classifying() == 2:
-        return model_logits[0]
+        if model_params.output == "Regression":
+            return model_logits[0][0]
+        else:
+            return get_bin_output(model_logits[1], model_params)
     elif model_params.get_classifying() == 1:
-        bin_index = np.argmax(model_logits)
-        a = (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
-        return a
+        return get_bin_output(model_logits, model_params)
     else:
         return model_logits
+
+
+def get_bin_output(model_logits, model_params):
+    bin_index = np.argmax(model_logits)
+    a = (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
+    return a
 
 
 def plot_predictions(original_sequence, image_title, nr_predictions, frame_size, predicted_sequence,

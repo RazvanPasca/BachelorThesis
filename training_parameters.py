@@ -68,7 +68,10 @@ class ModelTrainingParameters:
 
     def get_model_name(self):
         if self.get_classifying() == 2:
-            loss = self.loss + ":{}".format(self.nr_bins) + "_" + str(self.multiloss_weights)
+            loss = self.loss + ":{}_RegW:{}_SfmaxW:{}_Output:{}".format(self.nr_bins,
+                                                                        self.multiloss_weights["Regression"],
+                                                                        self.multiloss_weights["Sfmax"],
+                                                                        self.output)
         elif self.get_classifying() == 1:
             loss = self.loss + ":{}".format(self.nr_bins)
         else:
@@ -85,7 +88,8 @@ class ModelTrainingParameters:
             self.normalization,
             loss,
             self.clip_grad_by_value,
-            self.cutoff_freq,)
+            self.cutoff_freq,
+        )
 
     def _compute_model_path(self, model_path):
         if model_path is None:
