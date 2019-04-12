@@ -1,32 +1,51 @@
+import os
+
 import numpy as np
-import seaborn as sns
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import linkage
 from scipy.spatial.distance import pdist, squareform
 
-from datasets.DATASET_PATHS import PASCA_CAT_DATASET_PATH as CAT_DATASET_PATH
-from datasets.DATASET_PATHS import PASCA_MOUSE_DATASET_PATH as MOUSE_DATASET_PATH
-from datasets.DATASET_PATHS import PASCA_MOUSEACH_DATASET_PATH as MOUSEACH_DATASET_PATH
+from datasets.DATASET_PATHS import GABI_MOUSEACH_DATASET_PATH as MOUSEACH_DATASET_PATH
+from datasets.DATASET_PATHS import GABI_MOUSE_DATASET_PATH as MOUSE_DATASET_PATH
 from datasets.LFPDataset import LFPDataset
+from datasets.MouseControl import MouseControl
+from datasets.MouseLFP import MouseLFP
 
 
-def compute_distance_matrix(dataset, distance_metric):
-    dist_mat = squareform(pdist(dataset.channels, distance_metric))
-    N = len(dataset.channels)
-    methods = ["ward", "single", "average", "complete"]
-    plt.pcolormesh(dist_mat)
-    plt.xlim([0, N])
-    plt.ylim([0, N])
-    plt.show()
+# methods = ["ward", "single", "average", "complete"]
+
+
+def compute_heatmap_on_data(data,
+                            distance_metric,
+                            save_location,
+                            plot_title,
+                            methods=["average"],
+                            add_order_labels=True):
+    if not os.path.exists(save_location):
+        os.makedirs(save_location)
+
+    dist_mat = squareform(pdist(data, distance_metric))
+    N = len(data)
+
+    # plt.pcolormesh(dist_mat)
+    # plt.xlim([0, N])
+    # plt.ylim([0, N])
+    # plt.savefig(os.path.join("./heatmaps/{0}-Method:{1}.png".format(plot_title, "unordered")))
+
+    results = []
     for method in methods:
-        print("Method:\t", method)
-
         ordered_dist_mat, res_order, res_linkage = compute_serial_matrix(dist_mat, method)
 
         plt.pcolormesh(ordered_dist_mat)
         plt.xlim([0, N])
         plt.ylim([0, N])
-        plt.show()
+        if add_order_labels:
+            plt.yticks([x for x in range(len(res_order))], res_order)
+        plt.savefig(os.path.join(save_location, "{0}-{1}.png".format(plot_title, method)))
+        # plt.show()
+
+        results.append((ordered_dist_mat, res_order, res_linkage, dist_mat))
+    return results
 
 
 def seriation(Z, N, cur_index):
@@ -78,13 +97,135 @@ def compute_serial_matrix(dist_mat, method="ward"):
     return seriated_dist, res_order, res_linkage
 
 
-if __name__ == '__main__':
+def compute_heatmaps_on_channels():
     dataset = LFPDataset(MOUSEACH_DATASET_PATH)
-    dataset.channels = dataset.channels[:-1]
-    dataset.nr_channels -= 1
-    compute_distance_matrix(dataset, 'correlation')
+    mask = np.ones(len(dataset.channels), dtype=bool)
+    mask[[3, 6, 32]] = False
+    dataset.channels = dataset.channels[mask]
+    dataset.nr_channels -= 3
+    compute_heatmap_on_data(
+        dataset.channels,
+        'correlation',
+        './channels_heatmaps/MouseControl',
+        'MouseControl LFP Channels',
+        add_order_labels=True)
 
     dataset = LFPDataset(MOUSE_DATASET_PATH)
-    dataset.channels = dataset.channels[:-1]
-    dataset.nr_channels -= 1
-    compute_distance_matrix(dataset, 'correlation')
+    mask = np.ones(len(dataset.channels), dtype=bool)
+    mask[[1, 3, 6, 30, 32]] = False
+    dataset.channels = dataset.channels[mask]
+    dataset.nr_channels -= 4
+    compute_heatmap_on_data(
+        dataset.channels,
+        'correlation',
+        './channels_heatmaps/MouseACh',
+        'MouseACh LFP Channels',
+        add_order_labels=False)
+
+
+def compute_heatmaps_cross_channels():
+    dataset = LFPDataset(MOUSE_DATASET_PATH)
+    mask = np.ones(len(dataset.channels), dtype=bool)
+    mask[[3, 6, 32]] = False
+    dataset.channels = dataset.channels[mask]
+    dataset.nr_channels -= 3
+
+    for stimulus_condition in dataset.stimulus_conditions:
+        index = int(stimulus_condition['Trial']) - 1
+        events = [{'timestamp': dataset.event_timestamps[4 * index + i],
+                   'code': dataset.event_codes[4 * index + i]} for i in range(4)]
+        trial = dataset.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
+        compute_heatmap_on_data(trial,
+                                'correlation',
+                                './cross_channels/MouseControl',
+                                "Trial {}-Condition number{}-{}-{}".format(
+                                    stimulus_condition['Trial'],
+                                    stimulus_condition['Condition number'],
+                                    stimulus_condition['Condition name'],
+                                    stimulus_condition['Duration (us)']))
+
+    dataset = LFPDataset(MOUSEACH_DATASET_PATH)
+    mask = np.ones(len(dataset.channels), dtype=bool)
+    mask[[1, 3, 6, 30, 32]] = False
+    dataset.channels = dataset.channels[mask]
+    dataset.nr_channels -= 4
+
+    for stimulus_condition in dataset.stimulus_conditions:
+        index = int(stimulus_condition['Trial']) - 1
+        events = [{'timestamp': dataset.event_timestamps[4 * index + i],
+                   'code': dataset.event_codes[4 * index + i]} for i in range(4)]
+        trial = dataset.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
+        compute_heatmap_on_data(trial,
+                                'correlation',
+                                './cross_channels/MouseACh',
+                                "Trial {}-Condition number{}-{}-{}".format(
+                                    stimulus_condition['Trial'],
+                                    stimulus_condition['Condition number'],
+                                    stimulus_condition['Condition name'],
+                                    stimulus_condition['Duration (us)']))
+
+
+def compute_heatmaps_cross_trials():
+    dataset = LFPDataset(MOUSE_DATASET_PATH)
+    mask = np.ones(len(dataset.channels), dtype=bool)
+    mask[[3, 6, 32]] = False
+    dataset.channels = dataset.channels[mask]
+    dataset.nr_channels -= 3
+
+    cond_trial_channel = []
+    for condition in range(1, dataset.number_of_conditions + 1):
+        conditions = []
+        for stimulus_condition in dataset.stimulus_conditions:
+            if stimulus_condition['Condition number'] == str(condition):
+                index = int(stimulus_condition['Trial']) - 1
+                events = [{'timestamp': dataset.event_timestamps[4 * index + i],
+                           'code': dataset.event_codes[4 * index + i]} for i in range(4)]
+                # trial = self.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
+                # Right now it cuts only the area where the stimulus is active
+                # In order to keep the whole trial replace with
+                trial = dataset.channels[:, events[0]['timestamp']:(events[0]['timestamp'] + 4175)]
+                conditions.append(trial)
+        cond_trial_channel.append(np.array(conditions))
+    cond_trial_channel = np.array(cond_trial_channel, dtype=np.float32)
+
+    for condition in range(0, dataset.number_of_conditions):
+        for channel in range(0, dataset.nr_channels):
+            compute_heatmap_on_data(cond_trial_channel[condition, :, channel, :],
+                                    'correlation',
+                                    './cross_trials/MouseControl',
+                                    "Condition number{}-Channel{}".format(condition + 1, channel))
+
+    dataset = LFPDataset(MOUSEACH_DATASET_PATH)
+    mask = np.ones(len(dataset.channels), dtype=bool)
+    mask[[1, 3, 6, 30, 32]] = False
+    dataset.channels = dataset.channels[mask]
+    dataset.nr_channels -= 4
+
+    cond_trial_channel = []
+    for condition in range(1, dataset.number_of_conditions + 1):
+        conditions = []
+        for stimulus_condition in dataset.stimulus_conditions:
+            if stimulus_condition['Condition number'] == str(condition):
+                index = int(stimulus_condition['Trial']) - 1
+                events = [{'timestamp': dataset.event_timestamps[4 * index + i],
+                           'code': dataset.event_codes[4 * index + i]} for i in range(4)]
+                # trial = self.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
+                # Right now it cuts only the area where the stimulus is active
+                # In order to keep the whole trial replace with
+                trial = dataset.channels[:, events[0]['timestamp']:(events[0]['timestamp'] + 4175)]
+                conditions.append(trial)
+        cond_trial_channel.append(np.array(conditions))
+    cond_trial_channel = np.array(cond_trial_channel, dtype=np.float32)
+
+    for condition in range(0, dataset.number_of_conditions):
+        for channel in range(0, dataset.nr_channels):
+            compute_heatmap_on_data(cond_trial_channel[condition, :, channel, :],
+                                    'correlation',
+                                    './cross_trials/MouseACh',
+                                    "Condition number{}-Channel{}".format(condition + 1, channel))
+
+
+if __name__ == '__main__':
+    compute_heatmaps_on_channels()
+    compute_heatmaps_cross_channels()
+    compute_heatmaps_cross_trials()
