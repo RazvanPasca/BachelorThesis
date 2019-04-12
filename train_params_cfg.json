@@ -1,6 +1,6 @@
 {
   "channels_to_keep": [
-    15
+    32
   ],
   "n_epochs": 5,
   "batch_size": 64,
@@ -15,13 +15,14 @@
   "normalization": "Zsc",
   "dataset": "MouseControl",
   "train_coverage_per_epoch": 0.001,
-  "output": "Sfmax",
+  "output": "Regression",
   "multiloss_weights": {
     "Regression": 1,
     "Sfmax": 1
   },
   "val_coverage_per_epoch": 0.010,
   "save_path": "./LFP_models",
-  "cutoff_freq": -1,
+  "cutoff_freq": 5,
+  "random_seed": 23,
   "gpu": 0
 }

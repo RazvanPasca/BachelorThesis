@@ -24,6 +24,7 @@ class ModelTrainingParameters:
         self.conditions_to_keep = None
         self.movies_to_keep = None
         self.n_epochs = None
+        self.random_seed = 42
 
         if model_path is not None:
             config_path = os.path.join(model_path, "train_params_cfg.json")
@@ -52,13 +53,15 @@ class ModelTrainingParameters:
                                  channels_to_keep=self.channels_to_keep,
                                  nr_bins=self.nr_bins,
                                  normalization=self.normalization,
-                                 cutoff_freq=self.cutoff_freq)
+                                 cutoff_freq=self.cutoff_freq,
+                                 random_seed=self.random_seed)
         else:
             self.dataset = klass(conditions_to_keep=self.conditions_to_keep,
                                  channels_to_keep=self.channels_to_keep,
                                  nr_bins=self.nr_bins,
                                  normalization=self.normalization,
-                                 cutoff_freq=self.cutoff_freq)
+                                 cutoff_freq=self.cutoff_freq,
+                                 random_seed=self.random_seed)
 
     def _load_configuration_from_json(self, config_path):
         with open(config_path, 'r') as f:
@@ -94,14 +97,16 @@ class ModelTrainingParameters:
     def _compute_model_path(self, model_path):
         if model_path is None:
             self.model_path = os.path.abspath(os.path.join(self.save_path,
-                                                           "{}/Movies:{}/Channels:{}/{}/{}-{}".format(
+                                                           "{}/Movies:{}/Channels:{}/{}/Pid:{}_{}_Seed:{}".format(
                                                                type(self.dataset).__name__,
                                                                str(self.movies_to_keep),
                                                                str(self.channels_to_keep),
                                                                self.get_model_name(),
                                                                os.getpid(),
-                                                               datetime.datetime.now().strftime(
-                                                                   "%Y-%m-%d %H:%M"))))
+                                                               datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                                                               self.random_seed)
+                                                           )
+                                              )
         else:
             self.model_path = model_path
 
