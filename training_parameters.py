@@ -94,11 +94,12 @@ class ModelTrainingParameters:
     def _compute_model_path(self, model_path):
         if model_path is None:
             self.model_path = os.path.abspath(os.path.join(self.save_path,
-                                                           "{}/Movies:{}/Channels:{}/{}/{}".format(
+                                                           "{}/Movies:{}/Channels:{}/{}/{}-{}".format(
                                                                type(self.dataset).__name__,
                                                                str(self.movies_to_keep),
                                                                str(self.channels_to_keep),
                                                                self.get_model_name(),
+                                                               os.getpid(),
                                                                datetime.datetime.now().strftime(
                                                                    "%Y-%m-%d %H:%M"))))
         else:
