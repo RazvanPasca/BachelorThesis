@@ -23,6 +23,6 @@
   "val_coverage_per_epoch": 0.010,
   "save_path": "./LFP_models",
   "cutoff_freq": 5,
-  "random_seed": 23,
+  "random_seed": 42,
   "gpu": 0
 }

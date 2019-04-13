@@ -1,4 +1,6 @@
 import os
+import sys
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,7 +18,7 @@ def prepare_file_for_writing(file_path, text):
         f.write(text)
 
 
-def decode_model_output(model_logits, model_params, channel):
+def decode_model_output(model_logits, model_params):
     if model_params.get_classifying() == 2:
         if model_params.output == "Regression":
             return model_logits[0][0]
@@ -108,7 +110,10 @@ def get_predictions_with_losses(model, model_params, original_sequence, nr_predi
     vlines_coords = []
 
     if generated_window_size > nr_actual_predictions:
-        raise ValueError("Can't generate more steps per slice than the number of predictions")
+        warnings.warn(
+            "Can't generate more steps per window than the total number of predictions. "
+            "The generated window size will be set to the total number of predictions ")
+        generated_window_size = nr_actual_predictions
 
     input_sequence = []
     for prediction_nr in range(nr_actual_predictions):
@@ -119,9 +124,9 @@ def get_predictions_with_losses(model, model_params, original_sequence, nr_predi
                 (-1, model_params.frame_size, 1))
             vlines_coords.append(starting_point + prediction_nr + model_params.frame_size - 1)
 
-        channel_index = get_channel_index_from_name(image_name)
+        # channel_index = get_channel_index_from_name(image_name)
 
-        predicted = decode_model_output(model.predict(input_sequence), model_params, channel=channel_index)
+        predicted = decode_model_output(model.predict(input_sequence), model_params)
         predicted_sequence[prediction_nr] = predicted
         input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted, (-1, 1, 1)), axis=1)
 
@@ -136,7 +141,7 @@ def get_predictions_with_losses(model, model_params, original_sequence, nr_predi
                          prediction_losses=predictions_losses,
                          vlines_coords=vlines_coords)
 
-    return predictions_losses
+    return predictions_losses, predicted_sequence
 
 
 def generate_prediction_name(seq_addr):
@@ -149,46 +154,72 @@ def generate_prediction_name(seq_addr):
     return name
 
 
+def generate_subplots(original_sequences, sequence_predictions, sequence_names, prediction_starting_point, save_path):
+    nr_rows = 2
+    nr_cols = len(sequence_predictions) // nr_rows
+    prediction_length = len(sequence_predictions[0])
+    fig, subplots = plt.subplots(nr_rows, nr_cols, sharex=True, figsize=(20, 10))
+    predictions_x_indices = range(prediction_starting_point, prediction_starting_point + prediction_length)
+    original_sequences_x_indices = range(len(original_sequences[0]))
+
+    for i, subplot in enumerate(subplots.flatten()):
+        subplot.plot(original_sequences_x_indices, original_sequences[i][original_sequences_x_indices], '.-',
+                     label="Original sequence", color="blue")
+        subplot.plot(predictions_x_indices, sequence_predictions[i], '.-', label="Predicted sequence", color="red")
+        subplot.set_title(sequence_names[i])
+        subplot.legend()
+
+    plt.tight_layout()
+    plt.savefig(save_path, format="png")
+    # plt.show()
+    plt.close()
+
+
 def get_predictions(model, model_params, epoch, starting_point, nr_prediction_steps):
     pred_seqs = model_params.dataset.prediction_sequences
 
     for source in pred_seqs:
-        for sequence, addr in pred_seqs[source]:
-            image_prefix = generate_prediction_name(addr)
-            image_prefix = addr["SOURCE"] + "/" + image_prefix
-            image_name = image_prefix + "/" + "E:{}".format(epoch)
+        dir_name = "{}/{}".format(model_params.model_path, source)
+        create_dir_if_not_exists(dir_name)
 
-            create_dir_if_not_exists(model_params.model_path + "/" + image_prefix)
+        for generated_window_size in [1, nr_prediction_steps]:
+            plt_path = "{}/E:{}_GenWindowSize:{}".format(dir_name, epoch, generated_window_size)
+            sequence_predictions = []
+            sequence_names = []
+            original_sequences = []
 
-            get_predictions_with_losses(model, model_params, sequence, nr_prediction_steps, image_name, starting_point,
-                                        1, plot=True)
-            get_predictions_with_losses(model, model_params, sequence, nr_prediction_steps, image_name, starting_point,
-                                        nr_prediction_steps, plot=True)
+            for sequence, addr in pred_seqs[source]:
+                image_prefix = generate_prediction_name(addr)
+                image_prefix = addr["SOURCE"] + "_" + image_prefix
+                image_name = "{}_E:{}_GenWinSize:{}".format(image_prefix, epoch, generated_window_size)
 
+                _, predictions = get_predictions_with_losses(model, model_params, sequence, nr_prediction_steps,
+                                                             image_name,
+                                                             starting_point,
+                                                             generated_window_size, plot=False)
 
-class TensorBoardWrapper(TensorBoard):
-    '''Sets the self.validation_data property for use with TensorBoard callback.'''
+                sequence_predictions.append(predictions)
+                sequence_names.append(image_name)
+                original_sequences.append(sequence)
 
-    def __init__(self, batch_gen, nb_steps, **kwargs):
-        super().__init__(**kwargs)
-        self.batch_gen = batch_gen  # The generator.
-        self.nb_steps = nb_steps  # Number of times to call next() on the generator.
-
-    def on_epoch_end(self, epoch, logs=None):
-        # Fill in the `validation_data` property. Obviously this is specific to how your generator works.
-        # Below is an example that yields images and classification tags.
-        # After it's filled in, the regular on_epoch_end method has access to the validation_data.
-        x, y = next(self.batch_gen)
-        self.validation_data = (x, y, np.ones(self.batch_size))
-        return super().on_epoch_end(epoch, logs)
+            generate_subplots(original_sequences, sequence_predictions, sequence_names,
+                              starting_point + model_params.frame_size, plt_path)
 
 
 class PlotCallback(callbacks.Callback):
-    def __init__(self, model_params, plot_period, nr_predictions_steps, starting_point):
+    """Callback used for plotting at certain epochs the generations of the model
+
+        If nr_predictions is smaller than 1, the model will predict up to the end of the signal
+
+        If starting point is smaller than 1, the model will start predicting from the beginning of the signal-frame size
+    """
+
+    def __init__(self, model_params, plot_period, nr_predictions, starting_point):
         super().__init__()
+
         self.model_params = model_params
         self.epoch = 0
-        self.nr_prediction_steps = nr_predictions_steps
+        self.nr_prediction_steps = nr_predictions if nr_predictions > 0 else model_params.dataset.trial_length
         self.plot_period = plot_period
         self.starting_point = starting_point
 
@@ -207,3 +238,20 @@ class PlotCallback(callbacks.Callback):
     def on_train_end(self, logs=None):
         get_predictions(self.model, self.model_params, "TrainEnd", self.starting_point,
                         nr_prediction_steps=self.nr_prediction_steps)
+
+
+class TensorBoardWrapper(TensorBoard):
+    """Sets the self.validation_data property for use with TensorBoard callback."""
+
+    def __init__(self, batch_gen, nb_steps, **kwargs):
+        super().__init__(**kwargs)
+        self.batch_gen = batch_gen  # The generator.
+        self.nb_steps = nb_steps  # Number of times to call next() on the generator.
+
+    def on_epoch_end(self, epoch, logs=None):
+        # Fill in the `validation_data` property. Obviously this is specific to how your generator works.
+        # Below is an example that yields images and classification tags.
+        # After it's filled in, the regular on_epoch_end method has access to the validation_data.
+        x, y = next(self.batch_gen)
+        self.validation_data = (x, y, np.ones(self.batch_size))
+        return super().on_epoch_end(epoch, logs)

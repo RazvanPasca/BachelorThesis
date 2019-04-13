@@ -16,14 +16,14 @@ def get_error_estimates(model, model_parameters, nr_of_estimates, generated_wind
     avg_prediction_losses = np.zeros(nr_of_estimates)
     for estimate in range(nr_of_estimates):
         starting_point = np.random.choice(sequence.size - model_parameters.frame_size - generated_window_size)
-        prediction_losses = get_predictions_with_losses(model,
-                                                        model_parameters,
-                                                        sequence,
-                                                        generated_window_size,
-                                                        image_name="bla",
-                                                        starting_point=starting_point,
-                                                        generated_window_size=generated_window_size,
-                                                        plot=False)
+        prediction_losses, _ = get_predictions_with_losses(model,
+                                                           model_parameters,
+                                                           sequence,
+                                                           generated_window_size,
+                                                           image_name="bla",
+                                                           starting_point=starting_point,
+                                                           generated_window_size=generated_window_size,
+                                                           plot=False)
         avg_prediction_losses[estimate] = prediction_losses[-1]
 
     avg_prediction_losses = np.mean(avg_prediction_losses)
