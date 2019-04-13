@@ -75,7 +75,9 @@ class LFPDataset:
     def inv_mu_law_fn(self, x, mu=255):
         """Maps [0,255] discretized to [-1,1] which then needs to be rescaled when decoding the output
         using the max and min values of the provenience channel"""
+        assert (0 <= x <= 255)
         val = np.sign(x) * (1 / mu) * (((1 + mu) ** np.abs(x)) - 1)
+        assert (-1 <= val <= 1)
         return val
 
     def _parse_stimulus_data(self, condition_file_path):

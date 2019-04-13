@@ -53,13 +53,13 @@ def test_model(model_params):
 
             create_dir_if_not_exists(model_params.model_path + "/" + image_prefix)
 
-            for generated_window_size in range(1, 100, 2):
+            for generated_window_size in range(1, 1000, 50):
                 get_predictions_with_losses(model,
                                             model_params,
                                             sequence,
-                                            nr_predictions=100,
+                                            nr_predictions=1000,
                                             image_name=image_name,
-                                            starting_point=1200 - model_params.frame_size,
+                                            starting_point=1500 - model_params.frame_size,
                                             generated_window_size=generated_window_size)
 
     for source in ["VAL", "TRAIN"]:

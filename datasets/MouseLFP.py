@@ -25,7 +25,7 @@ class MouseLFP(LFPDataset):
         self.nr_of_orientations = 8
         self.nr_of_stimulus_luminosity_levels = 3
         self.number_of_conditions = 24
-        self.trial_length = 2672  # 2672  # 4175
+        self.trial_length = 4175  # 2672  # 4175
 
         if channels_to_keep is None:
             self.channels_to_keep = np.array(range(self.nr_channels))
@@ -60,10 +60,11 @@ class MouseLFP(LFPDataset):
                     index = int(stimulus_condition['Trial']) - 1
                     events = [{'timestamp': self.event_timestamps[4 * index + i],
                                'code': self.event_codes[4 * index + i]} for i in range(4)]
-                    trial = self.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
+                    #trial = self.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
+
                     # Right now it cuts only the area where the stimulus is active
                     # In order to keep the whole trial replace with
-                    # trial = self.channels[:, events[0]['timestamp']:(events[0]['timestamp'] + 4175)]
+                    trial = self.channels[:, events[0]['timestamp']:(events[0]['timestamp'] + 4175)]
 
                     conditions.append(trial)
             self.all_lfp_data.append(np.array(conditions))

@@ -2,7 +2,7 @@ import datetime
 import os
 
 from datasets.LFPDataset import LFPDataset
-from datasets.DATASET_PATHS import PASCA_CAT_DATASET_PATH as CAT_DATASET_PATH
+from datasets.DATASET_PATHS import RIST_CAT_DATASET_PATH
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -12,7 +12,6 @@ class CatLFP(LFPDataset):
                  nr_bins=256, nr_of_seqs=6, normalization="Zsc", cutoff_freq=50):
         super().__init__(CAT_DATASET_PATH, normalization=normalization, cutoff_freq=cutoff_freq,
                          random_seed=random_seed)
-
         np.random.seed(random_seed)
         self.nr_bins = nr_bins
         self.normalization = normalization
