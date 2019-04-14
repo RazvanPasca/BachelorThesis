@@ -1,4 +1,4 @@
-from datasets.DATASET_PATHS import RIST_MOUSE_DATASET_PATH
+from datasets.DATASET_PATHS import RIST_MOUSE_DATASET_PATH, PASCA_MOUSE_DATASET_PATH
 from datasets.MouseLFP import MouseLFP
 
 
