@@ -44,16 +44,10 @@ def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef):
     return f
 
 
-def get_basic_generative_model(nr_filters, input_size, nr_layers, lr, loss, clipvalue, skip_conn_filters,
-                               regularization_coef, nr_output_classes):
-    if loss == "MSE":
-        model_loss = losses.MSE
-    elif loss == "MAE":
-        model_loss = losses.MAE
-    elif loss == "CAT":
-        model_loss = losses.sparse_categorical_crossentropy
-    else:
-        raise ValueError('Use one of the following loss functions: MSE, MAE, CAT (categorical crossentropy)')
+def get_wavenet_model(nr_filters, input_size, nr_layers, lr, loss, clipvalue, skip_conn_filters,
+                      regularization_coef, nr_output_classes, multiloss_weights=None):
+
+    model_loss = get_model_loss(loss, multiloss_weights)
 
     input_ = Input(shape=(input_size, 1))
     A, B = wavenet_block(nr_filters, 2, 1, regularization_coef=regularization_coef)(input_)
@@ -71,12 +65,39 @@ def get_basic_generative_model(nr_filters, input_size, nr_layers, lr, loss, clip
     net = Conv1D(skip_conn_filters, 1, kernel_regularizer=l2(regularization_coef), name="Skip_FConv_2")(net)
     net = Flatten()(net)
 
-    if model_loss is losses.sparse_categorical_crossentropy:
-        net = Dense(nr_output_classes, activation=softmax, name="Sfmax")(net)
-    else:
-        net = Dense(1, name="Regression", kernel_regularizer=l2(regularization_coef))(net)
+    outputs = []
 
-    model = Model(inputs=input_, outputs=net)
+    if model_loss is losses.sparse_categorical_crossentropy:
+        outputs.append(Dense(nr_output_classes, activation=softmax, name="Sfmax")(net))
+    elif model_loss is losses.MSE or model_loss is losses.MAE:
+        regr_output = Dense(1, name="Regression", kernel_regularizer=l2(regularization_coef))(net)
+        outputs.append(regr_output)
+    else:
+        regr_output = Dense(1, name="Regression", kernel_regularizer=l2(regularization_coef))(net)
+        outputs.append(regr_output)
+        sfmax_output = Dense(nr_output_classes, activation=softmax, name="Sfmax")
+        outputs.append(sfmax_output(net))
+
+    model = Model(inputs=input_, outputs=outputs)
     optimizer = optimizers.adam(lr=lr, clipvalue=clipvalue)
-    model.compile(loss=model_loss, optimizer=optimizer, metrics=["accuracy"])
+    model.compile(loss=model_loss, optimizer=optimizer, loss_weights=multiloss_weights)
     return model
+
+
+def get_model_loss(loss, multiloss_weights):
+    if loss == "MSE":
+        model_loss = losses.MSE
+    elif loss == "MAE":
+        model_loss = losses.MAE
+    elif loss == "CE":
+        model_loss = losses.sparse_categorical_crossentropy
+    elif loss == "MSE_CE":
+        model_loss = {"Regression": "mean_squared_error", "Sfmax": "sparse_categorical_crossentropy"}
+        assert "Sfmax" in multiloss_weights and "Regression" in multiloss_weights
+
+    elif loss == "MAE_CE":
+        model_loss = {"Regression": "mean_absolute_error", "Sfmax": "sparse_categorical_crossentropy"}
+        assert "Sfmax" in multiloss_weights and "Regression" in multiloss_weights
+    else:
+        raise ValueError("Give a proper loss function")
+    return model_loss

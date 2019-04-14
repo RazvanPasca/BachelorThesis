@@ -12,7 +12,7 @@ class MouseControl(MouseLFP):
                          test_perc=test_perc,
                          random_seed=random_seed,
                          nr_bins=nr_bins,
-                         nr_of_seqs=4,
+                         nr_of_seqs=nr_of_seqs,
                          normalization=normalization,
                          cutoff_freq=cutoff_freq)
 

@@ -3,7 +3,9 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 from datasets.CatLFP import CatLFP
-from signal_low_pass import butter_lowpass_filter
+from datasets.DATASET_PATHS import PASCA_MOUSE_DATASET_PATH, PASCA_MOUSE_DATASET_PATH_OLD, PASCA_CAT_DATASET_PATH
+from datasets.MouseLFP import MouseLFP
+from signal_utils import butter_lowpass_filter
 
 
 def rmse(a, b):
@@ -64,7 +66,43 @@ if __name__ == '__main__':
     # find_samples_over_x(dataset, -2)
     # x2 = find_samples_over_x(dataset, -3)
     # print((x1 + x2) / dataset.channels[2].size)
-    dataset = CatLFP(channels_to_keep=[32], low_pass_filter=True)
+    dataset = MouseLFP(PASCA_MOUSE_DATASET_PATH, channels_to_keep=[32], cutoff_freq=5)
+    series = []
+
+    dataset.plot_signal(18, 1, 32, )
+
+    # for experiment in [13]:
+    #     for trial in [9]:
+    #         for channel in range(32):
+    #             signal = dataset.get_dataset_piece(experiment, trial, channel)
+    #             series.append(signal)
+    # for i, signal in enumerate(series):
+    #     # plt.subplot(2, 1, 1)
+    #     plt.ylim(-4, +4)
+    #     plt.plot(signal, label=i)
+    #     plt.legend()
+    # # plt.show()
+
+    # series = []
+    # for experiment in [8]:
+    #     for trial in [5, 6, 7, 8, 9,]:
+    #         signal = dataset.get_dataset_piece(experiment, trial, 4)
+    #         series.append(signal)
+    # for i, signal in enumerate(series):
+    #     plt.subplot(2, 1, 2)
+    #     plt.ylim(-4, +4)
+    #     plt.plot(signal, label=5 + i)
+    #     plt.legend()
+    plt.show()
+
+    # for i in range(1):
+    #     for j in range(10):
+    #         signal = dataset.get_dataset_piece(i, j, 4)
+    #         series.append(signal)
+    #
+    # for signal in series:
+    #     plt.plot(signal)
+
     # find_samples_over_x(dataset, -4)
     # find_samples_over_x(dataset, -5)
     # plt.hist(dataset.channels[2].flatten(), bins=50, range=(-7, 7))

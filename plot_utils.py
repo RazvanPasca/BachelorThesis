@@ -16,13 +16,22 @@ def prepare_file_for_writing(file_path, text):
         f.write(text)
 
 
-def decode_model_output(model_logits, model_params):
-    if model_params.get_classifying():
-        bin_index = np.argmax(model_logits)
-        a = (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
-        return a
+def decode_model_output(model_logits, model_params, channel):
+    if model_params.get_classifying() == 2:
+        if model_params.output == "Regression":
+            return model_logits[0][0]
+        else:
+            return get_bin_output(model_logits[1], model_params)
+    elif model_params.get_classifying() == 1:
+        return get_bin_output(model_logits, model_params)
     else:
         return model_logits
+
+
+def get_bin_output(model_logits, model_params):
+    bin_index = np.argmax(model_logits)
+    a = (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
+    return a
 
 
 def plot_predictions(original_sequence, image_title, nr_predictions, frame_size, predicted_sequence,
@@ -79,6 +88,18 @@ def plot_2_overlapped_series(x1, y1, label1, x2, y2, label2, image_title, save_p
     plt.close()
 
 
+def get_channel_index_from_name(name):
+    index = name.find("C:")
+    index_ = index + 2
+    c = name[index_]
+
+    while c.isdigit():
+        index_ += 1
+        c = name[index_]
+
+    return int(name[index + 2:index_])
+
+
 def get_predictions_with_losses(model, model_params, original_sequence, nr_predictions, image_name, starting_point,
                                 generated_window_size, plot=True):
     nr_actual_predictions = min(nr_predictions, original_sequence.size - starting_point - model_params.frame_size - 1)
@@ -98,7 +119,9 @@ def get_predictions_with_losses(model, model_params, original_sequence, nr_predi
                 (-1, model_params.frame_size, 1))
             vlines_coords.append(starting_point + prediction_nr + model_params.frame_size - 1)
 
-        predicted = decode_model_output(model.predict(input_sequence), model_params)
+        channel_index = get_channel_index_from_name(image_name)
+
+        predicted = decode_model_output(model.predict(input_sequence), model_params, channel=channel_index)
         predicted_sequence[prediction_nr] = predicted
         input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted, (-1, 1, 1)), axis=1)
 
@@ -156,7 +179,7 @@ class TensorBoardWrapper(TensorBoard):
         # Below is an example that yields images and classification tags.
         # After it's filled in, the regular on_epoch_end method has access to the validation_data.
         x, y = next(self.batch_gen)
-        self.validation_data = (x, y.reshape(-1, 1), np.ones((self.batch_size)))
+        self.validation_data = (x, y, np.ones(self.batch_size))
         return super().on_epoch_end(epoch, logs)
 
 

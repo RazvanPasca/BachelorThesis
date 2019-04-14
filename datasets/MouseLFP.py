@@ -3,6 +3,7 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import pyplot
 
 from datasets.LFPDataset import LFPDataset
 
@@ -25,15 +26,16 @@ class MouseLFP(LFPDataset):
         self.nr_of_orientations = 8
         self.nr_of_stimulus_luminosity_levels = 3
         self.number_of_conditions = 24
-        self.trial_length = 2672  # 4175
-        self._compute_values_range()
-        self._pre_compute_bins()
-        self._split_lfp_data()
+        self.trial_length = 4175  # 2672  # 4175
 
         if channels_to_keep is None:
             self.channels_to_keep = np.array(range(self.nr_channels))
         else:
             self.channels_to_keep = np.array(channels_to_keep)
+
+        self._compute_values_range(channels_to_keep=self.channels_to_keep)
+        self._pre_compute_bins()
+        self._split_lfp_data()
 
         if conditions_to_keep is None:
             self.conditions_to_keep = np.array(range(self.number_of_conditions))
@@ -41,8 +43,6 @@ class MouseLFP(LFPDataset):
             self.conditions_to_keep = np.array(conditions_to_keep) - 1
             self.number_of_conditions = len(conditions_to_keep)
 
-        indexes = [[0, 100], [200, 300], [400, 500]]
-        # self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
         self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
 
         self.prediction_sequences = {
@@ -61,13 +61,13 @@ class MouseLFP(LFPDataset):
                     index = int(stimulus_condition['Trial']) - 1
                     events = [{'timestamp': self.event_timestamps[4 * index + i],
                                'code': self.event_codes[4 * index + i]} for i in range(4)]
-                    trial = self.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
+                    # trial = self.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
                     # Right now it cuts only the area where the stimulus is active
                     # In order to keep the whole trial replace with
-                    # "trial = self.channels[:, events[0]['timestamp']:(events[0]['timestamp'] + 4175)]"
+                    trial = self.channels[:, events[0]['timestamp']:(events[0]['timestamp'] + 4175)]
                     conditions.append(trial)
             self.all_lfp_data.append(np.array(conditions))
-        self.all_lfp_data = np.array(self.all_lfp_data, dtype=np.float64)
+        self.all_lfp_data = np.array(self.all_lfp_data, dtype=np.float32)
         self.channels = None
 
     def _pre_compute_bins(self):
@@ -79,7 +79,10 @@ class MouseLFP(LFPDataset):
 
     def _encode_input_to_bin(self, target_val):
         if target_val not in self.cached_val_bin:
-            self.cached_val_bin[target_val] = np.digitize(target_val, self.bins, right=False)
+            if self.mu_law:
+                self.cached_val_bin[target_val] = self.mu_law_encoding(target_val)
+            else:
+                self.cached_val_bin[target_val] = np.digitize(target_val, self.bins, right=False)
         return self.cached_val_bin[target_val]
 
     def _get_train_val_test_split_channel_wise(self, channels_to_keep, conditions_to_keep, val_perc, test_perc):
@@ -94,6 +97,10 @@ class MouseLFP(LFPDataset):
         test_indexes = trial_indexes[-nr_test_trials:]
 
         interm_data = self.all_lfp_data[conditions_to_keep, :, channels_to_keep, :]
+
+        self.channels_lookup = {}
+        for i, channel in enumerate(channels_to_keep):
+            self.channels_lookup[i] = channel
 
         self.train = interm_data[:, train_indexes, :].reshape(self.number_of_conditions, nr_train_trials, -1,
                                                               self.trial_length)
@@ -135,9 +142,19 @@ class MouseLFP(LFPDataset):
             frame = random_sequence[batch_start:batch_start + frame_size]
             next_step_value = random_sequence[batch_start + frame_size]
             x.append(frame.reshape(frame_size, 1))
-            y.append(self._encode_input_to_bin(next_step_value) if classifying else next_step_value)
+            y.append(next_step_value)
+
             if len(x) == batch_size:
-                yield np.array(x), np.array(y)
+                """Classifying codes: 2 is MSE_CE, 1 is CE , -1 is Regression"""
+                if classifying == 2:
+                    y = {'Regression': np.array(y),
+                         "Sfmax": np.array([self._encode_input_to_bin(x) for x in y])}
+                elif classifying == 1:
+                    y = np.array([self._encode_input_to_bin(x) for x in y])
+                else:
+                    y = np.array(y)
+
+                yield np.array(x), y
                 x = []
                 y = []
 
@@ -208,6 +225,6 @@ class MouseLFP(LFPDataset):
         data_address = {
             'Condition': condition_index,
             'T': trial_index,
-            'C': channel_index
+            'C': self.channels_lookup[channel_index]
         }
-        return data_source[data_address['Condition'], data_address['T'], data_address['C'], :], data_address
+        return data_source[data_address['Condition'], data_address['T'], channel_index, :], data_address

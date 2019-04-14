@@ -2,6 +2,11 @@ import numpy as np
 from scipy.signal import butter, filtfilt
 
 
+def rescale(x, old_max, old_min, new_max, new_min):
+    val = (new_max - new_min) * (x - old_min) / (old_max - old_min) + new_min
+    return val
+
+
 def moving_average_smooth(x, nr_points):
     window = np.ones(nr_points) / nr_points
     x_smooth = np.convolve(x, window, mode="same")
