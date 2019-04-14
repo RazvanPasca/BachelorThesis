@@ -111,10 +111,11 @@ class ModelTrainingParameters:
             self.model_path = model_path
 
     def get_classifying(self):
-        if self.loss == "CE":
-            return 1
-        elif self.loss == "MSE_CE" or self.loss == "MAE_CE":
+
+        if self.loss == "MSE_CE" or self.loss == "MAE_CE":
             return 2
+        elif self.loss == "CE":
+            return 1
         else:
             return -1
 

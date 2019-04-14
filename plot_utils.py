@@ -141,7 +141,7 @@ def get_predictions_with_losses(model, model_params, original_sequence, nr_predi
                          prediction_losses=predictions_losses,
                          vlines_coords=vlines_coords)
 
-    return predictions_losses, predicted_sequence
+    return predictions_losses, predicted_sequence, vlines_coords
 
 
 def generate_prediction_name(seq_addr):
@@ -154,7 +154,8 @@ def generate_prediction_name(seq_addr):
     return name
 
 
-def generate_subplots(original_sequences, sequence_predictions, sequence_names, prediction_starting_point, save_path):
+def generate_subplots(original_sequences, sequence_predictions, vlines_coords_list, sequence_names,
+                      prediction_starting_point, save_path):
     nr_rows = 2
     nr_cols = len(sequence_predictions) // nr_rows
     prediction_length = len(sequence_predictions[0])
@@ -163,46 +164,49 @@ def generate_subplots(original_sequences, sequence_predictions, sequence_names, 
     original_sequences_x_indices = range(len(original_sequences[0]))
 
     for i, subplot in enumerate(subplots.flatten()):
-        subplot.plot(original_sequences_x_indices, original_sequences[i][original_sequences_x_indices], '.-',
+        subplot.plot(original_sequences_x_indices, original_sequences[i][original_sequences_x_indices],
                      label="Original sequence", color="blue")
-        subplot.plot(predictions_x_indices, sequence_predictions[i], '.-', label="Predicted sequence", color="red")
+        subplot.plot(predictions_x_indices, sequence_predictions[i], label="Predicted sequence", color="red")
         subplot.set_title(sequence_names[i])
+        subplot.vlines(vlines_coords_list[i], ymin=-5, ymax=5, lw=0.2)
         subplot.legend()
 
     plt.tight_layout()
-    plt.savefig(save_path, format="png")
-    # plt.show()
+    plt.savefig("{}.png".format(save_path), format="png")
     plt.close()
 
 
-def get_predictions(model, model_params, epoch, starting_point, nr_prediction_steps):
+def generate_multi_plot(model, model_params, epoch, starting_point, nr_prediction_steps, generated_window_sizes):
     pred_seqs = model_params.dataset.prediction_sequences
 
     for source in pred_seqs:
         dir_name = "{}/{}".format(model_params.model_path, source)
         create_dir_if_not_exists(dir_name)
 
-        for generated_window_size in [1, nr_prediction_steps]:
+        for generated_window_size in generated_window_sizes:
             plt_path = "{}/E:{}_GenWindowSize:{}".format(dir_name, epoch, generated_window_size)
             sequence_predictions = []
             sequence_names = []
             original_sequences = []
+            vlines_coords_list = []
 
             for sequence, addr in pred_seqs[source]:
                 image_prefix = generate_prediction_name(addr)
                 image_prefix = addr["SOURCE"] + "_" + image_prefix
                 image_name = "{}_E:{}_GenWinSize:{}".format(image_prefix, epoch, generated_window_size)
 
-                _, predictions = get_predictions_with_losses(model, model_params, sequence, nr_prediction_steps,
-                                                             image_name,
-                                                             starting_point,
-                                                             generated_window_size, plot=False)
+                _, predictions, vlines_coords = get_predictions_with_losses(model, model_params, sequence,
+                                                                            nr_prediction_steps,
+                                                                            image_name,
+                                                                            starting_point,
+                                                                            generated_window_size, plot=False)
 
                 sequence_predictions.append(predictions)
                 sequence_names.append(image_name)
                 original_sequences.append(sequence)
+                vlines_coords_list.append(vlines_coords)
 
-            generate_subplots(original_sequences, sequence_predictions, sequence_names,
+            generate_subplots(original_sequences, sequence_predictions, vlines_coords_list, sequence_names,
                               starting_point + model_params.frame_size, plt_path)
 
 
@@ -214,7 +218,7 @@ class PlotCallback(callbacks.Callback):
         If starting point is smaller than 1, the model will start predicting from the beginning of the signal-frame size
     """
 
-    def __init__(self, model_params, plot_period, nr_predictions, starting_point):
+    def __init__(self, model_params, plot_period, nr_predictions, starting_point, generated_window_sizes):
         super().__init__()
 
         self.model_params = model_params
@@ -222,6 +226,7 @@ class PlotCallback(callbacks.Callback):
         self.nr_prediction_steps = nr_predictions if nr_predictions > 0 else model_params.dataset.trial_length
         self.plot_period = plot_period
         self.starting_point = starting_point
+        self.generated_window_sizes = generated_window_sizes
 
     def on_train_begin(self, logs={}):
         create_dir_if_not_exists(self.model_params.model_path)
@@ -232,12 +237,13 @@ class PlotCallback(callbacks.Callback):
         self.epoch += 1
 
         if self.epoch % self.plot_period == 0 or self.epoch == 1:
-            get_predictions(self.model, self.model_params, self.epoch, self.starting_point,
-                            nr_prediction_steps=self.nr_prediction_steps)
+            generate_multi_plot(self.model, self.model_params, self.epoch, self.starting_point,
+                                nr_prediction_steps=self.nr_prediction_steps,
+                                generated_window_sizes=self.generated_window_sizes)
 
     def on_train_end(self, logs=None):
-        get_predictions(self.model, self.model_params, "TrainEnd", self.starting_point,
-                        nr_prediction_steps=self.nr_prediction_steps)
+        generate_multi_plot(self.model, self.model_params, "TrainEnd", self.starting_point,
+                            nr_prediction_steps=self.nr_prediction_steps)
 
 
 class TensorBoardWrapper(TensorBoard):
