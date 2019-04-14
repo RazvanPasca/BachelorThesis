@@ -20,14 +20,11 @@ def prepare_file_for_writing(file_path, text):
 
 def decode_model_output(model_logits, model_params):
     if model_params.get_classifying() == 2:
-        if model_params.output == "Regression":
-            return model_logits[0][0]
-        else:
-            return get_bin_output(model_logits[1], model_params)
+        return get_bin_output(model_logits[1], model_params), model_logits[0][0]
     elif model_params.get_classifying() == 1:
-        return get_bin_output(model_logits, model_params)
+        return get_bin_output(model_logits, model_params),
     else:
-        return model_logits
+        return model_logits,
 
 
 def get_bin_output(model_logits, model_params):
@@ -105,8 +102,8 @@ def get_channel_index_from_name(name):
 def get_predictions_with_losses(model, model_params, original_sequence, nr_predictions, image_name, starting_point,
                                 generated_window_size, plot=True):
     nr_actual_predictions = min(nr_predictions, original_sequence.size - starting_point - model_params.frame_size - 1)
-    predicted_sequence = np.zeros(nr_actual_predictions)
-    predictions_losses = np.zeros(nr_actual_predictions)
+    predicted_sequences = [np.zeros(nr_actual_predictions) for _ in range(model_params.get_classifying())]
+    predictions_losses = [np.zeros(nr_actual_predictions) for _ in range(model_params.get_classifying())]
     vlines_coords = []
 
     if generated_window_size > nr_actual_predictions:
@@ -125,23 +122,25 @@ def get_predictions_with_losses(model, model_params, original_sequence, nr_predi
             vlines_coords.append(starting_point + prediction_nr + model_params.frame_size - 1)
 
         # channel_index = get_channel_index_from_name(image_name)
+        """I get the predictions here. I might have 2 predictions made if I am using regression and softmax"""
+        predicted_values = decode_model_output(model.predict(input_sequence), model_params)
+        for i, predicted_val in enumerate(predicted_values):
+            predicted_sequences[i][prediction_nr] = predicted_val
+            input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted_val, (-1, 1, 1)), axis=1)
 
-        predicted = decode_model_output(model.predict(input_sequence), model_params)
-        predicted_sequence[prediction_nr] = predicted
-        input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted, (-1, 1, 1)), axis=1)
-
-        curr_loss = np.abs(predicted - original_sequence[starting_point + prediction_nr + model_params.frame_size])
-        predictions_losses[prediction_nr] = curr_loss if prediction_nr % generated_window_size == 0 else \
-            predictions_losses[prediction_nr - 1] + curr_loss
+            curr_loss = np.abs(
+                predicted_val - original_sequence[starting_point + prediction_nr + model_params.frame_size])
+            predictions_losses[i][prediction_nr] = curr_loss if prediction_nr % generated_window_size == 0 else \
+                predictions_losses[i][prediction_nr - 1] + curr_loss
 
     if plot:
         image_name += "GenSteps:{}_".format(generated_window_size)
         plot_predictions(original_sequence, image_name, nr_actual_predictions,
-                         model_params.frame_size, predicted_sequence, model_params.model_path, starting_point,
+                         model_params.frame_size, predicted_sequences, model_params.model_path, starting_point,
                          prediction_losses=predictions_losses,
                          vlines_coords=vlines_coords)
 
-    return predictions_losses, predicted_sequence, vlines_coords
+    return predictions_losses, predicted_sequences, vlines_coords
 
 
 def generate_prediction_name(seq_addr):
@@ -158,21 +157,28 @@ def generate_subplots(original_sequences, sequence_predictions, vlines_coords_li
                       prediction_starting_point, save_path):
     nr_rows = 2
     nr_cols = len(sequence_predictions) // nr_rows
-    prediction_length = len(sequence_predictions[0])
+    colors = ["red", "green"]
+    prediction_length = len(sequence_predictions[0][0])
     fig, subplots = plt.subplots(nr_rows, nr_cols, sharex=True, figsize=(20, 10))
     predictions_x_indices = range(prediction_starting_point, prediction_starting_point + prediction_length)
     original_sequences_x_indices = range(len(original_sequences[0]))
 
+    show_vlines = vlines_coords_list[0][1] - vlines_coords_list[0][0] != 1
+
     for i, subplot in enumerate(subplots.flatten()):
         subplot.plot(original_sequences_x_indices, original_sequences[i][original_sequences_x_indices],
                      label="Original sequence", color="blue")
-        subplot.plot(predictions_x_indices, sequence_predictions[i], label="Predicted sequence", color="red")
+        for i, sequence_prediction in enumerate(sequence_predictions[i]):
+            subplot.plot(predictions_x_indices, sequence_prediction, label="Predicted sequence {}".format(i),
+                         color=colors[i])
         subplot.set_title(sequence_names[i])
-        subplot.vlines(vlines_coords_list[i], ymin=-5, ymax=5, lw=0.2)
+        if show_vlines:
+            subplot.vlines(vlines_coords_list[i], ymin=-5, ymax=5, lw=0.2)
         subplot.legend()
 
     plt.tight_layout()
     plt.savefig("{}.png".format(save_path), format="png")
+    plt.show()
     plt.close()
 
 

@@ -28,13 +28,13 @@ def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef):
 
         skip_out = Conv1D(filters=n_filters * 2,
                           kernel_size=1,
-                          padding='same',
+                          padding='causal',
                           kernel_regularizer=l2(regularization_coef),
                           name="Skip_Conv_{}".format(dilation_rate))(merged)
 
         out = Conv1D(filters=n_filters,
                      kernel_size=1,
-                     padding='same',
+                     padding='causal',
                      kernel_regularizer=l2(regularization_coef),
                      name="Res_Conv_{}".format(dilation_rate))(merged)
 
