@@ -31,7 +31,7 @@ def load_cat_dataset(path, label='condition'):
     return x, y
 
 
-def load_mouse_dataset(path, label='orientation'):
+def load_mouse_dataset(path, label='orientation', ignore_channels=False):
     dataset = LFPDataset(path, normalization='Zsc')
     x = []
     y = []
@@ -43,14 +43,29 @@ def load_mouse_dataset(path, label='orientation'):
         # removed heart rate
 
         if label == 'orientation':
-            x.append(trial.reshape(-1))
-            y.append((int(stimulus_condition['Condition number']) - 1) // 3)
+            if ignore_channels:
+                for i, c in enumerate(trial):
+                    x.append(c)
+                    y.append((int(stimulus_condition['Condition number']) - 1) // 3)
+            else:
+                x.append(trial.reshape(-1))
+                y.append((int(stimulus_condition['Condition number']) - 1) // 3)
         elif label == 'contrast':
-            x.append(trial.reshape(-1))
-            y.append((int(stimulus_condition['Condition number']) - 1) % 3)
+            if ignore_channels:
+                for i, c in enumerate(trial):
+                    x.append(c)
+                    y.append((int(stimulus_condition['Condition number']) - 1) % 3)
+            else:
+                x.append(trial.reshape(-1))
+                y.append((int(stimulus_condition['Condition number']) - 1) % 3)
         elif label == 'condition':
-            x.append(trial.reshape(-1))
-            y.append((int(stimulus_condition['Condition number']) - 1))
+            if ignore_channels:
+                for i, c in enumerate(trial):
+                    x.append(c)
+                    y.append((int(stimulus_condition['Condition number']) - 1))
+            else:
+                x.append(trial.reshape(-1))
+                y.append((int(stimulus_condition['Condition number']) - 1))
         elif label == 'channel':
             for i, c in enumerate(trial):
                 x.append(c)
@@ -68,16 +83,19 @@ def compute_confusion_matrix(svc, x, y):
 
 if __name__ == '__main__':
     # x, y = load_cat_dataset(CAT_DATASET_PATH, label='condition')
-    x, y = load_mouse_dataset(MOUSEACH_DATASET_PATH, label='orientation')
+    x, y = load_mouse_dataset(MOUSEACH_DATASET_PATH, label='contrast', ignore_channels=True)
 
     X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, shuffle=True)
 
-    svc = SVC(kernel='linear')
-    svc.fit(X_train, y_train)
+    for i in range(0, 1):
+        print("C={}".format(10 ** i))
+        svc = SVC(kernel='linear', C=10 ** i)
 
-    print("TRAIN CONFUSION MATRIX:")
-    compute_confusion_matrix(svc, X_train, y_train)
+        svc.fit(X_train, y_train)
 
-    if not len(y_test) is 0:
-        print("TEST CONFUSION MATRIX:")
-        compute_confusion_matrix(svc, X_test, y_test)
+        print("TRAIN CONFUSION MATRIX:")
+        compute_confusion_matrix(svc, X_train, y_train)
+
+        if not len(y_test) is 0:
+            print("TEST CONFUSION MATRIX:")
+            compute_confusion_matrix(svc, X_test, y_test)
