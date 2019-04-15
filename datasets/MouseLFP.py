@@ -3,9 +3,9 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib import pyplot
 
 from datasets.LFPDataset import LFPDataset
+from signal_utils import mu_law_encoding
 
 
 class MouseLFP(LFPDataset):
@@ -81,7 +81,7 @@ class MouseLFP(LFPDataset):
     def _encode_input_to_bin(self, target_val):
         if target_val not in self.cached_val_bin:
             if self.mu_law:
-                self.cached_val_bin[target_val] = self.mu_law_encoding(target_val)
+                self.cached_val_bin[target_val] = mu_law_encoding(target_val)
             else:
                 self.cached_val_bin[target_val] = np.digitize(target_val, self.bins, right=False)
         return self.cached_val_bin[target_val]

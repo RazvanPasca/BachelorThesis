@@ -29,8 +29,10 @@ def decode_model_output(model_logits, model_params):
 
 def get_bin_output(model_logits, model_params):
     bin_index = np.argmax(model_logits)
-    a = (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
-    return a
+    if model_params.normalization == "MuLaw":
+        return bin_index
+    else:
+        return (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
 
 
 def plot_predictions(original_sequence, image_title, nr_predictions, frame_size, predicted_sequence,

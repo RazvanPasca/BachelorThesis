@@ -3,7 +3,9 @@ import json
 import numpy as np
 import os
 
-from signal_utils import butter_lowpass_filter, rescale
+from matplotlib import pyplot
+
+from signal_utils import butter_lowpass_filter, rescale, mu_law_fn
 
 
 class LFPDataset:
@@ -53,32 +55,21 @@ class LFPDataset:
                 self.channels /= np.max(self.channels, axis=1, keepdims=True)
 
             elif normalization == "MuLaw":
-                """I want to bring it in (-1,1) to be able to apply MuLaw after"""
+                """The signal is brought to [0,255] through rescale->[-1,1] through mu_law"""
                 self.limits = {}
                 self.mu_law = True
+                # pyplot.hist(self.channels[32], 256)
+                # pyplot.show()
+
                 for i, channel in enumerate(self.channels):
                     np_min = np.min(channel)
                     np_max = np.max(channel)
                     self.limits[i] = (np_min, np_max)
-                    self.channels[i] = self.mu_law_fn(
+                    self.channels[i] = mu_law_fn(
                         rescale(channel, old_max=np_max, old_min=np_min, new_max=1, new_min=-1))
-
-    def mu_law_fn(self, x, mu=255):
-        """Maps [-1,1] to [0,255] as classes to be used for cross entropy"""
-        val = np.sign(x) * (np.log(1 + mu * np.absolute(x)) / np.log(1 + mu))
-        return val
-
-    def mu_law_encoding(self, x, mu=255):
-        bin = np.rint(rescale(x, 1, -1, mu, 0))
-        return bin
-
-    def inv_mu_law_fn(self, x, mu=255):
-        """Maps [0,255] discretized to [-1,1] which then needs to be rescaled when decoding the output
-        using the max and min values of the provenience channel"""
-        assert (0 <= x <= 255)
-        val = np.sign(x) * (1 / mu) * (((1 + mu) ** np.abs(x)) - 1)
-        assert (-1 <= val <= 1)
-        return val
+                #
+                # pyplot.hist(self.channels[32], 256)
+                # pyplot.show()
 
     def _parse_stimulus_data(self, condition_file_path):
         with open(os.path.join(os.path.dirname(self.description_file_path), condition_file_path),
