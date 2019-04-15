@@ -55,11 +55,9 @@ class LFPDataset:
                 self.channels /= np.max(self.channels, axis=1, keepdims=True)
 
             elif normalization == "MuLaw":
-                """The signal is brought to [0,255] through rescale->[-1,1] through mu_law"""
+                """The signal is brought to [-1,1] through rescale->[-1,1] mu_law and then encoded using np.digitize"""
                 self.limits = {}
                 self.mu_law = True
-                # pyplot.hist(self.channels[32], 256)
-                # pyplot.show()
 
                 for i, channel in enumerate(self.channels):
                     np_min = np.min(channel)
@@ -67,9 +65,6 @@ class LFPDataset:
                     self.limits[i] = (np_min, np_max)
                     self.channels[i] = mu_law_fn(
                         rescale(channel, old_max=np_max, old_min=np_min, new_max=1, new_min=-1))
-                #
-                # pyplot.hist(self.channels[32], 256)
-                # pyplot.show()
 
     def _parse_stimulus_data(self, condition_file_path):
         with open(os.path.join(os.path.dirname(self.description_file_path), condition_file_path),

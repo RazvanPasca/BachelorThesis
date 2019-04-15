@@ -29,6 +29,8 @@ def butter_lowpass_filter(data, cutoff, fs, order=5):
 def mu_law_fn(x, mu=255):
     """Maps [-1,1] to [0,255] as classes to be used for cross entropy"""
     val = np.sign(x) * (np.log(1 + mu * np.absolute(x)) / np.log(1 + mu))
+    assert (0 >= np.min(val))
+    assert (np.max(val) <= 255)
     return val
 
 
@@ -38,9 +40,10 @@ def mu_law_encoding(x, mu=255):
 
 
 def inv_mu_law_fn(x, mu=255):
-    """Maps [0,255] discretized to [-1,1] which then needs to be rescaled when decoding the output
-    using the max and min values of the provenience channel"""
-    assert (0 <= x <= 255)
+    """Maps [-1,1] decoded from bin to [-1,1] initial rescale of the signals
+    To get the original values between -300 and 400 for example, we need to use rescale fn above with each channels'
+    min and max values"""
+    assert (-1 <= x <= 1)
     val = np.sign(x) * (1 / mu) * (((1 + mu) ** np.abs(x)) - 1)
     assert (-1 <= val <= 1)
     return val

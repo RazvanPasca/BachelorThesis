@@ -7,6 +7,8 @@ import numpy as np
 from keras import callbacks
 from keras.callbacks import TensorBoard
 
+from signal_utils import inv_mu_law_fn
+
 
 def create_dir_if_not_exists(directory_path):
     if not os.path.exists(directory_path):
@@ -29,10 +31,7 @@ def decode_model_output(model_logits, model_params):
 
 def get_bin_output(model_logits, model_params):
     bin_index = np.argmax(model_logits)
-    if model_params.normalization == "MuLaw":
-        return bin_index
-    else:
-        return (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
+    return (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
 
 
 def plot_predictions(original_sequence, image_title, nr_predictions, frame_size, predicted_sequence,
@@ -203,9 +202,9 @@ def generate_subplots(original_sequences, sequence_predictions, vlines_coords_li
                          color=colors[i])
         subplot.set_title(sequence_names[i])
         if show_vlines:
-            subplot.vlines(vlines_coords_list[i], ymin=-5, ymax=5, lw=0.2)
+            lim = np.max(sequence_predictions)
+            subplot.vlines(vlines_coords_list[i], ymin=-lim, ymax=lim, lw=0.2)
         subplot.legend()
-        subplot.ylim(-4.2, 4.2)
 
     plt.tight_layout()
     plt.savefig("{}.png".format(save_path), format="png")
