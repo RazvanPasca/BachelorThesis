@@ -16,14 +16,14 @@ def get_error_estimates(model, model_parameters, nr_of_estimates, generated_wind
     avg_prediction_losses = np.zeros(nr_of_estimates)
     for estimate in range(nr_of_estimates):
         starting_point = np.random.choice(sequence.size - model_parameters.frame_size - generated_window_size)
-        prediction_losses = get_predictions_with_losses(model,
-                                                        model_parameters,
-                                                        sequence,
-                                                        generated_window_size,
-                                                        image_name="bla",
-                                                        starting_point=starting_point,
-                                                        generated_window_size=generated_window_size,
-                                                        plot=False)
+        prediction_losses, _ = get_predictions_with_losses(model,
+                                                           model_parameters,
+                                                           sequence,
+                                                           generated_window_size,
+                                                           image_name="bla",
+                                                           starting_point=starting_point,
+                                                           generated_window_size=generated_window_size,
+                                                           plot=False)
         avg_prediction_losses[estimate] = prediction_losses[-1]
 
     avg_prediction_losses = np.mean(avg_prediction_losses)
@@ -53,13 +53,13 @@ def test_model(model_params):
 
             create_dir_if_not_exists(model_params.model_path + "/" + image_prefix)
 
-            for generated_window_size in range(1, 100, 2):
+            for generated_window_size in range(1, 1000, 50):
                 get_predictions_with_losses(model,
                                             model_params,
                                             sequence,
-                                            nr_predictions=100,
+                                            nr_predictions=1000,
                                             image_name=image_name,
-                                            starting_point=1200 - model_params.frame_size,
+                                            starting_point=1500 - model_params.frame_size,
                                             generated_window_size=generated_window_size)
 
     for source in ["VAL", "TRAIN"]:

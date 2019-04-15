@@ -2,19 +2,18 @@ import datetime
 import os
 
 from datasets.LFPDataset import LFPDataset
-from datasets.DATASET_PATHS import PASCA_CAT_DATASET_PATH as CAT_DATASET_PATH
+from datasets.DATASET_PATHS import RIST_CAT_DATASET_PATH
 import matplotlib.pyplot as plt
 import numpy as np
 
 
 class CatLFP(LFPDataset):
     def __init__(self, movies_to_keep=None, channels_to_keep=None, val_perc=0.20, test_perc=0.0, random_seed=42,
-                 nr_bins=256, nr_of_seqs=3, normalization="Zsc", cutoff_freq=50):
-        super().__init__(CAT_DATASET_PATH, normalization=normalization, cutoff_freq=cutoff_freq)
-
+                 nr_bins=256, nr_of_seqs=6, normalization="Zsc", cutoff_freq=50):
+        super().__init__(CAT_DATASET_PATH, normalization=normalization, cutoff_freq=cutoff_freq,
+                         random_seed=random_seed)
         np.random.seed(random_seed)
         self.nr_bins = nr_bins
-        self.random_seed = random_seed
         self.normalization = normalization
         self._compute_values_range()
         self._pre_compute_bins()
@@ -31,6 +30,7 @@ class CatLFP(LFPDataset):
             self.movies_to_keep = np.array(movies_to_keep)
 
         self._get_train_val_test_split_channel_wise(self.movies_to_keep, self.channels_to_keep, val_perc, test_perc)
+        self.trial_length = self.train.shape[-1]
 
         self.prediction_sequences = {
             'val': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],

@@ -47,63 +47,73 @@ def compute_signals_correlation(ds, name):
 def find_samples_over_x(dataset, x):
     samples = dataset.channels[2]
     values_over_x = (samples > x).sum() if x > 0 else (samples < x).sum()
-    # print(np.max(samples), np.min(samples))
     print(x, values_over_x)
     return values_over_x
 
 
 if __name__ == '__main__':
-    # dataset = CatLFP(movies_to_keep=[1], channels_to_keep=[0], normalization="Zsc")
-    # compute_signals_correlation(dataset, "MOUSE ACh")
-    # compute_heatmap_on_dataset(dataset)
-    # find_samples_over_x(dataset, 5)
-    # find_samples_over_x(dataset, 4)
-    # x1 = find_samples_over_x(dataset, 3)
-    # find_samples_over_x(dataset, 2)
-    # find_samples_over_x(dataset, 1)
-    # find_samples_over_x(dataset, 0)
-    # find_samples_over_x(dataset, -1)
-    # find_samples_over_x(dataset, -2)
-    # x2 = find_samples_over_x(dataset, -3)
-    # print((x1 + x2) / dataset.channels[2].size)
     dataset = MouseLFP(PASCA_MOUSE_DATASET_PATH, channels_to_keep=[32], cutoff_freq=5)
-    series = []
 
-    dataset.plot_signal(18, 1, 32, )
+    for condition in range(24):
+        for trial in range(10):
+            series = []
+            for channel in range(32):
+                signal = dataset.get_dataset_piece(condition, trial, channel)
+                series.append(signal)
 
-    # for experiment in [13]:
-    #     for trial in [9]:
-    #         for channel in range(32):
-    #             signal = dataset.get_dataset_piece(experiment, trial, channel)
-    #             series.append(signal)
-    # for i, signal in enumerate(series):
-    #     # plt.subplot(2, 1, 1)
-    #     plt.ylim(-4, +4)
-    #     plt.plot(signal, label=i)
-    #     plt.legend()
-    # # plt.show()
+            plt.figure(figsize=(16, 12))
+            for i, signal in enumerate(series):
+                title = "Condition:{}_Trial:{}".format(condition, trial)
+                plt.title(title)
+                plt.ylim(-5, +5)
+                plt.plot(signal, label=i)
+            plt.legend()
+            plt.savefig(fname="/home/pasca/School/Licenta/Naturix/Correlations/Channel_correlation/{}.png".format(title),
+                        format="png")
 
-    # series = []
-    # for experiment in [8]:
-    #     for trial in [5, 6, 7, 8, 9,]:
-    #         signal = dataset.get_dataset_piece(experiment, trial, 4)
-    #         series.append(signal)
-    # for i, signal in enumerate(series):
-    #     plt.subplot(2, 1, 2)
-    #     plt.ylim(-4, +4)
-    #     plt.plot(signal, label=5 + i)
-    #     plt.legend()
-    plt.show()
+            #plt.show()
+            plt.close()
 
-    # for i in range(1):
-    #     for j in range(10):
-    #         signal = dataset.get_dataset_piece(i, j, 4)
-    #         series.append(signal)
-    #
-    # for signal in series:
-    #     plt.plot(signal)
+    print("Finished channel comparison")
 
-    # find_samples_over_x(dataset, -4)
-    # find_samples_over_x(dataset, -5)
-    # plt.hist(dataset.channels[2].flatten(), bins=50, range=(-7, 7))
-    # plt.show()
+    for condition in range(24):
+        for channel in range(32):
+            series = []
+            for trial in range(10):
+                signal = dataset.get_dataset_piece(condition, trial, channel)
+                series.append(signal)
+
+            plt.figure(figsize=(16, 12))
+            for i, signal in enumerate(series):
+                title = "Condition:{}_Channel:{}".format(condition, channel)
+                plt.title(title)
+                plt.ylim(-5, +5)
+                plt.plot(signal, label=i)
+            plt.legend()
+            plt.savefig(fname="/home/pasca/School/Licenta/Naturix/Correlations/Trial_correlation/{}.png".format(title),
+                        format="png")
+            #plt.show()
+            plt.close()
+
+    print("Finished trial comparison")
+
+    for trial in range(10):
+        for channel in range(32):
+            series = []
+            for condition in range(24):
+                signal = dataset.get_dataset_piece(condition, trial, channel)
+                series.append(signal)
+
+            plt.figure(figsize=(16, 12))
+            for i, signal in enumerate(series):
+                title = "Trial:{}_Channel:{}".format(trial, channel)
+                plt.title(title)
+                plt.ylim(-5, +5)
+                plt.plot(signal, label=i)
+            plt.legend()
+            plt.savefig(fname="/home/pasca/School/Licenta/Naturix/Correlations/Condition_correlation/{}.png".format(title),
+                        format="png")
+            #plt.show()
+            plt.close()
+
+    print("Finished condition comparison")

@@ -1,27 +1,29 @@
 {
   "channels_to_keep": [
-    15
+    32
   ],
-  "n_epochs": 5,
-  "batch_size": 64,
-  "nr_layers": 6,
-  "nr_filters": 32,
-  "skip_conn_filters": 64,
+  "n_epochs": 400,
+  "batch_size": 32,
+  "nr_layers": 11,
+  "nr_filters": 256,
+  "skip_conn_filters": 256,
   "lr": 1e-05,
-  "loss": "MSE_CE",
+  "loss": "MAE_CE",
   "clip_grad_by_value": 5,
-  "nr_bins": 256,
-  "regularization_coef": 0.0001,
+  "nr_bins": 512,
+  "regularization_coef": 0.0,
   "normalization": "Zsc",
   "dataset": "MouseControl",
-  "train_coverage_per_epoch": 0.001,
-  "output": "Sfmax",
+  "output": "Regression",
+  "train_coverage_per_epoch": 0.3,
+  "val_coverage_per_epoch": 1.0,
   "multiloss_weights": {
-    "Regression": 1,
     "Sfmax": 1
   },
-  "val_coverage_per_epoch": 0.010,
-  "save_path": "./LFP_models",
-  "cutoff_freq": -1,
-  "gpu": 0
+  "save_path": "/data2/razpa/LFP_models",
+  "cutoff_freq": 5,
+  "random_seed": 42,
+  "gpu": 1
 }
+
+

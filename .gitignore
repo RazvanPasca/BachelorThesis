@@ -10,6 +10,7 @@ datasets/__pycache__/
 #Un-needed scripts
 crop_images.py
 resize_images.py
+*.out
 
 #Tensorflow models
 *.h5

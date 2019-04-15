@@ -8,7 +8,7 @@ from signal_utils import butter_lowpass_filter, rescale
 
 class LFPDataset:
 
-    def __init__(self, dataset_path, saved_as_npy=True, normalization=None, cutoff_freq=20):
+    def __init__(self, dataset_path, saved_as_npy=True, normalization=None, cutoff_freq=20, random_seed=42):
         self.description_file_path = dataset_path
         if saved_as_npy:
             self.load_from_npy(dataset_path)
@@ -31,6 +31,7 @@ class LFPDataset:
             self.channels = self._parse_channels_data(lfp_file_data.get('bin_file_names'))
             self.stimulus_on_at, self.stimulus_off_at = self._parse_stimulus_on_off(lfp_file_data)
 
+        self.random_seed = random_seed
         self.cutoff_freq = cutoff_freq
         self.nr_channels = len(self.channels)
         self.low_pass_filter = cutoff_freq > 0
@@ -74,7 +75,9 @@ class LFPDataset:
     def inv_mu_law_fn(self, x, mu=255):
         """Maps [0,255] discretized to [-1,1] which then needs to be rescaled when decoding the output
         using the max and min values of the provenience channel"""
+        assert (0 <= x <= 255)
         val = np.sign(x) * (1 / mu) * (((1 + mu) ** np.abs(x)) - 1)
+        assert (-1 <= val <= 1)
         return val
 
     def _parse_stimulus_data(self, condition_file_path):

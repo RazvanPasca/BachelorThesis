@@ -12,15 +12,14 @@ class MouseLFP(LFPDataset):
     def __init__(self, dataset_path, frame_size=512, channels_to_keep=None, conditions_to_keep=None, val_perc=0.20,
                  test_perc=0.0,
                  random_seed=42, nr_bins=256,
-                 nr_of_seqs=3,
+                 nr_of_seqs=6,
                  normalization="Zsc",
                  cutoff_freq=50):
-        super().__init__(dataset_path, normalization=normalization, cutoff_freq=cutoff_freq)
-        np.random.seed(random_seed)
+        super().__init__(dataset_path, normalization=normalization, cutoff_freq=cutoff_freq, random_seed=random_seed)
 
+        np.random.seed(random_seed)
         self.frame_size = frame_size
         self.nr_bins = nr_bins
-        self.random_seed = random_seed
         self.normalization = normalization
         self.nr_channels = len(self.channels)
         self.nr_of_orientations = 8
@@ -46,8 +45,8 @@ class MouseLFP(LFPDataset):
         self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
 
         self.prediction_sequences = {
-            'val': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
-            'train': [self.get_random_sequence_from('TRAIN') for _ in range(nr_of_seqs)]
+            'VAL': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
+            'TRAIN': [self.get_random_sequence_from('TRAIN') for _ in range(nr_of_seqs)]
         }
 
         np.random.seed(datetime.datetime.now().microsecond)
@@ -61,10 +60,12 @@ class MouseLFP(LFPDataset):
                     index = int(stimulus_condition['Trial']) - 1
                     events = [{'timestamp': self.event_timestamps[4 * index + i],
                                'code': self.event_codes[4 * index + i]} for i in range(4)]
-                    # trial = self.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
+                    #trial = self.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
+
                     # Right now it cuts only the area where the stimulus is active
                     # In order to keep the whole trial replace with
                     trial = self.channels[:, events[0]['timestamp']:(events[0]['timestamp'] + 4175)]
+
                     conditions.append(trial)
             self.all_lfp_data.append(np.array(conditions))
         self.all_lfp_data = np.array(self.all_lfp_data, dtype=np.float32)
@@ -111,27 +112,6 @@ class MouseLFP(LFPDataset):
         else:
             self.test = interm_data[:, test_indexes, :].reshape(self.number_of_conditions, nr_test_trials, -1,
                                                                 self.trial_length)
-
-    def _get_train_val_test_split_with_indexes(self, channels_to_keep, conditions_to_keep, val_perc, test_perc,
-                                               indexes):
-        self._get_train_val_test_split_channel_wise(channels_to_keep, conditions_to_keep, val_perc, test_perc)
-        train_slices = []
-        val_slices = []
-
-        train_shape = self.train.shape
-        val_shape = self.validation.shape
-        slice_length = indexes[0][1] - indexes[0][0]
-
-        for index_pair in indexes:
-            train_slices.append(self.train[:, :, :, index_pair[0]:index_pair[1]])
-            val_slices.append(self.validation[:, :, :, index_pair[0]:index_pair[1]])
-
-        train_slices = np.array(train_slices)
-        val_slices = np.array(val_slices)
-        self.train = train_slices.reshape(train_shape[0], train_shape[1], -1, slice_length)
-        self.validation = val_slices.reshape(val_shape[0], val_shape[1], -1, slice_length)
-
-        assert (np.all(self.train[0, 0,]))
 
     def frame_generator(self, frame_size, batch_size, classifying, data):
         x = []

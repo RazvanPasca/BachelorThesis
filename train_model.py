@@ -1,11 +1,10 @@
 from keras.callbacks import TensorBoard, CSVLogger, ModelCheckpoint
-from keras.losses import mean_squared_error, sparse_categorical_crossentropy
 
-from plot_utils import PlotCallback, TensorBoardWrapper
+from model import get_wavenet_model
+from plot_utils import PlotCallback
 from test_model import test_model
 from tf_utils import configure_gpu
 from training_parameters import ModelTrainingParameters
-from model import get_wavenet_model
 
 
 def log_training_session(model_params):
@@ -29,7 +28,7 @@ def train_model(model_params):
                               nr_output_classes=model_params.nr_bins,
                               multiloss_weights=model_params.multiloss_weights)
 
-    #TODO make activation callback work with multiple output
+    # TODO make activation callback work with multiple output
 
     # tensorboard_callback = TensorBoardWrapper(
     #     batch_gen=model_params.dataset.validation_frame_generator(model_params.frame_size,
@@ -44,10 +43,11 @@ def train_model(model_params):
     tensorboard_callback = TensorBoard(log_dir=model_params.model_path,
                                        write_graph=True, )
     log_callback = CSVLogger(model_params.model_path + "/session_log.csv")
-    plot_figure_callback = PlotCallback(model_params, 5, nr_predictions_steps=1000,
-                                        starting_point=1200 - model_params.frame_size)
+    plot_figure_callback = PlotCallback(model_params, 5, nr_predictions=-1, starting_point=0,
+                                        generated_window_sizes=range(1, model_params.dataset.trial_length, 250))
+
     save_model_callback = ModelCheckpoint(
-        filepath="{}/best_model.h5".format(model_params.model_path), monitor="val_Regression_loss",
+        filepath="{}/best_model.h5".format(model_params.model_path), monitor="val_loss",
         save_best_only=True)
 
     model.fit_generator(
