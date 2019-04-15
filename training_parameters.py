@@ -72,8 +72,8 @@ class ModelTrainingParameters:
     def get_model_name(self):
         if self.get_classifying() == 2:
             loss = self.loss + ":{}_RegW:{}_SfmaxW:{}".format(self.nr_bins,
-                                                                        self.multiloss_weights["Regression"],
-                                                                        self.multiloss_weights["Sfmax"])
+                                                              self.multiloss_weights["Regression"],
+                                                              self.multiloss_weights["Sfmax"])
         elif self.get_classifying() == 1:
             loss = self.loss + ":{}".format(self.nr_bins)
         else:

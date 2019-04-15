@@ -109,8 +109,8 @@ def get_predictions_with_losses(model, model_params, original_sequence, nr_predi
     if generated_window_size > nr_actual_predictions:
         warnings.warn(
             "Can't generate more steps per window than the total number of predictions. "
-            "The generated window size will be set to the total number of predictions ")
-        generated_window_size = nr_actual_predictions
+            "This will be skipped")
+        return
 
     input_sequence = []
     for prediction_nr in range(nr_actual_predictions):
@@ -163,7 +163,7 @@ def generate_subplots(original_sequences, sequence_predictions, vlines_coords_li
     predictions_x_indices = range(prediction_starting_point, prediction_starting_point + prediction_length)
     original_sequences_x_indices = range(len(original_sequences[0]))
 
-    show_vlines = vlines_coords_list[0][1] - vlines_coords_list[0][0] != 1
+    show_vlines = len(vlines_coords_list[0]) != sequence_predictions[0][0].size
 
     for i, subplot in enumerate(subplots.flatten()):
         subplot.plot(original_sequences_x_indices, original_sequences[i][original_sequences_x_indices],
@@ -232,7 +232,9 @@ class PlotCallback(callbacks.Callback):
         self.nr_prediction_steps = nr_predictions if nr_predictions > 0 else model_params.dataset.trial_length
         self.plot_period = plot_period
         self.starting_point = starting_point
-        self.generated_window_sizes = generated_window_sizes
+        self.generated_window_sizes = list(generated_window_sizes)
+        self.generated_window_sizes.append(
+            model_params.dataset.trial_length - model_params.frame_size - 1 - starting_point)
 
     def on_train_begin(self, logs={}):
         create_dir_if_not_exists(self.model_params.model_path)
