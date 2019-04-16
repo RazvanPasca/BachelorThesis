@@ -10,7 +10,8 @@ from signal_utils import butter_lowpass_filter, rescale, mu_law_fn
 
 class LFPDataset:
 
-    def __init__(self, dataset_path, saved_as_npy=True, normalization=None, cutoff_freq=20, random_seed=42):
+    def __init__(self, dataset_path, saved_as_npy=True, normalization=None, cutoff_freq=20, random_seed=42,
+                 white_noise_dev=-1):
         self.description_file_path = dataset_path
         if saved_as_npy:
             self.load_from_npy(dataset_path)
@@ -37,11 +38,26 @@ class LFPDataset:
         self.cutoff_freq = cutoff_freq
         self.nr_channels = len(self.channels)
         self.low_pass_filter = cutoff_freq > 0
+        self.white_noise = white_noise_dev > 0
+        self.white_noise_dev = white_noise_dev
 
         if self.low_pass_filter:
-            for i, channel in enumerate(self.channels):
-                self.channels[i] = butter_lowpass_filter(channel, self.cutoff_freq, 1000)
+            self._low_pass_input()
 
+        self._normalize_input(normalization)
+
+        if self.white_noise:
+            self._add_noise_to_input()
+
+    def _add_noise_to_input(self):
+        noise = np.random.normal(0, self.white_noise_dev, self.channels.shape)
+        self.channels += noise
+
+    def _low_pass_input(self):
+        for i, channel in enumerate(self.channels):
+            self.channels[i] = butter_lowpass_filter(channel, self.cutoff_freq, 1000)
+
+    def _normalize_input(self, normalization):
         self.mu_law = False
         if normalization is not None:
             if normalization == "Zsc":

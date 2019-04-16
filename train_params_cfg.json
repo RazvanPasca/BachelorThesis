@@ -16,6 +16,7 @@
   "dataset": "MouseControl",
   "train_coverage_per_epoch": 0.3,
   "val_coverage_per_epoch": 1.0,
+  "white_noise_dev": 0.01,
   "multiloss_weights": {
     "Sfmax": 1
   },

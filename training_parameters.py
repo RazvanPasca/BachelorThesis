@@ -48,20 +48,13 @@ class ModelTrainingParameters:
         self._compute_model_path(model_path)
 
     def _prepare_dataset(self, klass):
-        if "CatLFP" == self.dataset:
-            self.dataset = klass(movies_to_keep=self.movies_to_keep,
-                                 channels_to_keep=self.channels_to_keep,
-                                 nr_bins=self.nr_bins,
-                                 normalization=self.normalization,
-                                 cutoff_freq=self.cutoff_freq,
-                                 random_seed=self.random_seed)
-        else:
-            self.dataset = klass(conditions_to_keep=self.conditions_to_keep,
-                                 channels_to_keep=self.channels_to_keep,
-                                 nr_bins=self.nr_bins,
-                                 normalization=self.normalization,
-                                 cutoff_freq=self.cutoff_freq,
-                                 random_seed=self.random_seed)
+        self.dataset = klass(conditions_to_keep=self.conditions_to_keep,
+                             channels_to_keep=self.channels_to_keep,
+                             nr_bins=self.nr_bins,
+                             normalization=self.normalization,
+                             cutoff_freq=self.cutoff_freq,
+                             random_seed=self.random_seed,
+                             white_noise_dev=self.white_noise_dev)
 
     def _load_configuration_from_json(self, config_path):
         with open(config_path, 'r') as f:
@@ -78,7 +71,7 @@ class ModelTrainingParameters:
             loss = self.loss + ":{}".format(self.nr_bins)
         else:
             loss = self.loss
-        return "WvNet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_Norm:{}_Loss:{}_GradClip:{}_LPass:{}".format(
+        return "WvNet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_Norm:{}_Loss:{}_GradClip:{}_LPass:{}_WNz:{}".format(
             self.nr_layers,
             self.n_epochs,
             self.nr_train_steps,
@@ -91,7 +84,7 @@ class ModelTrainingParameters:
             loss,
             self.clip_grad_by_value,
             self.cutoff_freq,
-        )
+            self.white_noise_dev)
 
     def _compute_model_path(self, model_path):
         if model_path is None:

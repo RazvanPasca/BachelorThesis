@@ -14,8 +14,10 @@ class MouseLFP(LFPDataset):
                  random_seed=42, nr_bins=256,
                  nr_of_seqs=6,
                  normalization="Zsc",
-                 cutoff_freq=50):
-        super().__init__(dataset_path, normalization=normalization, cutoff_freq=cutoff_freq, random_seed=random_seed)
+                 cutoff_freq=50,
+                 white_noise_dev=-1):
+        super().__init__(dataset_path, normalization=normalization, cutoff_freq=cutoff_freq, random_seed=random_seed,
+                         white_noise_dev=white_noise_dev)
 
         np.random.seed(random_seed)
         self.frame_size = frame_size
@@ -60,7 +62,7 @@ class MouseLFP(LFPDataset):
                     index = int(stimulus_condition['Trial']) - 1
                     events = [{'timestamp': self.event_timestamps[4 * index + i],
                                'code': self.event_codes[4 * index + i]} for i in range(4)]
-                    #trial = self.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
+                    # trial = self.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
 
                     # Right now it cuts only the area where the stimulus is active
                     # In order to keep the whole trial replace with
