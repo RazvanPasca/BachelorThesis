@@ -14,16 +14,16 @@
   "regularization_coef": 0.0,
   "normalization": "MuLaw",
   "dataset": "MouseControl",
-  "train_coverage_per_epoch": 0.3,
-  "val_coverage_per_epoch": 1.0,
   "white_noise_dev": 0.01,
+  "train_coverage_per_epoch": 0.3,
+  "val_coverage_per_epoch": 0.2,
   "multiloss_weights": {
     "Sfmax": 1
   },
   "save_path": "/data2/razpa/LFP_models",
-  "cutoff_freq": 5,
+  "cutoff_freq": 7,
   "random_seed": 42,
-  "gpu": 1
+  "gpu": 0
 }
 
 
