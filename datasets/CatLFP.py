@@ -8,12 +8,19 @@ import numpy as np
 
 
 class CatLFP(LFPDataset):
-    def __init__(self, conditions_to_keep=None, channels_to_keep=None, val_perc=0.20, test_perc=0.0, random_seed=42,
-                 nr_bins=256, nr_of_seqs=6, normalization="Zsc", cutoff_freq=50, white_noise_dev=-1):
+    def __init__(self, conditions_to_keep=None, channels_to_keep=None,
+                 val_perc=0.20,
+                 test_perc=0.0,
+                 random_seed=42,
+                 nr_bins=256,
+                 nr_of_seqs=6,
+                 normalization="Zsc",
+                 cutoff_freq=50,
+                 white_noise_dev=-1):
         super().__init__(CAT_DATASET_PATH, normalization=normalization, cutoff_freq=cutoff_freq,
-                         random_seed=random_seed, white_noise_dev=white_noise_dev)
+                         random_seed=random_seed, white_noise_dev=white_noise_dev, nr_bins=nr_bins)
+
         np.random.seed(random_seed)
-        self.nr_bins = nr_bins
         self.normalization = normalization
         self._compute_values_range()
         self._pre_compute_bins()
