@@ -195,20 +195,19 @@ def generate_subplots(original_sequences, sequence_predictions, vlines_coords_li
     show_vlines = len(vlines_coords_list[0]) != sequence_predictions[0][0].size
 
     for i, subplot in enumerate(subplots.flatten()):
-        subplot.plot(original_sequences_x_indices, original_sequences[i][original_sequences_x_indices],
-                     label="Original sequence", color="blue")
-        for i, sequence_prediction in enumerate(sequence_predictions[i]):
-            subplot.plot(predictions_x_indices, sequence_prediction, label="Predicted sequence {}".format(i),
-                         color=colors[i])
-        subplot.set_title(sequence_names[i])
+        for j, sequence_prediction in enumerate(sequence_predictions[i]):
+            subplot.plot(predictions_x_indices, sequence_prediction, label="Predicted sequence {}".format(j),
+                         color=colors[j])
         if show_vlines:
             lim = np.max(sequence_predictions)
             subplot.vlines(vlines_coords_list[i], ymin=-lim, ymax=lim, lw=0.2)
+        subplot.set_title(sequence_names[i])
+        subplot.plot(original_sequences_x_indices, original_sequences[i][original_sequences_x_indices],
+                     label="Original sequence", color="blue")
         subplot.legend()
 
     plt.tight_layout()
     plt.savefig("{}.png".format(save_path), format="png")
-    plt.show()
     plt.close()
 
 
