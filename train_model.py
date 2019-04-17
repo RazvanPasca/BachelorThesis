@@ -43,8 +43,8 @@ def train_model(model_params):
     tensorboard_callback = TensorBoard(log_dir=model_params.model_path,
                                        write_graph=True, )
     log_callback = CSVLogger(model_params.model_path + "/session_log.csv")
-    plot_figure_callback = PlotCallback(model_params, 5, nr_predictions=-1, starting_point=0,
-                                        generated_window_sizes=range(1, model_params.dataset.trial_length, 250))
+    plot_figure_callback = PlotCallback(model_params, 1, nr_predictions=-1, starting_point=0,
+                                        generated_window_sizes=range(1, model_params.dataset.trial_length, 750))
 
     save_model_callback = ModelCheckpoint(
         filepath="{}/best_model.h5".format(model_params.model_path), monitor="val_loss",
