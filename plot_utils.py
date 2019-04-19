@@ -266,7 +266,7 @@ class PlotCallback(callbacks.Callback):
                                                              generated_window_sizes=self.generated_window_sizes,
                                                              nr_of_sequences_to_plot=self.nr_of_sequences_to_plot)
 
-            self.write_pred_losses_to_tboard(self.pred_error_writer, all_pred_losses_normalized, self.epoch)
+            self.write_pred_losses_to_tboard(all_pred_losses_normalized, self.epoch)
 
     def on_train_end(self, logs=None):
         all_pred_losses_normalized = generate_multi_plot(self.model, self.model_params, "TrainEnd", self.starting_point,
@@ -274,7 +274,7 @@ class PlotCallback(callbacks.Callback):
                                                          generated_window_sizes=self.generated_window_sizes,
                                                          nr_of_sequences_to_plot=self.nr_of_sequences_to_plot)
 
-        self.write_pred_losses_to_tboard(self.pred_error_writer, all_pred_losses_normalized, self.epoch)
+        self.write_pred_losses_to_tboard(all_pred_losses_normalized, self.epoch)
         self.pred_error_writer.close()
 
     def get_nr_prediction_steps(self, model_params, nr_predictions, starting_point):
@@ -288,15 +288,15 @@ class PlotCallback(callbacks.Callback):
         self.generated_window_sizes = [x for x in self.generated_window_sizes if x < limit]
         self.generated_window_sizes.append(limit)
 
-    def write_pred_losses_to_tboard(self, pred_error_writer, all_pred_losses_normalized, epoch):
+    def write_pred_losses_to_tboard(self, all_pred_losses_normalized, epoch):
         for source, source_errors in all_pred_losses_normalized.items():
             summary = tf.Summary()
             for i, error in enumerate(source_errors):
                 summary_value = summary.value.add()
                 summary_value.simple_value = error
                 summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, self.generated_window_sizes[i])
-            pred_error_writer.add_summary(summary, epoch)
-        pred_error_writer.flush()
+            self.pred_error_writer.add_summary(summary, epoch)
+        self.pred_error_writer.flush()
 
 
 class TensorBoardWrapper(TensorBoard):
