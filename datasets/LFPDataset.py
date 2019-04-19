@@ -82,8 +82,6 @@ class LFPDataset:
                     self.limits[i] = (np_min, np_max)
                     self.channels[i] = mu_law_fn(
                         rescale(channel, old_max=np_max, old_min=np_min, new_max=1, new_min=-1), self.nr_bins)
-                pyplot.hist(self.channels[15], 256)
-                pyplot.show()
 
     def _parse_stimulus_data(self, condition_file_path):
         with open(os.path.join(os.path.dirname(self.description_file_path), condition_file_path),

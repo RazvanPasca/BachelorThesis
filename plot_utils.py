@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from keras import callbacks
 from keras.callbacks import TensorBoard
+import tensorflow as tf
+
+from output_utils import decode_model_output, get_normalized_prediction_losses, get_cumulated_error_mean_per_sequence
 
 
 def create_dir_if_not_exists(directory_path):
@@ -14,20 +17,6 @@ def create_dir_if_not_exists(directory_path):
 def prepare_file_for_writing(file_path, text):
     with open(file_path, "w") as f:
         f.write(text)
-
-
-def decode_model_output(model_logits, model_params):
-    if model_params.get_classifying() == 2:
-        return get_bin_output(model_logits[1], model_params), model_logits[0][0]
-    elif model_params.get_classifying() == 1:
-        return get_bin_output(model_logits, model_params),
-    else:
-        return model_logits,
-
-
-def get_bin_output(model_logits, model_params):
-    bin_index = np.argmax(model_logits)
-    return (model_params.dataset.bins[bin_index - 1] + model_params.dataset.bins[bin_index]) / 2
 
 
 def plot_predictions(original_sequence, image_title, nr_predictions, frame_size, predicted_sequence,
@@ -106,12 +95,16 @@ def generate_prediction_name(seq_addr):
     return name
 
 
-def generate_multi_plot(model, model_params, epoch, starting_point, nr_prediction_steps, generated_window_sizes):
+def generate_multi_plot(model, model_params, epoch, starting_point, nr_prediction_steps, generated_window_sizes,
+                        nr_of_sequences_to_plot=6):
     pred_seqs = model_params.dataset.prediction_sequences
+    prediction_range = np.arange(1, nr_prediction_steps + 1)
+    all_prediction_losses_norm = {}
 
     for source in pred_seqs:
         dir_name = "{}/{}".format(model_params.model_path, source)
         create_dir_if_not_exists(dir_name)
+        all_prediction_losses_norm[source] = []
 
         for generated_window_size in generated_window_sizes:
             plt_path = "{}/E:{}_GenWindowSize:{}".format(dir_name, epoch, generated_window_size)
@@ -119,18 +112,21 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
             sequence_names = []
             original_sequences = []
             vlines_coords_list = []
+            prediction_losses = []
 
-            for sequence, addr in pred_seqs[source]:
+            for sequence, addr in pred_seqs[source][:nr_of_sequences_to_plot]:
                 image_prefix = generate_prediction_name(addr)
                 image_prefix = addr["SOURCE"] + "_" + image_prefix
                 image_name = "{}_E:{}_GenWinSize:{}".format(image_prefix, epoch, generated_window_size)
 
-                _, predictions, vlines_coords = get_predictions_with_losses(model, model_params, sequence,
-                                                                            nr_prediction_steps,
-                                                                            image_name,
-                                                                            starting_point,
-                                                                            generated_window_size, plot=False)
+                losses, predictions, vlines_coords = get_sequence_prediction(model, model_params, sequence,
+                                                                             nr_prediction_steps,
+                                                                             image_name,
+                                                                             starting_point,
+                                                                             generated_window_size, plot=False)
 
+                prediction_losses.append(
+                    get_cumulated_error_mean_per_sequence(losses[0], generated_window_size, prediction_range))
                 sequence_predictions.append(predictions)
                 sequence_names.append(image_name)
                 original_sequences.append(sequence)
@@ -139,10 +135,32 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
             generate_subplots(original_sequences, sequence_predictions, vlines_coords_list, sequence_names,
                               starting_point + model_params.frame_size, plt_path)
 
+            prediction_losses_normalized = get_normalized_prediction_losses(generated_window_size, prediction_losses)
+            all_prediction_losses_norm[source].append(prediction_losses_normalized)
 
-def get_predictions_with_losses(model, model_params, original_sequence, nr_actual_predictions, image_name,
-                                starting_point,
-                                generated_window_size, plot=True):
+    return all_prediction_losses_norm
+
+
+def get_sequence_prediction(model, model_params, original_sequence, nr_actual_predictions, image_name,
+                            starting_point,
+                            generated_window_size, plot=True):
+    """Generates prediction given an original sequence as input
+
+
+     Args:
+            model: instance of the keras model used for predicting
+            model_params: instance of the model_params associated with this training/testing session
+            original_sequence: the original sequence from the dataset used as "seed" for the model
+            nr_actual_predictions: how many values we will predict in total
+            starting_point: the place from which we start seeding the model with model_params.frame_size values
+            generated_window_size: after how many values we reset the teacher forcing, starting with another original sequence
+            plot: boolean telling if we should plot or not the results or only return them
+
+    Returns:
+            prediction_losses: the accumulated errors associated with it
+            predicted_sequences: the predicted sequence
+            vlines_coords: a vlines object indicating the reset indices
+    """
     predicted_sequences = [np.zeros(nr_actual_predictions) for _ in range(model_params.get_classifying())]
     predictions_losses = [np.zeros(nr_actual_predictions) for _ in range(model_params.get_classifying())]
     vlines_coords = []
@@ -184,22 +202,23 @@ def generate_subplots(original_sequences, sequence_predictions, vlines_coords_li
     nr_cols = len(sequence_predictions) // nr_rows
     colors = ["red", "green"]
     prediction_length = len(sequence_predictions[0][0])
-    fig, subplots = plt.subplots(nr_rows, nr_cols, sharex=True, figsize=(20, 10))
+    fig, subplots = plt.subplots(nr_rows, nr_cols, sharex=True, figsize=(25, 15))
     predictions_x_indices = range(prediction_starting_point, prediction_starting_point + prediction_length)
     original_sequences_x_indices = range(len(original_sequences[0]))
 
     show_vlines = len(vlines_coords_list[0]) != sequence_predictions[0][0].size
 
     for i, subplot in enumerate(subplots.flatten()):
+        subplot.plot(original_sequences_x_indices, original_sequences[i][original_sequences_x_indices],
+                     label="Original sequence", color="blue")
         for j, sequence_prediction in enumerate(sequence_predictions[i]):
             subplot.plot(predictions_x_indices, sequence_prediction, label="Predicted sequence {}".format(j),
                          color=colors[j])
         if show_vlines:
             lim = np.max(sequence_predictions)
-            subplot.vlines(vlines_coords_list[i], ymin=-lim, ymax=lim, lw=0.2)
+            lim1 = np.min(sequence_predictions)
+            subplot.vlines(vlines_coords_list[i], ymin=lim1, ymax=lim, lw=0.2)
         subplot.set_title(sequence_names[i])
-        subplot.plot(original_sequences_x_indices, original_sequences[i][original_sequences_x_indices],
-                     label="Original sequence", color="blue")
         subplot.legend()
 
     plt.tight_layout()
@@ -215,7 +234,8 @@ class PlotCallback(callbacks.Callback):
         If starting point is smaller than 1, the model will start predicting from the beginning of the signal-frame size
     """
 
-    def __init__(self, model_params, plot_period, nr_predictions, starting_point, generated_window_sizes):
+    def __init__(self, model_params, plot_period, nr_predictions, starting_point, generated_window_sizes,
+                 nr_plot_rows=2):
         super().__init__()
 
         self.model_params = model_params
@@ -224,6 +244,38 @@ class PlotCallback(callbacks.Callback):
         self.plot_period = plot_period
         self.starting_point = starting_point
         self.get_generated_window_sizes(generated_window_sizes, model_params, starting_point)
+        self.nr_plot_rows = nr_plot_rows
+        self.nr_of_sequences_to_plot = self.model_params.dataset.nr_of_seqs // nr_plot_rows * nr_plot_rows
+
+    def set_model(self, model):
+        self.pred_error_writer = tf.summary.FileWriter(self.model_params.model_path)
+        super().set_model(model)
+
+    def on_train_begin(self, logs={}):
+        create_dir_if_not_exists(self.model_params.model_path)
+        self.model_params.serialize_to_json(self.model_params.model_path)
+        return
+
+    def on_epoch_end(self, epoch, logs={}):
+        self.epoch += 1
+
+        if self.epoch % self.plot_period == 0 or self.epoch == 1:
+            all_pred_losses_normalized = generate_multi_plot(self.model, self.model_params, self.epoch,
+                                                             self.starting_point,
+                                                             nr_prediction_steps=self.nr_prediction_steps,
+                                                             generated_window_sizes=self.generated_window_sizes,
+                                                             nr_of_sequences_to_plot=self.nr_of_sequences_to_plot)
+
+            self.write_pred_losses_to_tboard(self.pred_error_writer, all_pred_losses_normalized, self.epoch)
+
+    def on_train_end(self, logs=None):
+        all_pred_losses_normalized = generate_multi_plot(self.model, self.model_params, "TrainEnd", self.starting_point,
+                                                         nr_prediction_steps=self.nr_prediction_steps,
+                                                         generated_window_sizes=self.generated_window_sizes,
+                                                         nr_of_sequences_to_plot=self.nr_of_sequences_to_plot)
+
+        self.write_pred_losses_to_tboard(self.pred_error_writer, all_pred_losses_normalized, self.epoch)
+        self.pred_error_writer.close()
 
     def get_nr_prediction_steps(self, model_params, nr_predictions, starting_point):
         self.nr_prediction_steps = nr_predictions if nr_predictions > 0 else model_params.dataset.trial_length
@@ -236,23 +288,15 @@ class PlotCallback(callbacks.Callback):
         self.generated_window_sizes = [x for x in self.generated_window_sizes if x < limit]
         self.generated_window_sizes.append(limit)
 
-    def on_train_begin(self, logs={}):
-        create_dir_if_not_exists(self.model_params.model_path)
-        self.model_params.serialize_to_json(self.model_params.model_path)
-        return
-
-    def on_epoch_end(self, epoch, logs={}):
-        self.epoch += 1
-
-        if self.epoch % self.plot_period == 0 or self.epoch == 1:
-            generate_multi_plot(self.model, self.model_params, self.epoch, self.starting_point,
-                                nr_prediction_steps=self.nr_prediction_steps,
-                                generated_window_sizes=self.generated_window_sizes)
-
-    def on_train_end(self, logs=None):
-        generate_multi_plot(self.model, self.model_params, "TrainEnd", self.starting_point,
-                            nr_prediction_steps=self.nr_prediction_steps,
-                            generated_window_sizes=self.generated_window_sizes)
+    def write_pred_losses_to_tboard(self, pred_error_writer, all_pred_losses_normalized, epoch):
+        for source, source_errors in all_pred_losses_normalized.items():
+            summary = tf.Summary()
+            for i, error in enumerate(source_errors):
+                summary_value = summary.value.add()
+                summary_value.simple_value = error
+                summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, self.generated_window_sizes[i])
+            pred_error_writer.add_summary(summary, epoch)
+        pred_error_writer.flush()
 
 
 class TensorBoardWrapper(TensorBoard):

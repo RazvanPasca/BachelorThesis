@@ -36,6 +36,7 @@ def mu_law_fn(x, mu=256):
 
 def mu_law_encoding(x, mu=256):
     bin = np.rint(rescale(x, 1, -1, mu - 1, 0))
+    assert (0 <= bin <= mu - 1)
     return bin
 
 

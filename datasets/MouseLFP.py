@@ -11,23 +11,24 @@ from signal_utils import mu_law_encoding
 class MouseLFP(LFPDataset):
     def __init__(self, dataset_path, frame_size=512, channels_to_keep=None, conditions_to_keep=None, val_perc=0.20,
                  test_perc=0.0,
-                 random_seed=42, nr_bins=256,
+                 random_seed=42,
+                 nr_bins=256,
                  nr_of_seqs=6,
                  normalization="Zsc",
                  cutoff_freq=50,
                  white_noise_dev=-1):
         super().__init__(dataset_path, normalization=normalization, cutoff_freq=cutoff_freq, random_seed=random_seed,
-                         white_noise_dev=white_noise_dev)
+                         white_noise_dev=white_noise_dev, nr_bins=nr_bins)
 
         np.random.seed(random_seed)
         self.frame_size = frame_size
-        self.nr_bins = nr_bins
         self.normalization = normalization
         self.nr_channels = len(self.channels)
         self.nr_of_orientations = 8
         self.nr_of_stimulus_luminosity_levels = 3
         self.number_of_conditions = 24
         self.trial_length = 4175  # 2672  # 4175
+        self.nr_of_seqs = nr_of_seqs
 
         if channels_to_keep is None:
             self.channels_to_keep = np.array(range(self.nr_channels))
@@ -83,7 +84,7 @@ class MouseLFP(LFPDataset):
     def _encode_input_to_bin(self, target_val):
         if target_val not in self.cached_val_bin:
             if self.mu_law:
-                self.cached_val_bin[target_val] = mu_law_encoding(target_val)
+                self.cached_val_bin[target_val] = mu_law_encoding(target_val, self.nr_bins)
             else:
                 self.cached_val_bin[target_val] = np.digitize(target_val, self.bins, right=False)
         return self.cached_val_bin[target_val]
