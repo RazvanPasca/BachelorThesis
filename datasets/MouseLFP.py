@@ -9,14 +9,19 @@ from signal_utils import mu_law_encoding
 
 
 class MouseLFP(LFPDataset):
-    def __init__(self, dataset_path, frame_size=512, channels_to_keep=None, conditions_to_keep=None, val_perc=0.20,
+    def __init__(self, dataset_path, frame_size=512,
+                 channels_to_keep=(-1,),
+                 conditions_to_keep=(-1,),
+                 trials_to_keep=(-1,),
+                 val_perc=0.20,
                  test_perc=0.0,
                  random_seed=42,
                  nr_bins=256,
                  nr_of_seqs=6,
                  normalization="Zsc",
                  cutoff_freq=50,
-                 white_noise_dev=-1):
+                 white_noise_dev=-1,
+                 noisy_channels=(1, 3, 6, 30, 32)):
         super().__init__(dataset_path, normalization=normalization, cutoff_freq=cutoff_freq, random_seed=random_seed,
                          white_noise_dev=white_noise_dev, nr_bins=nr_bins)
 
@@ -30,29 +35,21 @@ class MouseLFP(LFPDataset):
         self.trial_length = 4175  # 2672  # 4175
         self.nr_of_seqs = nr_of_seqs
 
-        if channels_to_keep is None:
-            self.channels_to_keep = np.array(range(self.nr_channels))
-        else:
-            self.channels_to_keep = np.array(channels_to_keep)
+        self._get_dataset_keep_indexes(channels_to_keep, conditions_to_keep, noisy_channels, trials_to_keep)
 
-        self._compute_values_range(channels_to_keep=self.channels_to_keep)
-        self._pre_compute_bins()
         self._split_lfp_data()
-
-        if conditions_to_keep is None:
-            self.conditions_to_keep = np.array(range(self.number_of_conditions))
-        else:
-            self.conditions_to_keep = np.array(conditions_to_keep) - 1
-            self.number_of_conditions = len(conditions_to_keep)
-
         self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
 
+        self._pre_compute_bins()
+        self.get_sequences_for_plotting(nr_of_seqs)
+
+        np.random.seed(datetime.datetime.now().microsecond)
+
+    def get_sequences_for_plotting(self, nr_of_seqs):
         self.prediction_sequences = {
             'VAL': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
             'TRAIN': [self.get_random_sequence_from('TRAIN') for _ in range(nr_of_seqs)]
         }
-
-        np.random.seed(datetime.datetime.now().microsecond)
 
     def _split_lfp_data(self):
         self.all_lfp_data = []
@@ -75,6 +72,7 @@ class MouseLFP(LFPDataset):
         self.channels = None
 
     def _pre_compute_bins(self):
+        self._compute_values_range()
         self.cached_val_bin = {}
         min_train_seq = np.floor(self.values_range[0])
         max_train_seq = np.ceil(self.values_range[1])
@@ -115,6 +113,10 @@ class MouseLFP(LFPDataset):
         else:
             self.test = interm_data[:, test_indexes, :].reshape(self.number_of_conditions, nr_test_trials, -1,
                                                                 self.trial_length)
+
+    def get_train_val_split(self, val_perc):
+        nr_val_series = round(val_perc * self.channels_to_keep.size)
+        nr_train_series = self.channels_to_keep.size - nr_val_series
 
     def frame_generator(self, frame_size, batch_size, classifying, data):
         x = []

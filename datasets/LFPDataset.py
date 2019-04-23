@@ -1,9 +1,8 @@
 import csv
 import json
-import numpy as np
 import os
 
-from matplotlib import pyplot
+import numpy as np
 
 from signal_utils import butter_lowpass_filter, rescale, mu_law_fn
 
@@ -155,11 +154,26 @@ class LFPDataset:
         else:
             raise ValueError("Please pick a valid partition from: TRAIN, VAL and TEST")
 
-    def _compute_values_range(self, channels_to_keep=None):
-        if channels_to_keep is None:
-            min_val = np.min(self.channels)
-            max_val = np.max(self.channels)
-        else:
-            min_val = np.min(self.channels[channels_to_keep])
-            max_val = np.max(self.channels[channels_to_keep])
+    def _compute_values_range(self):
+        min_val = min(np.min(self.train), np.min(self.validation))
+        max_val = max(np.max(self.train), np.max(self.validation))
         self.values_range = min_val, max_val
+
+    def _get_dataset_keep_indexes(self, channels_to_keep, conditions_to_keep, trials_to_keep, noisy_channels):
+        if channels_to_keep[0] == -1:
+            self.channels_to_keep = np.array(range(self.nr_channels))
+            self.channels_to_keep = np.delete(self.channels_to_keep, noisy_channels)
+        else:
+            self.channels_to_keep = np.array(channels_to_keep)
+
+        if conditions_to_keep[0] == -1:
+            self.conditions_to_keep = np.array(range(self.number_of_conditions))
+        else:
+            self.conditions_to_keep = np.array(conditions_to_keep) - 1
+            self.number_of_conditions = len(conditions_to_keep)
+
+        if trials_to_keep[0] == -1:
+            self.trials_to_keep = np.array(range(self.trials_per_condition))
+        else:
+            self.trials_to_keep = np.array(trials_to_keep)
+            self.trials_per_condition = len(self.trials_to_keep)

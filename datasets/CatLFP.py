@@ -1,14 +1,18 @@
 import datetime
 import os
 
-from datasets.LFPDataset import LFPDataset
-from datasets.DATASET_PATHS import RIST_CAT_DATASET_PATH
 import matplotlib.pyplot as plt
 import numpy as np
 
+from datasets.DATASET_PATHS import PASCA_CAT_DATASET_PATH as CAT_DATASET_PATH
+from datasets.LFPDataset import LFPDataset
+
 
 class CatLFP(LFPDataset):
-    def __init__(self, conditions_to_keep=None, channels_to_keep=None,
+    def __init__(self, conditions_to_keep=(-1,),
+                 channels_to_keep=(-1,),
+                 trials_to_keep=(-1,),
+                 noisy_channels=(),
                  val_perc=0.20,
                  test_perc=0.0,
                  random_seed=42,
@@ -22,31 +26,23 @@ class CatLFP(LFPDataset):
 
         np.random.seed(random_seed)
         self.normalization = normalization
-        self._compute_values_range()
+
+        self._get_dataset_keep_indexes(channels_to_keep, conditions_to_keep, noisy_channels, trials_to_keep)
+        self._split_lfp_data()
+        self._get_train_val_test_split_channel_wise(self.conditions_to_keep, self.channels_to_keep, val_perc, test_perc)
+
         self._pre_compute_bins()
-        self._split_lfp_into_movies()
-
-        if channels_to_keep is None:
-            self.channels_to_keep = np.array(range(self.nr_channels))
-        else:
-            self.channels_to_keep = np.array(channels_to_keep)
-
-        if conditions_to_keep is None:
-            self.movies_to_keep = np.array(range(self.number_of_conditions))
-        else:
-            self.movies_to_keep = np.array(conditions_to_keep)
-
-        self._get_train_val_test_split_channel_wise(self.movies_to_keep, self.channels_to_keep, val_perc, test_perc)
-        self.trial_length = self.train.shape[-1]
-
-        self.prediction_sequences = {
-            'val': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
-            'train': [self.get_random_sequence_from('TRAIN') for _ in range(nr_of_seqs)]
-        }
+        self.get_sequences_for_plotting(nr_of_seqs)
 
         np.random.seed(datetime.datetime.now().microsecond)
 
-    def _split_lfp_into_movies(self):
+    def get_sequences_for_plotting(self, nr_of_seqs):
+        self.prediction_sequences = {
+            'VAL': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
+            'TRAIN': [self.get_random_sequence_from('TRAIN') for _ in range(nr_of_seqs)]
+        }
+
+    def _split_lfp_data(self):
         self.all_lfp_data = []
         for condition_id in range(0, self.number_of_conditions):
             condition = []
@@ -60,6 +56,7 @@ class CatLFP(LFPDataset):
         self.channels = None
 
     def _pre_compute_bins(self):
+        self._compute_values_range()
         self.cached_val_bin = {}
         min_train_seq = np.floor(self.values_range[0])
         max_train_seq = np.ceil(self.values_range[1])
@@ -73,16 +70,6 @@ class CatLFP(LFPDataset):
             else:
                 self.cached_val_bin[target_val] = np.digitize(target_val, self.bins, right=False)
         return self.cached_val_bin[target_val]
-
-    def _get_train_val_test_split(self, val_perc, test_perc, random=False):
-        self.val_length = round(val_perc * self.trial_length)
-        self.test_length = round(test_perc * self.trial_length)
-        self.train_length = self.trial_length - (self.val_length + self.test_length)
-        if not random:
-            self.train = self.all_lfp_data[:, :, :, :self.train_length]
-            self.validation = self.all_lfp_data[:, :, :, self.train_length:self.train_length + self.val_length]
-            self.test = self.all_lfp_data[:, :, :,
-                        self.train_length + self.val_length:self.train_length + self.val_length + self.test_length]
 
     def _get_train_val_test_split_channel_wise(self, movies_to_keep, channels_to_keep, val_perc, test_perc):
         nr_test_trials = round(test_perc * self.trials_per_condition)

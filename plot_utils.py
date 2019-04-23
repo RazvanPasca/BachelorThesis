@@ -2,9 +2,9 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+import tensorflow as tf
 from keras import callbacks
 from keras.callbacks import TensorBoard
-import tensorflow as tf
 
 from output_utils import decode_model_output, get_normalized_prediction_losses, get_cumulated_error_mean_per_sequence
 
@@ -246,6 +246,8 @@ class PlotCallback(callbacks.Callback):
         self.get_generated_window_sizes(generated_window_sizes, model_params, starting_point)
         self.nr_plot_rows = nr_plot_rows
         self.nr_of_sequences_to_plot = self.model_params.dataset.nr_of_seqs // nr_plot_rows * nr_plot_rows
+        self.all_pred_losses_normalized = {"VAL": [],
+                                           "TRAIN": []}
 
     def set_model(self, model):
         self.pred_error_writer = tf.summary.FileWriter(self.model_params.model_path)
@@ -267,13 +269,15 @@ class PlotCallback(callbacks.Callback):
                                                              nr_of_sequences_to_plot=self.nr_of_sequences_to_plot)
 
             self.write_pred_losses_to_tboard(all_pred_losses_normalized, self.epoch)
+            self.update_all_pred_losses(all_pred_losses_normalized)
+            plot_pred_losses(self.all_pred_losses_normalized, self.model_params.model_path + "/pred_error_log")
 
     def on_train_end(self, logs=None):
         all_pred_losses_normalized = generate_multi_plot(self.model, self.model_params, "TrainEnd", self.starting_point,
                                                          nr_prediction_steps=self.nr_prediction_steps,
                                                          generated_window_sizes=self.generated_window_sizes,
                                                          nr_of_sequences_to_plot=self.nr_of_sequences_to_plot)
-
+        self.update_all_pred_losses(all_pred_losses_normalized)
         self.write_pred_losses_to_tboard(all_pred_losses_normalized, self.epoch)
         self.pred_error_writer.close()
 
@@ -297,6 +301,10 @@ class PlotCallback(callbacks.Callback):
                 summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, self.generated_window_sizes[i])
             self.pred_error_writer.add_summary(summary, epoch)
         self.pred_error_writer.flush()
+
+    def update_all_pred_losses(self, all_pred_losses_normalized):
+        for source, source_pred_errors in all_pred_losses_normalized.items():
+            self.all_pred_losses_normalized[source].append(source_pred_errors)
 
 
 class TensorBoardWrapper(TensorBoard):
