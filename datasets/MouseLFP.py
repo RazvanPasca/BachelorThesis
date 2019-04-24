@@ -14,7 +14,6 @@ class MouseLFP(LFPDataset):
                  conditions_to_keep=(-1,),
                  trials_to_keep=(-1,),
                  val_perc=0.20,
-                 test_perc=0.0,
                  random_seed=42,
                  nr_bins=256,
                  nr_of_seqs=6,
@@ -32,13 +31,13 @@ class MouseLFP(LFPDataset):
         self.nr_of_orientations = 8
         self.nr_of_stimulus_luminosity_levels = 3
         self.number_of_conditions = 24
-        self.trial_length = 4175  # 2672  # 4175
+        self.trial_length = 2672  # 2672  # 4175
         self.nr_of_seqs = nr_of_seqs
 
-        self._get_dataset_keep_indexes(channels_to_keep, conditions_to_keep, noisy_channels, trials_to_keep)
-
         self._split_lfp_data()
-        self._get_train_val_test_split_channel_wise(self.channels_to_keep, self.conditions_to_keep, val_perc, test_perc)
+
+        self._get_dataset_keep_indexes(channels_to_keep, conditions_to_keep, trials_to_keep, noisy_channels, )
+        self.get_train_val_split(val_perc)
 
         self._pre_compute_bins()
         self.get_sequences_for_plotting(nr_of_seqs)
@@ -47,9 +46,14 @@ class MouseLFP(LFPDataset):
 
     def get_sequences_for_plotting(self, nr_of_seqs):
         self.prediction_sequences = {
-            'VAL': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
-            'TRAIN': [self.get_random_sequence_from('TRAIN') for _ in range(nr_of_seqs)]
+            'VAL': [],
+            'TRAIN': []
         }
+        for seq_nr in range(nr_of_seqs):
+            cond_index = np.random.choice(len(self.conditions_to_keep))
+            trial_index = np.random.choice(len(self.trials_to_keep))
+            for key in self.prediction_sequences.keys():
+                self.prediction_sequences[key].append(self.get_sequence_from(cond_index, trial_index, seq_nr, key))
 
     def _split_lfp_data(self):
         self.all_lfp_data = []
@@ -60,11 +64,11 @@ class MouseLFP(LFPDataset):
                     index = int(stimulus_condition['Trial']) - 1
                     events = [{'timestamp': self.event_timestamps[4 * index + i],
                                'code': self.event_codes[4 * index + i]} for i in range(4)]
-                    # trial = self.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
+                    trial = self.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
 
                     # Right now it cuts only the area where the stimulus is active
                     # In order to keep the whole trial replace with
-                    trial = self.channels[:, events[0]['timestamp']:(events[0]['timestamp'] + 4175)]
+                    # trial = self.channels[:, events[0]['timestamp']:(events[0]['timestamp'] + 4175)]
 
                     conditions.append(trial)
             self.all_lfp_data.append(np.array(conditions))
@@ -117,6 +121,26 @@ class MouseLFP(LFPDataset):
     def get_train_val_split(self, val_perc):
         nr_val_series = round(val_perc * self.channels_to_keep.size)
         nr_train_series = self.channels_to_keep.size - nr_val_series
+        channels_shuffled_indexes = self.channels_to_keep
+        np.random.shuffle(channels_shuffled_indexes)
+
+        train_indexes = channels_shuffled_indexes[:nr_train_series]
+        val_indexes = channels_shuffled_indexes[nr_train_series:]
+
+        interm_data = self.all_lfp_data[self.conditions_to_keep]
+
+        interm_data = interm_data[:, self.trials_to_keep, ...]
+        self.train = interm_data[:, :, train_indexes, :]
+        self.validation = interm_data[:, :, val_indexes, :]
+
+        self.channels_lookup = {"VAL": {},
+                                "TRAIN": {}}
+
+        for i, channel in enumerate(train_indexes):
+            self.channels_lookup["TRAIN"][i] = channel
+
+        for i, channel in enumerate(val_indexes):
+            self.channels_lookup["VAL"][i] = channel
 
     def frame_generator(self, frame_size, batch_size, classifying, data):
         x = []
@@ -130,18 +154,22 @@ class MouseLFP(LFPDataset):
             y.append(next_step_value)
 
             if len(x) == batch_size:
-                """Classifying codes: 2 is MSE_CE, 1 is CE , -1 is Regression"""
-                if classifying == 2:
-                    y = {'Regression': np.array(y),
-                         "Sfmax": np.array([self._encode_input_to_bin(x) for x in y])}
-                elif classifying == 1:
-                    y = np.array([self._encode_input_to_bin(x) for x in y])
-                else:
-                    y = np.array(y)
+                y = self._get_y_value(classifying, y)
 
                 yield np.array(x), y
                 x = []
                 y = []
+
+    def _get_y_value(self, classifying, y):
+        """Classifying codes: 2 is MSE_CE, 1 is CE , -1 is Regression"""
+        if classifying == 2:
+            y = {'Regression': np.array(y),
+                 "Sfmax": np.array([self._encode_input_to_bin(x) for x in y])}
+        elif classifying == 1:
+            y = np.array([self._encode_input_to_bin(x) for x in y])
+        else:
+            y = np.array(y)
+        return y
 
     def train_frame_generator(self, frame_size, batch_size, classifying):
         return self.frame_generator(frame_size, batch_size, classifying, self.train)
@@ -181,6 +209,22 @@ class MouseLFP(LFPDataset):
 
         sequence, sequence_addr = self.get_random_sequence(data_source)
         sequence_addr['SOURCE'] = source
+        sequence_addr['C'] = self.channels_lookup[source][sequence_addr['C']]
+        return sequence, sequence_addr
+
+    def get_sequence_from(self, condition_index, trial_index, channel_index, source='VAL'):
+        if source == 'TRAIN':
+            data_source = self.train
+        elif source == 'VAL':
+            data_source = self.validation
+        elif source == 'TEST':
+            data_source = self.test
+        else:
+            raise ValueError("Please pick one out of TRAIN, VAL, TEST as data source")
+
+        sequence, sequence_addr = self.get_sequence(condition_index, trial_index, channel_index, data_source)
+        sequence_addr['SOURCE'] = source
+        sequence_addr['C'] = self.channels_lookup[source][sequence_addr['C']]
         return sequence, sequence_addr
 
     def get_random_sequence(self, data_source):
@@ -210,6 +254,6 @@ class MouseLFP(LFPDataset):
         data_address = {
             'Condition': condition_index,
             'T': trial_index,
-            'C': self.channels_lookup[channel_index]
+            'C': channel_index
         }
         return data_source[data_address['Condition'], data_address['T'], channel_index, :], data_address

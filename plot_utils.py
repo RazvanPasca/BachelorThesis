@@ -141,7 +141,7 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
     return all_prediction_losses_norm
 
 
-def get_sequence_prediction(model, model_params, original_sequence, nr_actual_predictions, image_name,
+def get_sequence_prediction(model, model_params, original_sequence, nr_predictions, image_name,
                             starting_point,
                             generated_window_size, plot=True):
     """Generates prediction given an original sequence as input
@@ -151,7 +151,7 @@ def get_sequence_prediction(model, model_params, original_sequence, nr_actual_pr
             model: instance of the keras model used for predicting
             model_params: instance of the model_params associated with this training/testing session
             original_sequence: the original sequence from the dataset used as "seed" for the model
-            nr_actual_predictions: how many values we will predict in total
+            nr_predictions: how many values we will predict in total
             starting_point: the place from which we start seeding the model with model_params.frame_size values
             generated_window_size: after how many values we reset the teacher forcing, starting with another original sequence
             plot: boolean telling if we should plot or not the results or only return them
@@ -161,12 +161,12 @@ def get_sequence_prediction(model, model_params, original_sequence, nr_actual_pr
             predicted_sequences: the predicted sequence
             vlines_coords: a vlines object indicating the reset indices
     """
-    predicted_sequences = [np.zeros(nr_actual_predictions) for _ in range(model_params.get_classifying())]
-    predictions_losses = [np.zeros(nr_actual_predictions) for _ in range(model_params.get_classifying())]
+    predicted_sequences = [np.zeros(nr_predictions) for _ in range(model_params.get_classifying())]
+    predictions_losses = [np.zeros(nr_predictions) for _ in range(model_params.get_classifying())]
     vlines_coords = []
     input_sequence = []
 
-    for prediction_nr in range(nr_actual_predictions):
+    for prediction_nr in range(nr_predictions):
         if prediction_nr % generated_window_size == 0:
             input_sequence = np.reshape(
                 original_sequence[
@@ -188,7 +188,7 @@ def get_sequence_prediction(model, model_params, original_sequence, nr_actual_pr
 
     if plot:
         image_name += "GenSteps:{}_".format(generated_window_size)
-        plot_predictions(original_sequence, image_name, nr_actual_predictions,
+        plot_predictions(original_sequence, image_name, nr_predictions,
                          model_params.frame_size, predicted_sequences, model_params.model_path, starting_point,
                          prediction_losses=predictions_losses,
                          vlines_coords=vlines_coords)
@@ -224,6 +224,12 @@ def generate_subplots(original_sequences, sequence_predictions, vlines_coords_li
     plt.tight_layout()
     plt.savefig("{}.png".format(save_path), format="png")
     plt.close()
+
+
+def plot_pred_losses(pred_losses, name):
+    for source, source_pred_errors in pred_losses.items():
+        pass
+
 
 
 class PlotCallback(callbacks.Callback):

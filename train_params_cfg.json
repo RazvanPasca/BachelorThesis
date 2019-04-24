@@ -1,6 +1,12 @@
 {
   "channels_to_keep": [
-    32
+    -1
+  ],
+  "conditions_to_keep": [
+    1
+  ],
+  "trials_to_keep": [
+    0
   ],
   "n_epochs": 400,
   "batch_size": 32,

@@ -27,8 +27,9 @@ class CatLFP(LFPDataset):
         np.random.seed(random_seed)
         self.normalization = normalization
 
-        self._get_dataset_keep_indexes(channels_to_keep, conditions_to_keep, noisy_channels, trials_to_keep)
         self._split_lfp_data()
+
+        self._get_dataset_keep_indexes(channels_to_keep, conditions_to_keep, trials_to_keep, noisy_channels, )
         self._get_train_val_test_split_channel_wise(self.conditions_to_keep, self.channels_to_keep, val_perc, test_perc)
 
         self._pre_compute_bins()
