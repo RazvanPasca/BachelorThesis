@@ -329,5 +329,5 @@ class TensorBoardWrapper(TensorBoard):
         # Below is an example that yields images and classification tags.
         # After it's filled in, the regular on_epoch_end method has access to the validation_data.
         x, y = next(self.batch_gen)
-        self.validation_data = (x, y, np.ones(self.batch_size))
+        self.validation_data = (x, y.reshape(-1, 1), np.ones(self.batch_size))
         return super().on_epoch_end(epoch, logs)

@@ -1,7 +1,7 @@
-from keras.callbacks import TensorBoard, CSVLogger, ModelCheckpoint
+from keras.callbacks import CSVLogger, ModelCheckpoint
 
 from model import get_wavenet_model
-from plot_utils import PlotCallback
+from plot_utils import PlotCallback, TensorBoardWrapper
 from test_model import test_model
 from tf_utils import configure_gpu
 from training_parameters import ModelTrainingParameters
@@ -30,20 +30,19 @@ def train_model(model_params):
 
     # TODO make activation callback work with multiple output
 
-    # tensorboard_callback = TensorBoardWrapper(
-    #     batch_gen=model_params.dataset.validation_frame_generator(model_params.frame_size,
-    #                                                               model_params.batch_size,
-    #                                                               model_params.get_classifying()),
-    #     nb_steps=1,
-    #     log_dir=model_params.model_path,
-    #     write_graph=True,
-    #     histogram_freq=1,
-    #     batch_size=model_params.batch_size)
+    tensorboard_callback = TensorBoardWrapper(
+        batch_gen=model_params.dataset.validation_frame_generator(model_params.frame_size,
+                                                                  model_params.batch_size,
+                                                                  model_params.get_classifying()),
+        nb_steps=1,
+        log_dir=model_params.model_path,
+        write_graph=True,
+        histogram_freq=5,
+        batch_size=model_params.batch_size)
 
-    tensorboard_callback = TensorBoard(log_dir=model_params.model_path,
-                                       write_graph=True, )
+    # tensorboard_callback = TensorBoard(log_dir=model_params.model_path, write_graph=True, )
     log_callback = CSVLogger(model_params.model_path + "/session_log.csv")
-    plot_figure_callback = PlotCallback(model_params, 1, nr_predictions=-1, starting_point=0,
+    plot_figure_callback = PlotCallback(model_params, 5, nr_predictions=-1, starting_point=0,
                                         generated_window_sizes=range(1, model_params.dataset.trial_length, 1250))
 
     save_model_callback = ModelCheckpoint(
