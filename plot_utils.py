@@ -102,12 +102,13 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
     all_prediction_losses_norm = {}
 
     for source in pred_seqs:
-        dir_name = "{}/{}".format(model_params.model_path, source)
-        create_dir_if_not_exists(dir_name)
+        dir_name_root = "{}/{}".format(model_params.model_path, source)
         all_prediction_losses_norm[source] = []
 
         for generated_window_size in generated_window_sizes:
-            plt_path = "{}/E:{}_GenWindowSize:{}".format(dir_name, epoch, generated_window_size)
+            dir_name = "{}/WinSize:{}".format(dir_name_root, generated_window_size)
+            create_dir_if_not_exists(dir_name)
+            plt_path = "{}/E:{}".format(dir_name, epoch)
             sequence_predictions = []
             sequence_names = []
             original_sequences = []
@@ -231,7 +232,6 @@ def plot_pred_losses(pred_losses, name):
         pass
 
 
-
 class PlotCallback(callbacks.Callback):
     """Callback used for plotting at certain epochs the generations of the model
 
@@ -304,7 +304,10 @@ class PlotCallback(callbacks.Callback):
             for i, error in enumerate(source_errors):
                 summary_value = summary.value.add()
                 summary_value.simple_value = error
-                summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, self.generated_window_sizes[i])
+                if i == len(self.generated_window_sizes) - 1:
+                    summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, "Full")
+                else:
+                    summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, self.generated_window_sizes[i])
             self.pred_error_writer.add_summary(summary, epoch)
         self.pred_error_writer.flush()
 

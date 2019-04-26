@@ -146,12 +146,15 @@ class MouseLFP(LFPDataset):
         x = []
         y = []
         while 1:
-            random_sequence, _ = self.get_random_sequence(data)
-            batch_start = np.random.choice(range(0, random_sequence.size - frame_size))
-            frame = random_sequence[batch_start:batch_start + frame_size]
-            next_step_value = random_sequence[batch_start + frame_size]
-            x.append(frame.reshape(frame_size, 1))
-            y.append(next_step_value)
+            random_sequences = [self.get_random_sequence(data)[0] for _ in range(batch_size)]
+            batch_starts = np.random.choice(range(0, random_sequences[0].size - frame_size), batch_size)
+
+            for elem in range(batch_size):
+                batch_start = batch_starts[elem]
+                frame = random_sequences[elem][batch_start:batch_start + frame_size]
+                next_step_value = random_sequences[elem][batch_start + frame_size]
+                x.append(frame.reshape(frame_size, 1))
+                y.append(next_step_value)
 
             if len(x) == batch_size:
                 y = self._get_y_value(classifying, y)
