@@ -49,9 +49,7 @@ def find_samples_over_x(dataset, x):
     return values_over_x
 
 
-if __name__ == '__main__':
-    dataset = MouseLFP(PASCA_MOUSE_DATASET_PATH, channels_to_keep=[32], cutoff_freq=5)
-
+def compare_signals(dataset):
     conditions = 3
     trials = dataset.trials_per_condition
     channels = 47
@@ -76,9 +74,7 @@ if __name__ == '__main__':
 
             # plt.show()
             plt.close()
-
     print("Finished channel comparison")
-
     for condition in range(conditions):
         for channel in range(channels):
             series = []
@@ -98,9 +94,7 @@ if __name__ == '__main__':
                 format="png")
             # plt.show()
             plt.close()
-
     print("Finished trial comparison")
-
     for trial in range(trials):
         for channel in range(channels):
             series = []
@@ -121,5 +115,44 @@ if __name__ == '__main__':
                 format="png")
             # plt.show()
             plt.close()
-
     print("Finished condition comparison")
+
+
+if __name__ == '__main__':
+
+    for normalization in ["MuLaw", "Zsc", "Brute"]:
+        dataset = MouseLFP(PASCA_MOUSEACH_DATASET_PATH, cutoff_freq=10, channels_to_keep=[-1],
+                           conditions_to_keep=[-1], trials_to_keep=[-1], normalization=normalization)
+        for cond in range(dataset.number_of_conditions):
+            for trial in range(dataset.trials_per_condition):
+                signals = []
+                for channel in range(32):
+                    signal = dataset.get_dataset_piece(cond, trial, channel)
+                    signals.append(signal)
+
+                signals = np.concatenate(signals).ravel()
+                a = plt.hist(signals, 512)
+
+                plt.savefig(
+                    "/home/pasca/School/Licenta/Naturix/Histograms/MouseControl/{}/Cond:{}_Trial:{}".format(
+                        normalization,
+                        cond, trial))
+                plt.close()
+
+    for normalization in ["MuLaw", "Zsc"]:
+        dataset = MouseLFP(PASCA_MOUSE_DATASET_PATH, cutoff_freq=10, channels_to_keep=[-1],
+                           conditions_to_keep=[1, 2], trials_to_keep=[1], normalization=normalization)
+        for cond in range(dataset.number_of_conditions):
+            for trial in range(dataset.trials_per_condition):
+                signals = []
+                for channel in range(32):
+                    signal = dataset.get_dataset_piece(cond, trial, channel)
+                    signals.append(signal)
+
+                signals = np.concatenate(signals).ravel()
+                a = plt.hist(signals, 512)
+
+                plt.savefig(
+                    "/home/pasca/School/Licenta/Naturix/Histograms/MouseACh/{}/Cond:{}_Trial:{}".format(
+                        normalization,
+                        cond, trial))

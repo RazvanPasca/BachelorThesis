@@ -61,24 +61,21 @@ class LFPDataset:
         self.mu_law = False
         if normalization is not None:
             if normalization == "Zsc":
-                mean = np.mean(self.channels, axis=1, keepdims=True)
-                std = np.std(self.channels, axis=1, keepdims=True)
+                mean = np.mean(self.channels, keepdims=True)
+                std = np.std(self.channels, keepdims=True)
                 self.channels -= mean
                 self.channels /= std
 
             elif normalization == "Brute":
-                self.channels -= np.min(self.channels, axis=1, keepdims=True)
-                self.channels /= np.max(self.channels, axis=1, keepdims=True)
+                self.channels -= np.min(self.channels, keepdims=True)
+                self.channels /= np.max(self.channels, keepdims=True)
 
             elif normalization == "MuLaw":
                 """The signal is brought to [-1,1] through rescale->[-1,1] mu_law and then encoded using np.digitize"""
-                self.limits = {}
                 self.mu_law = True
-
+                np_min = np.min(self.channels)
+                np_max = np.max(self.channels)
                 for i, channel in enumerate(self.channels):
-                    np_min = np.min(channel)
-                    np_max = np.max(channel)
-                    self.limits[i] = (np_min, np_max)
                     self.channels[i] = mu_law_fn(
                         rescale(channel, old_max=np_max, old_min=np_min, new_max=1, new_min=-1), self.nr_bins)
 
