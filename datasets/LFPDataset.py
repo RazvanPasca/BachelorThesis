@@ -59,25 +59,39 @@ class LFPDataset:
 
     def _normalize_input(self, normalization):
         self.mu_law = False
-        if normalization is not None:
-            if normalization == "Zsc":
-                mean = np.mean(self.channels, keepdims=True)
-                std = np.std(self.channels, keepdims=True)
-                self.channels -= mean
-                self.channels /= std
+        if normalization == "Zsc":
+            mean = np.mean(self.channels[:-1], keepdims=True)
+            std = np.std(self.channels[:-1], keepdims=True)
+            self.channels[:-1] -= mean
+            self.channels[:-1] /= std
 
-            elif normalization == "Brute":
-                self.channels -= np.min(self.channels, keepdims=True)
-                self.channels /= np.max(self.channels, keepdims=True)
+            mean = np.mean(self.channels[-1])
+            std = np.std(self.channels[-1])
+            self.channels[-1] = (self.channels[-1] - mean) / std
 
-            elif normalization == "MuLaw":
-                """The signal is brought to [-1,1] through rescale->[-1,1] mu_law and then encoded using np.digitize"""
-                self.mu_law = True
-                np_min = np.min(self.channels)
-                np_max = np.max(self.channels)
-                for i, channel in enumerate(self.channels):
-                    self.channels[i] = mu_law_fn(
-                        rescale(channel, old_max=np_max, old_min=np_min, new_max=1, new_min=-1), self.nr_bins)
+        elif normalization == "Brute":
+            min = np.min(self.channels[:-1])
+            max = np.max(self.channels[:-1])
+            for i, channel in enumerate(self.channels[:-1]):
+                self.channels[i] = rescale(channel, old_max=max, old_min=min, new_max=1, new_min=-1)
+
+            min = np.min(self.channels[-1])
+            max = np.max(self.channels[-1])
+            self.channels[-1] = rescale(self.channels[-1], old_max=max, old_min=min, new_max=1, new_min=-1)
+
+        elif normalization == "MuLaw":
+            """The signal is brought to [-1,1] through rescale->[-1,1] mu_law and then encoded using np.digitize"""
+            self.mu_law = True
+            np_min = np.min(self.channels[:-1])
+            np_max = np.max(self.channels[:-1])
+            for i, channel in enumerate(self.channels[:-1]):
+                self.channels[i] = mu_law_fn(
+                    rescale(channel, old_max=np_max, old_min=np_min, new_max=1, new_min=-1), self.nr_bins)
+
+            np_min = np.min(self.channels[-1])
+            np_max = np.max(self.channels[-1])
+            self.channels[-1] = mu_law_fn(
+                rescale(self.channels[-1], old_max=np_max, old_min=np_min, new_max=1, new_min=-1), self.nr_bins)
 
     def _parse_stimulus_data(self, condition_file_path):
         with open(os.path.join(os.path.dirname(self.description_file_path), condition_file_path),

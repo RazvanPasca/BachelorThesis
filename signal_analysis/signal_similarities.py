@@ -2,7 +2,7 @@ import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from datasets.DATASET_PATHS import PASCA_MOUSEACH_DATASET_PATH
+from datasets.DATASET_PATHS import PASCA_MOUSEACH_DATASET_PATH, PASCA_MOUSE_DATASET_PATH
 from datasets.MouseLFP import MouseLFP
 
 
@@ -134,13 +134,13 @@ if __name__ == '__main__':
                 a = plt.hist(signals, 512)
 
                 plt.savefig(
-                    "/home/pasca/School/Licenta/Naturix/Histograms/MouseControl/{}/Cond:{}_Trial:{}".format(
+                    "/home/pasca/School/Licenta/Naturix/Histograms/MouseACh/{}/Cond:{}_Trial:{}".format(
                         normalization,
                         cond, trial))
                 plt.close()
 
-    for normalization in ["MuLaw", "Zsc"]:
-        dataset = MouseLFP(PASCA_MOUSE_DATASET_PATH, cutoff_freq=10, channels_to_keep=[-1],
+    for normalization in ["MuLaw", "Zsc", "Brute"]:
+        dataset = MouseLFP(PASCA_MOUSE_DATASET_PATH, cutoff_freq=7, channels_to_keep=[-1],
                            conditions_to_keep=[1, 2], trials_to_keep=[1], normalization=normalization)
         for cond in range(dataset.number_of_conditions):
             for trial in range(dataset.trials_per_condition):
@@ -153,6 +153,6 @@ if __name__ == '__main__':
                 a = plt.hist(signals, 512)
 
                 plt.savefig(
-                    "/home/pasca/School/Licenta/Naturix/Histograms/MouseACh/{}/Cond:{}_Trial:{}".format(
+                    "/home/pasca/School/Licenta/Naturix/Histograms/MouseControl/{}/Cond:{}_Trial:{}".format(
                         normalization,
                         cond, trial))
