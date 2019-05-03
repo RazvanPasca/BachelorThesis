@@ -4,12 +4,12 @@ import os
 
 import numpy as np
 
-from signal_utils import butter_lowpass_filter, rescale, mu_law_fn
+from signal_utils import butter_pass_filter
 
 
 class LFPDataset:
 
-    def __init__(self, dataset_path, saved_as_npy=True, normalization=None, cutoff_freq=20, random_seed=42,
+    def __init__(self, dataset_path, saved_as_npy=True, normalization=None, cutoff_freq=[2], random_seed=42,
                  white_noise_dev=-1, nr_bins=256):
         self.description_file_path = dataset_path
         if saved_as_npy:
@@ -36,14 +36,14 @@ class LFPDataset:
         self.random_seed = random_seed
         self.cutoff_freq = cutoff_freq
         self.nr_channels = len(self.channels)
-        self.low_pass_filter = cutoff_freq > 0
+        self.filtering = cutoff_freq[0] > 0
         self.white_noise = white_noise_dev > 0
         self.white_noise_dev = white_noise_dev
         self.nr_bins = nr_bins
         self.normalization = normalization
 
-        if self.low_pass_filter:
-            self._low_pass_input()
+        if self.filtering:
+            self._filter_input()
 
         if self.white_noise:
             self._add_noise_to_input()
@@ -52,32 +52,10 @@ class LFPDataset:
         noise = np.random.normal(0, self.white_noise_dev, self.channels.shape)
         self.channels += noise
 
-    def _low_pass_input(self):
+    def _filter_input(self):
+        filter_type = "band" if len(self.cutoff_freq) > 1 else "low"
         for i, channel in enumerate(self.channels):
-            self.channels[i] = butter_lowpass_filter(channel, self.cutoff_freq, 1000)
-
-    def _normalize_input(self, input_data):
-        self.mu_law = False
-        if self.normalization == "Zsc":
-            mean = np.mean(input_data, keepdims=True)
-            std = np.std(input_data, keepdims=True)
-            input_data -= mean
-            input_data /= std
-
-        elif self.normalization == "Brute":
-            min = np.min(input_data)
-            max = np.max(input_data)
-            input_data = rescale(input_data, old_max=max, old_min=min, new_max=1, new_min=-1)
-
-        elif self.normalization == "MuLaw":
-            """The signal is brought to [-1,1] through rescale->[-1,1] mu_law and then encoded using np.digitize"""
-            self.mu_law = True
-            np_min = np.min(input_data)
-            np_max = np.max(input_data)
-            input_data = mu_law_fn(rescale(input_data, old_max=np_max, old_min=np_min, new_max=1, new_min=-1),
-                                   self.nr_bins)
-
-        return input_data
+            self.channels[i] = butter_pass_filter(channel, self.cutoff_freq, 1000, filter_type)
 
     def _parse_stimulus_data(self, condition_file_path):
         with open(os.path.join(os.path.dirname(self.description_file_path), condition_file_path),

@@ -26,8 +26,11 @@
   "multiloss_weights": {
     "Sfmax": 1
   },
-  "save_path": "/data2/razpa/LFP_models",
-  "cutoff_freq": 7,
+  "save_path": "./LFP_models",
+  "cutoff_freq": [
+    30,
+    80
+  ],
   "random_seed": 42,
   "gpu": 0
 }

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from datasets.LFPDataset import LFPDataset
-from signal_utils import mu_law_encoding
+from signal_utils import mu_law_encoding, mu_law_fn, rescale
 
 
 class MouseLFP(LFPDataset):
@@ -39,7 +39,7 @@ class MouseLFP(LFPDataset):
         self._get_dataset_keep_indexes(channels_to_keep, conditions_to_keep, trials_to_keep, noisy_channels, )
         self.get_train_val_split(val_perc)
 
-        self.all_lfp_data = self._normalize_input(self.all_lfp_data[:, :, -1, :])
+        self.all_lfp_data = self._normalize_input_per_channel(self.all_lfp_data)
 
         self._pre_compute_bins()
         self.get_sequences_for_plotting()
@@ -77,6 +77,40 @@ class MouseLFP(LFPDataset):
         self.all_lfp_data = np.array(self.all_lfp_data, dtype=np.float32)
         self.channels = None
 
+    def _normalize_input_per_channel(self, input_data):
+        self.mu_law = False
+
+        nr_channels = input_data.shape[2]
+
+        if self.normalization == "Zsc":
+            for i in range(nr_channels):
+                mean = np.mean(input_data[:, :, i, :], keepdims=True)
+                std = np.std(input_data[:, :, i, :], keepdims=True)
+                input_data[:, :, i, :] -= mean
+                input_data[:, :, i, :] /= std
+
+        elif self.normalization == "Brute":
+            for i in range(nr_channels):
+                min = np.min(input_data[:, :, i, :], keepdims=True)
+                max = np.max(input_data[:, :, i, :], keepdims=True)
+                input_data[:, :, i, :] -= min
+                input_data[:, :, i, :] /= max
+
+        elif self.normalization == "MuLaw":
+            """The signal is brought to [-1,1] through rescale->[-1,1] mu_law and then encoded using np.digitize"""
+            self.limits = {}
+            self.mu_law = True
+
+            for i in range(nr_channels):
+                np_min = np.min(input_data[:, :, i, :], keepdims=True)
+                np_max = np.max(input_data[:, :, i, :], keepdims=True)
+                self.limits[i] = (np_min, np_max)
+                input_data[:, :, i, :] = mu_law_fn(
+                    rescale(input_data[:, :, i, :], old_max=np_max, old_min=np_min, new_max=1, new_min=-1),
+                    self.nr_bins)
+
+        return input_data
+
     def _pre_compute_bins(self):
         self._compute_values_range()
         self.cached_val_bin = {}
@@ -93,33 +127,6 @@ class MouseLFP(LFPDataset):
                 self.cached_val_bin[target_val] = np.digitize(target_val, self.bins, right=False)
         return self.cached_val_bin[target_val]
 
-    def _get_train_val_test_split_channel_wise(self, channels_to_keep, conditions_to_keep, val_perc, test_perc):
-        nr_test_trials = round(test_perc * self.trials_per_condition)
-        nr_val_trials = round(val_perc * self.trials_per_condition)
-        nr_train_trials = self.trials_per_condition - nr_test_trials - nr_val_trials
-
-        trial_indexes = np.arange(0, self.trials_per_condition)
-        np.random.shuffle(trial_indexes)
-        train_indexes = trial_indexes[:nr_train_trials]
-        val_indexes = trial_indexes[nr_train_trials:nr_train_trials + nr_val_trials]
-        test_indexes = trial_indexes[-nr_test_trials:]
-
-        interm_data = self.all_lfp_data[conditions_to_keep, :, channels_to_keep, :]
-
-        self.channels_lookup = {}
-        for i, channel in enumerate(channels_to_keep):
-            self.channels_lookup[i] = channel
-
-        self.train = interm_data[:, train_indexes, :].reshape(self.number_of_conditions, nr_train_trials, -1,
-                                                              self.trial_length)
-        self.validation = interm_data[:, val_indexes, :].reshape(self.number_of_conditions, nr_val_trials, -1,
-                                                                 self.trial_length)
-        if nr_test_trials <= 0:
-            pass
-        else:
-            self.test = interm_data[:, test_indexes, :].reshape(self.number_of_conditions, nr_test_trials, -1,
-                                                                self.trial_length)
-
     def get_train_val_split(self, val_perc):
         nr_val_series = round(val_perc * self.channels_to_keep.size)
         nr_train_series = self.channels_to_keep.size - nr_val_series
@@ -133,7 +140,7 @@ class MouseLFP(LFPDataset):
 
         interm_data = interm_data[:, self.trials_to_keep, ...]
 
-        p_interm_data = self._normalize_input(interm_data[:, :, channels_shuffled_indexes, :])
+        p_interm_data = self._normalize_input_per_channel(interm_data[:, :, channels_shuffled_indexes, :])
 
         self.train = p_interm_data[:, :, :nr_train_series, :]
         self.validation = p_interm_data[:, :, nr_train_series:, :]
@@ -265,3 +272,30 @@ class MouseLFP(LFPDataset):
             'C': channel_index
         }
         return data_source[data_address['Condition'], data_address['T'], channel_index, :], data_address
+
+    def _get_train_val_test_split_channel_wise(self, channels_to_keep, conditions_to_keep, val_perc, test_perc):
+        nr_test_trials = round(test_perc * self.trials_per_condition)
+        nr_val_trials = round(val_perc * self.trials_per_condition)
+        nr_train_trials = self.trials_per_condition - nr_test_trials - nr_val_trials
+
+        trial_indexes = np.arange(0, self.trials_per_condition)
+        np.random.shuffle(trial_indexes)
+        train_indexes = trial_indexes[:nr_train_trials]
+        val_indexes = trial_indexes[nr_train_trials:nr_train_trials + nr_val_trials]
+        test_indexes = trial_indexes[-nr_test_trials:]
+
+        interm_data = self.all_lfp_data[conditions_to_keep, :, channels_to_keep, :]
+
+        self.channels_lookup = {}
+        for i, channel in enumerate(channels_to_keep):
+            self.channels_lookup[i] = channel
+
+        self.train = interm_data[:, train_indexes, :].reshape(self.number_of_conditions, nr_train_trials, -1,
+                                                              self.trial_length)
+        self.validation = interm_data[:, val_indexes, :].reshape(self.number_of_conditions, nr_val_trials, -1,
+                                                                 self.trial_length)
+        if nr_test_trials <= 0:
+            pass
+        else:
+            self.test = interm_data[:, test_indexes, :].reshape(self.number_of_conditions, nr_test_trials, -1,
+                                                                self.trial_length)

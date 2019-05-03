@@ -13,15 +13,15 @@ def moving_average_smooth(x, nr_points):
     return x_smooth
 
 
-def butter_lowpass(cutoff, fs, order=5):
+def butter_pass(cutoff, fs, type, order=5):
     nyq = 0.5 * fs
-    normal_cutoff = cutoff / nyq
-    b, a = butter(order, normal_cutoff, btype='low', analog=False, output="ba")
+    normal_cutoff = np.array(cutoff) / nyq
+    b, a = butter(order, normal_cutoff, btype=type, analog=False, output="ba")
     return b, a
 
 
-def butter_lowpass_filter(data, cutoff, fs, order=5):
-    b, a = butter_lowpass(cutoff, fs, order=order)
+def butter_pass_filter(data, cutoff, fs, type, order=5):
+    b, a = butter_pass(cutoff, fs, type, order=order)
     y = filtfilt(b, a, data)
     return y
 

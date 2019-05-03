@@ -49,37 +49,38 @@ def find_samples_over_x(dataset, x):
     return values_over_x
 
 
-def compare_signals(dataset):
-    conditions = 3
-    trials = dataset.trials_per_condition
-    channels = 47
+def compare_signals(dataset, dir_name):
+    conditions = len(dataset.conditions_to_keep)
+    trials = len(dataset.trials_to_keep)
+    channels = len(dataset.channels_to_keep)
+
     for condition in range(conditions):
         for trial in range(trials):
             series = []
-            for channel in range(channels):
-                signal = dataset.get_dataset_piece(condition, trial, channel)[:3000]
+            for channel in range(5, 10):
+                signal = dataset.get_dataset_piece(condition, trial, channel)
                 series.append(signal)
 
             plt.figure(figsize=(16, 12))
             for i, signal in enumerate(series):
                 title = "Condition:{}_Trial:{}".format(condition, trial)
                 plt.title(title)
-                plt.ylim(-5, +5)
+                plt.ylim(-8, +8)
                 plt.plot(signal, label=i)
             plt.legend()
-            plt.savefig(
-                fname="/home/pasca/School/Licenta/Naturix/Correlations/Cat/Channel_correlation/{}.png".format(
-                    title),
-                format="png")
-
-            # plt.show()
+            # plt.savefig(
+            #     fname="/home/pasca/School/Licenta/Naturix/Correlations/{}/Channel_correlation/{}.png".format(dir_name,
+            #                                                                                                  title),
+            #     format="png")
+            plt.show()
             plt.close()
     print("Finished channel comparison")
+
     for condition in range(conditions):
         for channel in range(channels):
             series = []
             for trial in range(trials):
-                signal = dataset.get_dataset_piece(condition, trial, channel)[:3000]
+                signal = dataset.get_dataset_piece(condition, trial, channel)
                 series.append(signal)
 
             plt.figure(figsize=(16, 12))
@@ -90,16 +91,18 @@ def compare_signals(dataset):
                 plt.plot(signal, label=i)
             plt.legend()
             plt.savefig(
-                fname="/home/pasca/School/Licenta/Naturix/Correlations/Cat/Trial_correlation/{}.png".format(title),
+                fname="/home/pasca/School/Licenta/Naturix/Correlations/{}/Trial_correlation/{}.png".format(dir_name,
+                                                                                                           title),
                 format="png")
             # plt.show()
             plt.close()
+
     print("Finished trial comparison")
     for trial in range(trials):
         for channel in range(channels):
             series = []
             for condition in range(conditions):
-                signal = dataset.get_dataset_piece(condition, trial, channel)[:3000]
+                signal = dataset.get_dataset_piece(condition, trial, channel)
                 series.append(signal)
 
             plt.figure(figsize=(16, 12))
@@ -110,25 +113,25 @@ def compare_signals(dataset):
                 plt.plot(signal, label=i)
             plt.legend()
             plt.savefig(
-                fname="/home/pasca/School/Licenta/Naturix/Correlations/Cat/Condition_correlation/{}.png".format(
-                    title),
+                fname="/home/pasca/School/Licenta/Naturix/Correlations/{}/Condition_correlation/{}.png".format(dir_name,
+                                                                                                               title),
                 format="png")
             # plt.show()
             plt.close()
     print("Finished condition comparison")
 
 
-if __name__ == '__main__':
-
+def signal_histograms():
     for normalization in ["MuLaw", "Zsc", "Brute"]:
-        dataset = MouseLFP(PASCA_MOUSEACH_DATASET_PATH, cutoff_freq=10, channels_to_keep=[-1],
-                           conditions_to_keep=[-1], trials_to_keep=[-1], normalization=normalization)
+        dataset = MouseLFP(PASCA_MOUSEACH_DATASET_PATH, cutoff_freq=-1, channels_to_keep=[-1],
+                           conditions_to_keep=[0], trials_to_keep=[1], normalization=normalization)
         for cond in range(dataset.number_of_conditions):
             for trial in range(dataset.trials_per_condition):
                 signals = []
-                for channel in range(32):
-                    signal = dataset.get_dataset_piece(cond, trial, channel)
-                    signals.append(signal)
+                for channel in range(33):
+                    if channel in dataset.channels_to_keep:
+                        signal = dataset.get_dataset_piece(cond, trial, channel)
+                        signals.append(signal)
 
                 signals = np.concatenate(signals).ravel()
                 a = plt.hist(signals, 512)
@@ -137,11 +140,12 @@ if __name__ == '__main__':
                     "/home/pasca/School/Licenta/Naturix/Histograms/MouseACh/{}/Cond:{}_Trial:{}".format(
                         normalization,
                         cond, trial))
+                plt.show()
                 plt.close()
 
     for normalization in ["MuLaw", "Zsc", "Brute"]:
         dataset = MouseLFP(PASCA_MOUSE_DATASET_PATH, cutoff_freq=7, channels_to_keep=[-1],
-                           conditions_to_keep=[1, 2], trials_to_keep=[1], normalization=normalization)
+                           conditions_to_keep=[-1], trials_to_keep=[-1], normalization=normalization)
         for cond in range(dataset.number_of_conditions):
             for trial in range(dataset.trials_per_condition):
                 signals = []
@@ -156,3 +160,10 @@ if __name__ == '__main__':
                     "/home/pasca/School/Licenta/Naturix/Histograms/MouseControl/{}/Cond:{}_Trial:{}".format(
                         normalization,
                         cond, trial))
+                plt.close()
+
+
+if __name__ == '__main__':
+    dataset = MouseLFP(PASCA_MOUSE_DATASET_PATH, cutoff_freq=[30, 70], channels_to_keep=[-1],
+                       conditions_to_keep=[1], trials_to_keep=[0], normalization="Zsc")
+    compare_signals(dataset, "MouseControl/Bpass")
