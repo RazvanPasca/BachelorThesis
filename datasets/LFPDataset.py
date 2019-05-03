@@ -40,11 +40,10 @@ class LFPDataset:
         self.white_noise = white_noise_dev > 0
         self.white_noise_dev = white_noise_dev
         self.nr_bins = nr_bins
+        self.normalization = normalization
 
         if self.low_pass_filter:
             self._low_pass_input()
-
-        self._normalize_input(normalization)
 
         if self.white_noise:
             self._add_noise_to_input()
@@ -57,41 +56,28 @@ class LFPDataset:
         for i, channel in enumerate(self.channels):
             self.channels[i] = butter_lowpass_filter(channel, self.cutoff_freq, 1000)
 
-    def _normalize_input(self, normalization):
+    def _normalize_input(self, input_data):
         self.mu_law = False
-        if normalization == "Zsc":
-            mean = np.mean(self.channels[:-1], keepdims=True)
-            std = np.std(self.channels[:-1], keepdims=True)
-            self.channels[:-1] -= mean
-            self.channels[:-1] /= std
+        if self.normalization == "Zsc":
+            mean = np.mean(input_data, keepdims=True)
+            std = np.std(input_data, keepdims=True)
+            input_data -= mean
+            input_data /= std
 
-            mean = np.mean(self.channels[-1])
-            std = np.std(self.channels[-1])
-            self.channels[-1] = (self.channels[-1] - mean) / std
+        elif self.normalization == "Brute":
+            min = np.min(input_data)
+            max = np.max(input_data)
+            input_data = rescale(input_data, old_max=max, old_min=min, new_max=1, new_min=-1)
 
-        elif normalization == "Brute":
-            min = np.min(self.channels[:-1])
-            max = np.max(self.channels[:-1])
-            for i, channel in enumerate(self.channels[:-1]):
-                self.channels[i] = rescale(channel, old_max=max, old_min=min, new_max=1, new_min=-1)
-
-            min = np.min(self.channels[-1])
-            max = np.max(self.channels[-1])
-            self.channels[-1] = rescale(self.channels[-1], old_max=max, old_min=min, new_max=1, new_min=-1)
-
-        elif normalization == "MuLaw":
+        elif self.normalization == "MuLaw":
             """The signal is brought to [-1,1] through rescale->[-1,1] mu_law and then encoded using np.digitize"""
             self.mu_law = True
-            np_min = np.min(self.channels[:-1])
-            np_max = np.max(self.channels[:-1])
-            for i, channel in enumerate(self.channels[:-1]):
-                self.channels[i] = mu_law_fn(
-                    rescale(channel, old_max=np_max, old_min=np_min, new_max=1, new_min=-1), self.nr_bins)
+            np_min = np.min(input_data)
+            np_max = np.max(input_data)
+            input_data = mu_law_fn(rescale(input_data, old_max=np_max, old_min=np_min, new_max=1, new_min=-1),
+                                   self.nr_bins)
 
-            np_min = np.min(self.channels[-1])
-            np_max = np.max(self.channels[-1])
-            self.channels[-1] = mu_law_fn(
-                rescale(self.channels[-1], old_max=np_max, old_min=np_min, new_max=1, new_min=-1), self.nr_bins)
+        return input_data
 
     def _parse_stimulus_data(self, condition_file_path):
         with open(os.path.join(os.path.dirname(self.description_file_path), condition_file_path),

@@ -20,7 +20,7 @@ class MouseLFP(LFPDataset):
                  normalization="Zsc",
                  cutoff_freq=50,
                  white_noise_dev=-1,
-                 noisy_channels=(3, 6, 30, 22, 23, 19, 18 , 32)):
+                 noisy_channels=(3, 6, 30, 22, 23, 19, 18, 32)):
         super().__init__(dataset_path, normalization=normalization, cutoff_freq=cutoff_freq, random_seed=random_seed,
                          white_noise_dev=white_noise_dev, nr_bins=nr_bins)
 
@@ -38,6 +38,8 @@ class MouseLFP(LFPDataset):
 
         self._get_dataset_keep_indexes(channels_to_keep, conditions_to_keep, trials_to_keep, noisy_channels, )
         self.get_train_val_split(val_perc)
+
+        self.all_lfp_data = self._normalize_input(self.all_lfp_data[:, :, -1, :])
 
         self._pre_compute_bins()
         self.get_sequences_for_plotting()
@@ -130,8 +132,11 @@ class MouseLFP(LFPDataset):
         interm_data = self.all_lfp_data[self.conditions_to_keep]
 
         interm_data = interm_data[:, self.trials_to_keep, ...]
-        self.train = interm_data[:, :, train_indexes, :]
-        self.validation = interm_data[:, :, val_indexes, :]
+
+        p_interm_data = self._normalize_input(interm_data[:, :, channels_shuffled_indexes, :])
+
+        self.train = p_interm_data[:, :, :nr_train_series, :]
+        self.validation = p_interm_data[:, :, nr_train_series:, :]
 
         self.channels_lookup = {"VAL": {},
                                 "TRAIN": {}}
