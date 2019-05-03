@@ -20,7 +20,7 @@ class MouseLFP(LFPDataset):
                  normalization="Zsc",
                  cutoff_freq=50,
                  white_noise_dev=-1,
-                 noisy_channels=(1, 3, 6, 30, 32)):
+                 noisy_channels=(3, 6, 30, 22, 23, 19, 18 , 32)):
         super().__init__(dataset_path, normalization=normalization, cutoff_freq=cutoff_freq, random_seed=random_seed,
                          white_noise_dev=white_noise_dev, nr_bins=nr_bins)
 
@@ -40,16 +40,16 @@ class MouseLFP(LFPDataset):
         self.get_train_val_split(val_perc)
 
         self._pre_compute_bins()
-        self.get_sequences_for_plotting(nr_of_seqs)
+        self.get_sequences_for_plotting()
 
         np.random.seed(datetime.datetime.now().microsecond)
 
-    def get_sequences_for_plotting(self, nr_of_seqs):
+    def get_sequences_for_plotting(self):
         self.prediction_sequences = {
             'VAL': [],
             'TRAIN': []
         }
-        for seq_nr in range(nr_of_seqs):
+        for seq_nr in range(self.validation.shape[2]):
             cond_index = np.random.choice(len(self.conditions_to_keep))
             trial_index = np.random.choice(len(self.trials_to_keep))
             for key in self.prediction_sequences.keys():
