@@ -17,9 +17,9 @@ def log_training_session(model_params):
 def train_model(model_params):
     log_training_session(model_params)
 
-    model = get_wavenet_model(model_params.nr_filters,
-                              model_params.frame_size,
-                              model_params.nr_layers,
+    model = get_wavenet_model(nr_filters=model_params.nr_filters,
+                              input_shape=(model_params.frame_size, 2),
+                              nr_layers=model_params.nr_layers,
                               lr=model_params.lr,
                               loss=model_params.loss,
                               clipvalue=model_params.clip_grad_by_value,
@@ -58,7 +58,7 @@ def train_model(model_params):
                                                                         model_params.get_classifying()),
         validation_steps=model_params.nr_val_steps,
         verbose=2,
-        callbacks=[tensorboard_callback, plot_figure_callback, log_callback, save_model_callback])
+        callbacks=[tensorboard_callback, log_callback, save_model_callback])  # plot_figure_callback
 
     print('Saving model and results...')
     model.save(model_params.model_path + "/" + "final_model.h5")

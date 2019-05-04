@@ -20,7 +20,8 @@ class MouseLFP(LFPDataset):
                  normalization="Zsc",
                  cutoff_freq=50,
                  white_noise_dev=-1,
-                 noisy_channels=(3, 6, 30, 22, 23, 19, 18, 32)):
+                 noisy_channels=(3, 6, 30, 22, 23, 19, 18, 32),
+                 gamma_windows_in_trial=None):
         super().__init__(dataset_path, normalization=normalization, cutoff_freq=cutoff_freq, random_seed=random_seed,
                          white_noise_dev=white_noise_dev, nr_bins=nr_bins)
 
@@ -33,7 +34,7 @@ class MouseLFP(LFPDataset):
         self.number_of_conditions = 24
         self.trial_length = 2672  # 2672  # 4175
         self.nr_of_seqs = nr_of_seqs
-
+        self.gamma_info = self.compute_gamma_labels_for_trial(gamma_windows_in_trial)
         self._split_lfp_data()
 
         self._get_dataset_keep_indexes(channels_to_keep, conditions_to_keep, trials_to_keep, noisy_channels, )
@@ -76,6 +77,14 @@ class MouseLFP(LFPDataset):
             self.all_lfp_data.append(np.array(conditions))
         self.all_lfp_data = np.array(self.all_lfp_data, dtype=np.float32)
         self.channels = None
+
+    def compute_gamma_labels_for_trial(self, gamma_windows_in_trial):
+        trial_gamma_label = np.zeros(self.trial_length)
+        if not gamma_windows_in_trial is None:
+            gamma_ranges = [list(range(l[0], l[1] + 1)) for l in gamma_windows_in_trial]
+            gamma_ranges = [item for sublist in gamma_ranges for item in sublist if item < self.trial_length]
+            np.put(trial_gamma_label, gamma_ranges, 1)
+        return trial_gamma_label.reshape(-1, 1)
 
     def _normalize_input_per_channel(self, input_data):
         self.mu_law = False
@@ -164,8 +173,10 @@ class MouseLFP(LFPDataset):
             for elem in range(batch_size):
                 batch_start = batch_starts[elem]
                 frame = random_sequences[elem][batch_start:batch_start + frame_size]
+                gamma_label = self.gamma_info[batch_start:batch_start + frame_size]
+                input = np.concatenate((frame.reshape(frame_size, 1), gamma_label)).reshape(-1, 2)
                 next_step_value = random_sequences[elem][batch_start + frame_size]
-                x.append(frame.reshape(frame_size, 1))
+                x.append(input)
                 y.append(next_step_value)
 
             if len(x) == batch_size:

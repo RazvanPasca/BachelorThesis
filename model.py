@@ -1,12 +1,16 @@
 from keras import losses, Input, Model, optimizers
 from keras.activations import softmax
-from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense
+from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense, K, Reshape, Lambda
 from keras.regularizers import l2
 
 
-def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef):
+def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef, first=False):
     def f(input_):
-        residual = input_
+        if first:
+            residual = Lambda(lambda x: x[:, :, 0], output_shape=(1,))(input_)
+            residual = Reshape(target_shape=(-1, 1))(residual)
+        else:
+            residual = input_
 
         tanh_out = Conv1D(filters=n_filters,
                           kernel_size=filter_size,
@@ -44,13 +48,12 @@ def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef):
     return f
 
 
-def get_wavenet_model(nr_filters, input_size, nr_layers, lr, loss, clipvalue, skip_conn_filters,
+def get_wavenet_model(nr_filters, input_shape, nr_layers, lr, loss, clipvalue, skip_conn_filters,
                       regularization_coef, nr_output_classes, multiloss_weights=None):
-
     model_loss = get_model_loss(loss, multiloss_weights)
 
-    input_ = Input(shape=(input_size, 1))
-    A, B = wavenet_block(nr_filters, 2, 1, regularization_coef=regularization_coef)(input_)
+    input_ = Input(shape=input_shape)
+    A, B = wavenet_block(nr_filters, 2, 1, regularization_coef=regularization_coef, first=True)(input_)
     skip_connections = [B]
 
     for i in range(1, nr_layers):

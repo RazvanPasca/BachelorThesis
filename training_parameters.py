@@ -56,7 +56,8 @@ class ModelTrainingParameters:
                              normalization=self.normalization,
                              cutoff_freq=self.cutoff_freq,
                              random_seed=self.random_seed,
-                             white_noise_dev=self.white_noise_dev)
+                             white_noise_dev=self.white_noise_dev,
+                             gamma_windows_in_trial=self.gamma_windows_in_trial)
 
     def _load_configuration_from_json(self, config_path):
         with open(config_path, 'r') as f:

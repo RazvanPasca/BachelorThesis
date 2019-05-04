@@ -10,7 +10,7 @@
   ],
   "n_epochs": 400,
   "batch_size": 32,
-  "nr_layers": 11,
+  "nr_layers": 6,
   "nr_filters": 256,
   "skip_conn_filters": 256,
   "lr": 1e-05,
@@ -32,6 +32,24 @@
     80
   ],
   "random_seed": 42,
+  "gamma_windows_in_trial": [
+    [
+      400,
+      700
+    ],
+    [
+      1075,
+      1375
+    ],
+    [
+      1775,
+      2075
+    ],
+    [
+      2425,
+      2725
+    ]
+  ],
   "gpu": 0
 }
 
