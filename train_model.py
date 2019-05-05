@@ -45,10 +45,11 @@ def train_model(model_params):
     plot_figure_callback = PlotCallback(model_params, 3,
                                         nr_predictions=-1,
                                         starting_point=0,
-                                        generated_window_sizes=range(1, 900, 300))
-    save_model_callback = ModelCheckpoint(
-        filepath="{}/best_model.h5".format(model_params.model_path), monitor="val_loss",
-        save_best_only=True)
+                                        all_reset_indices=[model_params.dataset.gamma_windows_in_trial, [1]])
+
+    save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_params.model_path),
+                                          monitor="val_loss",
+                                          save_best_only=True)
 
     model.fit_generator(
         model_params.dataset.train_frame_generator(model_params.frame_size,

@@ -32,6 +32,7 @@
     80
   ],
   "random_seed": 42,
+  "condition_on_gamma": true,
   "gamma_windows_in_trial": [
     [
       400,

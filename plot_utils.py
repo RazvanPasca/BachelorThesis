@@ -95,7 +95,7 @@ def generate_prediction_name(seq_addr):
     return name
 
 
-def generate_multi_plot(model, model_params, epoch, starting_point, nr_prediction_steps, generated_window_sizes,
+def generate_multi_plot(model, model_params, epoch, starting_point, nr_prediction_steps, all_reset_indices,
                         nr_of_sequences_to_plot=6):
     pred_seqs = model_params.dataset.prediction_sequences
     prediction_range = np.arange(1, nr_prediction_steps + 1)
@@ -105,8 +105,8 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
         dir_name_root = "{}/{}".format(model_params.model_path, source)
         all_prediction_losses_norm[source] = []
 
-        for generated_window_size in generated_window_sizes:
-            dir_name = "{}/WinSize:{}".format(dir_name_root, generated_window_size)
+        for reset_indices in all_reset_indices:
+            dir_name = "{}/WinSize:{}".format(dir_name_root, reset_indices)
             create_dir_if_not_exists(dir_name)
             plt_path = "{}/E:{}".format(dir_name, epoch)
             sequence_predictions = []
@@ -119,16 +119,16 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
             for sequence, addr in pred_seqs[source][:nr_of_sequences_to_plot]:
                 image_prefix = generate_prediction_name(addr)
                 image_prefix = addr["SOURCE"] + "_" + image_prefix
-                image_name = "{}_E:{}_GenWinSize:{}".format(image_prefix, epoch, generated_window_size)
+                image_name = "{}_E:{}_GenWinSize:{}".format(image_prefix, epoch, reset_indices)
 
                 losses, predictions, vlines_coords = get_sequence_prediction(model, model_params, sequence,
                                                                              nr_prediction_steps,
                                                                              image_name,
                                                                              starting_point,
-                                                                             generated_window_size, plot=False)
+                                                                             reset_indices, plot=False)
 
                 prediction_losses_means.append(
-                    get_cumulated_error_mean_per_sequence(losses[0], generated_window_size, prediction_range))
+                    get_cumulated_error_mean_per_sequence(losses[0], reset_indices, prediction_range))
                 prediction_losses.append(losses)
                 sequence_predictions.append(predictions)
                 sequence_names.append(image_name)
@@ -140,7 +140,7 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
             generate_errors_subplots(prediction_losses, vlines_coords_list, sequence_names,
                                      starting_point + model_params.frame_size, plt_path)
 
-            prediction_losses_normalized = get_normalized_prediction_losses(generated_window_size,
+            prediction_losses_normalized = get_normalized_prediction_losses(reset_indices,
                                                                             prediction_losses_means)
             all_prediction_losses_norm[source].append(prediction_losses_normalized)
 
@@ -149,7 +149,7 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
 
 def get_sequence_prediction(model, model_params, original_sequence, nr_predictions, image_name,
                             starting_point,
-                            generated_window_size, plot=True):
+                            reset_indices, plot=True):
     """Generates prediction given an original sequence as input
 
 
@@ -159,7 +159,7 @@ def get_sequence_prediction(model, model_params, original_sequence, nr_predictio
             original_sequence: the original sequence from the dataset used as "seed" for the model
             nr_predictions: how many values we will predict in total
             starting_point: the place from which we start seeding the model with model_params.frame_size values
-            generated_window_size: after how many values we reset the teacher forcing, starting with another original sequence
+            reset_indices: when we reset the teacher forcing, starting with another original sequence
             plot: boolean telling if we should plot or not the results or only return them
 
     Returns:
@@ -175,7 +175,7 @@ def get_sequence_prediction(model, model_params, original_sequence, nr_predictio
     for prediction_nr in range(nr_predictions):
         current_pos = starting_point + prediction_nr
 
-        if prediction_nr % generated_window_size == 0:
+        if current_pos + model_params.frame_size in reset_indices or prediction_nr == 0:
             seed_sequence = original_sequence[current_pos:current_pos + model_params.frame_size]
             input_sequence = np.reshape(seed_sequence, (-1, model_params.frame_size, 2))
             vlines_coords.append(current_pos + model_params.frame_size - 1)
@@ -189,12 +189,13 @@ def get_sequence_prediction(model, model_params, original_sequence, nr_predictio
 
             input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted_val_w_label, (-1, 1, 2)), axis=1)
 
-            curr_loss = np.abs(predicted_val - original_sequence[current_pos + model_params.frame_size][0])
-            predictions_losses[i][prediction_nr] = curr_loss if prediction_nr % generated_window_size == 0 else \
-                predictions_losses[i][prediction_nr - 1] + curr_loss
+            curr_loss = np.abs(
+                (original_sequence[current_pos + model_params.frame_size][0] - predicted_val) / predicted_val)
+            predictions_losses[i][prediction_nr] = curr_loss if current_pos + model_params.frame_size in reset_indices \
+                else predictions_losses[i][prediction_nr - 1] + curr_loss
 
     if plot:
-        image_name += "GenSteps:{}_".format(generated_window_size)
+        image_name += "GenSteps:{}_".format(reset_indices)
         plot_predictions(original_sequence, image_name, nr_predictions,
                          model_params.frame_size, predicted_sequences, model_params.model_path, starting_point,
                          prediction_losses=predictions_losses,
@@ -274,7 +275,7 @@ class PlotCallback(callbacks.Callback):
         If starting point is smaller than 1, the model will start predicting from the beginning of the signal-frame size
     """
 
-    def __init__(self, model_params, plot_period, nr_predictions, starting_point, generated_window_sizes,
+    def __init__(self, model_params, plot_period, nr_predictions, starting_point, all_reset_indices,
                  nr_plot_rows=2):
         super().__init__()
 
@@ -283,11 +284,16 @@ class PlotCallback(callbacks.Callback):
         self.get_nr_prediction_steps(model_params, nr_predictions, starting_point)
         self.plot_period = plot_period
         self.starting_point = starting_point
-        self.get_generated_window_sizes(generated_window_sizes, model_params, starting_point)
+        # self.get_all_reset_indices(all_reset_indices, model_params, starting_point)
+        self.all_reset_indices = self.get_all_reset_indices(all_reset_indices)
         self.nr_plot_rows = nr_plot_rows
         self.nr_of_sequences_to_plot = self.model_params.dataset.nr_of_seqs // nr_plot_rows * nr_plot_rows
         self.all_pred_losses_normalized = {"VAL": [],
                                            "TRAIN": []}
+
+    def get_all_reset_indices(self, all_reset_indices):
+        set_all_reset_indices = [set(tuple(reset_indices)) for reset_indices in all_reset_indices]
+        return set_all_reset_indices
 
     def set_model(self, model):
         self.pred_error_writer = tf.summary.FileWriter(self.model_params.model_path)
@@ -305,7 +311,7 @@ class PlotCallback(callbacks.Callback):
             all_pred_losses_normalized = generate_multi_plot(self.model, self.model_params, self.epoch,
                                                              self.starting_point,
                                                              nr_prediction_steps=self.nr_prediction_steps,
-                                                             generated_window_sizes=self.generated_window_sizes,
+                                                             all_reset_indices=self.all_reset_indices,
                                                              nr_of_sequences_to_plot=self.nr_of_sequences_to_plot)
 
             self.write_pred_losses_to_tboard(all_pred_losses_normalized, self.epoch)
@@ -315,7 +321,7 @@ class PlotCallback(callbacks.Callback):
     def on_train_end(self, logs=None):
         all_pred_losses_normalized = generate_multi_plot(self.model, self.model_params, "TrainEnd", self.starting_point,
                                                          nr_prediction_steps=self.nr_prediction_steps,
-                                                         generated_window_sizes=self.generated_window_sizes,
+                                                         all_reset_indices=self.all_reset_indices,
                                                          nr_of_sequences_to_plot=self.nr_of_sequences_to_plot)
         self.update_all_pred_losses(all_pred_losses_normalized)
         self.write_pred_losses_to_tboard(all_pred_losses_normalized, self.epoch)
@@ -326,12 +332,12 @@ class PlotCallback(callbacks.Callback):
         self.nr_prediction_steps = min(self.nr_prediction_steps,
                                        model_params.dataset.trial_length - starting_point - model_params.frame_size - 1)
 
-    def get_generated_window_sizes(self, generated_window_sizes, model_params, starting_point):
-        self.generated_window_sizes = list(generated_window_sizes)
+    def get_all_reset_indices_2(self, all_reset_indices, model_params, starting_point):
+        self.all_reset_indices = all_reset_indices
         self.limit = model_params.dataset.trial_length - model_params.frame_size - 1 - starting_point
-        if self.generated_window_sizes[-1] > self.limit:
-            self.generated_window_sizes = self.generated_window_sizes[:-1]
-            self.generated_window_sizes.append(self.limit)
+        if self.all_reset_indices[-1] > self.limit:
+            self.all_reset_indices = self.all_reset_indices[:-1]
+            self.all_reset_indices.append(self.limit)
 
     def write_pred_losses_to_tboard(self, all_pred_losses_normalized, epoch):
         for source, source_errors in all_pred_losses_normalized.items():
@@ -342,7 +348,7 @@ class PlotCallback(callbacks.Callback):
                 if error == self.limit:
                     summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, "Full")
                 else:
-                    summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, self.generated_window_sizes[i])
+                    summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, self.all_reset_indices[i])
             self.pred_error_writer.add_summary(summary, epoch)
         self.pred_error_writer.flush()
 

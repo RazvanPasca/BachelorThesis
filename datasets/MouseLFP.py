@@ -22,7 +22,8 @@ class MouseLFP(LFPDataset):
                  cutoff_freq=50,
                  white_noise_dev=-1,
                  noisy_channels=(3, 6, 30, 22, 23, 19, 18, 32),
-                 gamma_windows_in_trial=None):
+                 gamma_windows_in_trial=None,
+                 condition_on_gamma=False):
         super().__init__(dataset_path, normalization=normalization, cutoff_freq=cutoff_freq, random_seed=random_seed,
                          white_noise_dev=white_noise_dev, nr_bins=nr_bins)
 
@@ -35,7 +36,11 @@ class MouseLFP(LFPDataset):
         self.number_of_conditions = 24
         self.trial_length = 2672  # 2672  # 4175
         self.nr_of_seqs = nr_of_seqs
+        self.condition_on_gamma = condition_on_gamma
         self.gamma_info = self.compute_gamma_labels_for_trial(gamma_windows_in_trial)
+        self.gamma_windows_in_trial = [item for sublist in gamma_windows_in_trial for item in sublist if
+                                       item < self.trial_length]
+
         self._split_lfp_data()
 
         self._get_dataset_keep_indexes(channels_to_keep, conditions_to_keep, trials_to_keep, noisy_channels, )
@@ -86,7 +91,7 @@ class MouseLFP(LFPDataset):
 
     def compute_gamma_labels_for_trial(self, gamma_windows_in_trial):
         trial_gamma_label = np.zeros(self.trial_length)
-        if not gamma_windows_in_trial is None:
+        if self.condition_on_gamma:
             gamma_ranges = [list(range(l[0], l[1] + 1)) for l in gamma_windows_in_trial]
             gamma_ranges = [item for sublist in gamma_ranges for item in sublist if item < self.trial_length]
             np.put(trial_gamma_label, gamma_ranges, 1)

@@ -1,4 +1,4 @@
-from datasets.DATASET_PATHS import GABI_MOUSE_DATASET_PATH
+from datasets.DATASET_PATHS import PASCA_MOUSE_DATASET_PATH
 from datasets.MouseLFP import MouseLFP
 
 
@@ -9,8 +9,9 @@ class MouseControl(MouseLFP):
                  val_perc=0.20,
                  random_seed=42,
                  nr_bins=256, nr_of_seqs=6, normalization="Zsc", cutoff_freq=50, white_noise_dev=-1,
-                 gamma_windows_in_trial=None):
-        super().__init__(GABI_MOUSE_DATASET_PATH,
+                 gamma_windows_in_trial=None,
+                 condition_on_gamma=False):
+        super().__init__(PASCA_MOUSE_DATASET_PATH,
                          channels_to_keep=channels_to_keep,
                          conditions_to_keep=conditions_to_keep,
                          trials_to_keep=trials_to_keep,
@@ -21,7 +22,8 @@ class MouseControl(MouseLFP):
                          normalization=normalization,
                          cutoff_freq=cutoff_freq,
                          white_noise_dev=white_noise_dev,
-                         gamma_windows_in_trial=gamma_windows_in_trial)
+                         gamma_windows_in_trial=gamma_windows_in_trial,
+                         condition_on_gamma=condition_on_gamma)
 
 
 if __name__ == '__main__':

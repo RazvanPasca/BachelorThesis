@@ -57,7 +57,8 @@ class ModelTrainingParameters:
                              cutoff_freq=self.cutoff_freq,
                              random_seed=self.random_seed,
                              white_noise_dev=self.white_noise_dev,
-                             gamma_windows_in_trial=self.gamma_windows_in_trial)
+                             gamma_windows_in_trial=self.gamma_windows_in_trial,
+                             condition_on_gamma=self.condition_on_gamma)
 
     def _load_configuration_from_json(self, config_path):
         with open(config_path, 'r') as f:
@@ -88,7 +89,7 @@ class ModelTrainingParameters:
             self.clip_grad_by_value,
             self.cutoff_freq,
             self.white_noise_dev,
-            self.gamma_windows_in_trial != None)
+            self.condition_on_gamma)
 
     def _compute_model_path(self, model_path):
         if model_path is None:

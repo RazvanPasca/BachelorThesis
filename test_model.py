@@ -3,9 +3,9 @@ import datetime
 import numpy as np
 from keras.models import load_model
 
+from output_utils import get_normalized_prediction_losses
 from plot_utils import get_sequence_prediction, generate_prediction_name, \
     create_dir_if_not_exists, prepare_file_for_writing
-from output_utils import get_normalized_prediction_losses
 from tf_utils import configure_gpu
 from training_parameters import ModelTrainingParameters
 
@@ -22,7 +22,7 @@ def get_error_estimates(model, model_parameters, nr_of_estimates, generated_wind
                                                        generated_window_size,
                                                        image_name="bla",
                                                        starting_point=starting_point,
-                                                       generated_window_size=generated_window_size,
+                                                       reset_indices=generated_window_size,
                                                        plot=False)
         avg_prediction_losses[estimate] = prediction_losses[-1]
 
@@ -59,7 +59,7 @@ def test_model(model_params):
                                         nr_predictions=1000,
                                         image_name=image_name,
                                         starting_point=1500 - model_params.frame_size,
-                                        generated_window_size=generated_window_size)
+                                        reset_indices=generated_window_size)
 
     for source in ["VAL", "TRAIN"]:
         file_path = model_params.model_path + "/Error_statistics_{}.txt".format(source)
