@@ -215,7 +215,7 @@ def generate_subplots(original_sequences, sequence_predictions, vlines_coords_li
         sequence_values = original_sequences[i][:, 0]
         subplot.plot(original_sequences_x_indices, sequence_values[original_sequences_x_indices],
                      label="Original sequence", color="blue")
-        subplot.scatter(gamma_indices, sequence_values[gamma_indices], color="cyan")
+        subplot.scatter(gamma_indices, sequence_values[gamma_indices], color="cyan", s=3)
         for j, sequence_prediction in enumerate(sequence_predictions[i]):
             subplot.plot(predictions_x_indices, sequence_prediction, label="Predicted sequence {}".format(j),
                          color=colors[j])
@@ -299,8 +299,9 @@ class PlotCallback(callbacks.Callback):
     def get_generated_window_sizes(self, generated_window_sizes, model_params, starting_point):
         self.generated_window_sizes = list(generated_window_sizes)
         limit = model_params.dataset.trial_length - model_params.frame_size - 1 - starting_point
-        self.generated_window_sizes = [x for x in self.generated_window_sizes if x < limit]
-        self.generated_window_sizes.append(limit)
+        if self.generated_window_sizes[-1] > limit:
+            self.generated_window_sizes = self.generated_window_sizes[:-1]
+            self.generated_window_sizes.append(limit)
 
     def write_pred_losses_to_tboard(self, all_pred_losses_normalized, epoch):
         for source, source_errors in all_pred_losses_normalized.items():
