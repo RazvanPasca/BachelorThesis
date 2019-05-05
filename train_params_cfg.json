@@ -3,10 +3,10 @@
     -1
   ],
   "conditions_to_keep": [
-    1
+    19
   ],
   "trials_to_keep": [
-    0
+    3
   ],
   "n_epochs": 400,
   "batch_size": 32,
@@ -18,7 +18,7 @@
   "clip_grad_by_value": 5,
   "nr_bins": 256,
   "regularization_coef": 0.0,
-  "normalization": "MuLaw",
+  "normalization": "Zsc",
   "dataset": "MouseControl",
   "white_noise_dev": 0.01,
   "train_coverage_per_epoch": 0.3,

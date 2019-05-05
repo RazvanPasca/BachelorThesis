@@ -298,10 +298,10 @@ class PlotCallback(callbacks.Callback):
 
     def get_generated_window_sizes(self, generated_window_sizes, model_params, starting_point):
         self.generated_window_sizes = list(generated_window_sizes)
-        limit = model_params.dataset.trial_length - model_params.frame_size - 1 - starting_point
-        if self.generated_window_sizes[-1] > limit:
+        self.limit = model_params.dataset.trial_length - model_params.frame_size - 1 - starting_point
+        if self.generated_window_sizes[-1] > self.limit:
             self.generated_window_sizes = self.generated_window_sizes[:-1]
-            self.generated_window_sizes.append(limit)
+            self.generated_window_sizes.append(self.limit)
 
     def write_pred_losses_to_tboard(self, all_pred_losses_normalized, epoch):
         for source, source_errors in all_pred_losses_normalized.items():
@@ -309,7 +309,7 @@ class PlotCallback(callbacks.Callback):
             for i, error in enumerate(source_errors):
                 summary_value = summary.value.add()
                 summary_value.simple_value = error
-                if i == len(self.generated_window_sizes) - 1:
+                if error == self.limit:
                     summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, "Full")
                 else:
                     summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, self.generated_window_sizes[i])
