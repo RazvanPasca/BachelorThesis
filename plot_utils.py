@@ -168,22 +168,23 @@ def get_sequence_prediction(model, model_params, original_sequence, nr_predictio
     input_sequence = []
 
     for prediction_nr in range(nr_predictions):
-        if prediction_nr % generated_window_size == 0:
-            input_sequence = np.reshape(
-                original_sequence[
-                starting_point + prediction_nr:starting_point + prediction_nr + model_params.frame_size],
-                (-1, model_params.frame_size, 1))
-            vlines_coords.append(starting_point + prediction_nr + model_params.frame_size - 1)
+        current_pos = starting_point + prediction_nr
 
-        # channel_index = get_channel_index_from_name(image_name)
+        if prediction_nr % generated_window_size == 0:
+            seed_sequence = original_sequence[current_pos:current_pos + model_params.frame_size]
+            input_sequence = np.reshape(seed_sequence, (-1, model_params.frame_size, 2))
+            vlines_coords.append(current_pos + model_params.frame_size - 1)
+
         """I get the predictions here. I might have 2 predictions made if I am using regression and softmax"""
         predicted_values = decode_model_output(model.predict(input_sequence), model_params)
         for i, predicted_val in enumerate(predicted_values):
             predicted_sequences[i][prediction_nr] = predicted_val
-            input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted_val, (-1, 1, 1)), axis=1)
+            predicted_val_w_label = np.array(
+                [predicted_val, original_sequence[current_pos + model_params.frame_size, 1]])
 
-            curr_loss = np.abs(
-                predicted_val - original_sequence[starting_point + prediction_nr + model_params.frame_size])
+            input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted_val_w_label, (-1, 1, 2)), axis=1)
+
+            curr_loss = np.abs(predicted_val - original_sequence[current_pos + model_params.frame_size][0])
             predictions_losses[i][prediction_nr] = curr_loss if prediction_nr % generated_window_size == 0 else \
                 predictions_losses[i][prediction_nr - 1] + curr_loss
 
@@ -208,10 +209,13 @@ def generate_subplots(original_sequences, sequence_predictions, vlines_coords_li
     original_sequences_x_indices = range(len(original_sequences[0]))
 
     show_vlines = len(vlines_coords_list[0]) != sequence_predictions[0][0].size
+    gamma_indices = np.where(original_sequences[0][:, 1] == 1)
 
     for i, subplot in enumerate(subplots.flatten()):
-        subplot.plot(original_sequences_x_indices, original_sequences[i][original_sequences_x_indices],
+        sequence_values = original_sequences[i][:, 0]
+        subplot.plot(original_sequences_x_indices, sequence_values[original_sequences_x_indices],
                      label="Original sequence", color="blue")
+        subplot.scatter(gamma_indices, sequence_values[gamma_indices], color="cyan")
         for j, sequence_prediction in enumerate(sequence_predictions[i]):
             subplot.plot(predictions_x_indices, sequence_prediction, label="Predicted sequence {}".format(j),
                          color=colors[j])

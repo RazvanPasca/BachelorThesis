@@ -6,6 +6,7 @@ import numpy as np
 
 from datasets.LFPDataset import LFPDataset
 from signal_utils import mu_law_encoding, mu_law_fn, rescale
+from tf_utils import replace_at_index
 
 
 class MouseLFP(LFPDataset):
@@ -56,7 +57,12 @@ class MouseLFP(LFPDataset):
             cond_index = np.random.choice(len(self.conditions_to_keep))
             trial_index = np.random.choice(len(self.trials_to_keep))
             for key in self.prediction_sequences.keys():
-                self.prediction_sequences[key].append(self.get_sequence_from(cond_index, trial_index, seq_nr, key))
+                sequence_and_source = self.get_sequence_from(cond_index, trial_index, seq_nr, key)
+                gamma_label = self.gamma_info
+                sequence_w_gamma_labels = np.concatenate(
+                    (sequence_and_source[0].reshape(self.trial_length, 1), gamma_label), axis=1)
+                sequence_and_source = replace_at_index(sequence_and_source, 0, sequence_w_gamma_labels)
+                self.prediction_sequences[key].append(sequence_and_source)
 
     def _split_lfp_data(self):
         self.all_lfp_data = []
@@ -174,7 +180,7 @@ class MouseLFP(LFPDataset):
                 batch_start = batch_starts[elem]
                 frame = random_sequences[elem][batch_start:batch_start + frame_size]
                 gamma_label = self.gamma_info[batch_start:batch_start + frame_size]
-                input = np.concatenate((frame.reshape(frame_size, 1), gamma_label)).reshape(-1, 2)
+                input = np.concatenate((frame.reshape(frame_size, 1), gamma_label), axis=1)
                 next_step_value = random_sequences[elem][batch_start + frame_size]
                 x.append(input)
                 y.append(next_step_value)

@@ -58,7 +58,8 @@ def train_model(model_params):
                                                                         model_params.get_classifying()),
         validation_steps=model_params.nr_val_steps,
         verbose=2,
-        callbacks=[tensorboard_callback, log_callback, save_model_callback])  # plot_figure_callback
+        callbacks=[tensorboard_callback, plot_figure_callback, log_callback,
+                   save_model_callback])  # plot_figure_callback
 
     print('Saving model and results...')
     model.save(model_params.model_path + "/" + "final_model.h5")

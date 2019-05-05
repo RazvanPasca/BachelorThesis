@@ -11,3 +11,7 @@ def configure_gpu(gpu):
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
     set_session(sess)
+
+
+def replace_at_index(tup, ix, val):
+    return tup[:ix] + (val,) + tup[ix + 1:]
