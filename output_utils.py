@@ -21,11 +21,8 @@ def get_normalized_prediction_losses(generated_window_size, prediction_losses):
     return prediction_losses_avg
 
 
-def get_cumulated_error_mean_per_sequence(losses, reset_indices, range):
-    values = 0
-    counter = 0
-    for i, val in enumerate(losses[:-1]):
-        if val > losses[i + 1]:
-            values += val
-            counter += 1
-    return values / counter if counter != 0 else losses[-1]
+def get_cumulated_error_mean_per_sequence(losses, reset_indices):
+    pos_reset_indices = reset_indices > 0
+    values_np = losses[reset_indices[pos_reset_indices] - 1]
+    mean = np.mean(values_np)
+    return mean

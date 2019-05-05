@@ -98,7 +98,6 @@ def generate_prediction_name(seq_addr):
 def generate_multi_plot(model, model_params, epoch, starting_point, nr_prediction_steps, all_reset_indices,
                         nr_of_sequences_to_plot=6):
     pred_seqs = model_params.dataset.prediction_sequences
-    prediction_range = np.arange(1, nr_prediction_steps + 1)
     all_prediction_losses_norm = {}
 
     for source in pred_seqs:
@@ -106,7 +105,7 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
         all_prediction_losses_norm[source] = []
 
         for reset_indices in all_reset_indices:
-            dir_name = "{}/WinSize:{}".format(dir_name_root, reset_indices)
+            dir_name = "{}/WinSize:{}".format(dir_name_root, list(reset_indices)[:10])
             create_dir_if_not_exists(dir_name)
             plt_path = "{}/E:{}".format(dir_name, epoch)
             sequence_predictions = []
@@ -119,7 +118,7 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
             for sequence, addr in pred_seqs[source][:nr_of_sequences_to_plot]:
                 image_prefix = generate_prediction_name(addr)
                 image_prefix = addr["SOURCE"] + "_" + image_prefix
-                image_name = "{}_E:{}_GenWinSize:{}".format(image_prefix, epoch, reset_indices)
+                image_name = "{}_E:{}".format(image_prefix, epoch)
 
                 losses, predictions, vlines_coords = get_sequence_prediction(model, model_params, sequence,
                                                                              nr_prediction_steps,
@@ -127,8 +126,9 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
                                                                              starting_point,
                                                                              reset_indices, plot=False)
 
-                prediction_losses_means.append(
-                    get_cumulated_error_mean_per_sequence(losses[0], reset_indices, prediction_range))
+                error_mean_per_sequence = get_cumulated_error_mean_per_sequence(losses[0], np.array(
+                    list(reset_indices)) - model_params.frame_size)
+                prediction_losses_means.append(error_mean_per_sequence)
                 prediction_losses.append(losses)
                 sequence_predictions.append(predictions)
                 sequence_names.append(image_name)
@@ -345,10 +345,7 @@ class PlotCallback(callbacks.Callback):
             for i, error in enumerate(source_errors):
                 summary_value = summary.value.add()
                 summary_value.simple_value = error
-                if error == self.limit:
-                    summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, "Full")
-                else:
-                    summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, self.all_reset_indices[i])
+                summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, self.all_reset_indices[i])
             self.pred_error_writer.add_summary(summary, epoch)
         self.pred_error_writer.flush()
 

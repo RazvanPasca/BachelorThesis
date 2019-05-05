@@ -45,7 +45,9 @@ def train_model(model_params):
     plot_figure_callback = PlotCallback(model_params, 3,
                                         nr_predictions=-1,
                                         starting_point=0,
-                                        all_reset_indices=[model_params.dataset.gamma_windows_in_trial, [1]])
+                                        all_reset_indices=[model_params.dataset.gamma_windows_in_trial,
+                                                           list(range(1, model_params.dataset.trial_length)),
+                                                           [model_params.dataset.trial_length - 1]])
 
     save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_params.model_path),
                                           monitor="val_loss",
