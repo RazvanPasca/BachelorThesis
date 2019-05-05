@@ -139,7 +139,8 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
                               starting_point + model_params.frame_size, plt_path)
             generate_errors_subplots(prediction_losses, vlines_coords_list, sequence_names,
                                      starting_point + model_params.frame_size, plt_path)
-            save_errors_in_csv(epoch, prediction_losses_means, plt_path)
+            save_range_accumulated_errors_in_csv(epoch, prediction_losses,
+                                                 np.array(list(reset_indices)) - model_params.frame_size, dir_name)
 
             prediction_losses_normalized = get_normalized_prediction_losses(reset_indices, prediction_losses_means)
             all_prediction_losses_norm[source].append(prediction_losses_normalized)
@@ -147,8 +148,24 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
     return all_prediction_losses_norm
 
 
-def save_errors_in_csv(epoch, prediction_losses_means, plt_path):
-    pass
+def save_range_accumulated_errors_in_csv(epoch, prediction_losses, reset_indices, dir_name):
+    csv_name = os.path.join(dir_name, "prediction_losses_means.csv")
+    reset_indices.sort()
+
+    pos_reset_indices = reset_indices > 0
+    values_np = np.mean(np.array(prediction_losses)[:, 0, reset_indices[pos_reset_indices] - 1], axis=0)
+
+    if os.path.exists(csv_name):
+        with open(csv_name, 'a') as f:
+            errors_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+            errors_writer.writerow([epoch] + values_np)
+    else:
+        with open(csv_name, 'w') as f:
+            errors_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+            errors_writer.writerow(["Epoch"] + list(reset_indices))
+            errors_writer.writerow([epoch] + values_np)
 
 
 def get_sequence_prediction(model, model_params, original_sequence, nr_predictions, image_name,
@@ -249,13 +266,15 @@ def generate_errors_subplots(prediction_losses, vlines_coords_list, sequence_nam
     show_vlines = vlines_coords_list[0].size != prediction_losses[0][0].size
     # gamma_indices = np.where(original_sequences[0][:, 1] == 1)
 
+    if show_vlines:
+        lim = np.max(prediction_losses[:nr_cols * nr_rows])
+        lim1 = np.min(prediction_losses[:nr_cols * nr_rows])
+
     for i, subplot in enumerate(subplots.flatten()):
         # sequence_values = original_sequences[i][:, 0]
         subplot.plot(prediction_losses[i][0], linewidth=1, label="Prediction accumulated errors", color="blue")
         # subplot.scatter(gamma_indices, sequence_values[gamma_indices], color="cyan", s=3)
         if show_vlines:
-            lim = np.max(prediction_losses)
-            lim1 = np.min(prediction_losses)
             subplot.vlines(vlines_coords_list[i], ymin=lim1, ymax=lim, lw=0.5)
         subplot.set_title(sequence_names[i])
         subplot.legend()
