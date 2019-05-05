@@ -1,5 +1,5 @@
 import os
-
+import csv
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
@@ -139,12 +139,16 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
                               starting_point + model_params.frame_size, plt_path)
             generate_errors_subplots(prediction_losses, vlines_coords_list, sequence_names,
                                      starting_point + model_params.frame_size, plt_path)
+            save_errors_in_csv(epoch, prediction_losses_means, plt_path)
 
-            prediction_losses_normalized = get_normalized_prediction_losses(reset_indices,
-                                                                            prediction_losses_means)
+            prediction_losses_normalized = get_normalized_prediction_losses(reset_indices, prediction_losses_means)
             all_prediction_losses_norm[source].append(prediction_losses_normalized)
 
     return all_prediction_losses_norm
+
+
+def save_errors_in_csv(epoch, prediction_losses_means, plt_path):
+    pass
 
 
 def get_sequence_prediction(model, model_params, original_sequence, nr_predictions, image_name,
@@ -188,9 +192,8 @@ def get_sequence_prediction(model, model_params, original_sequence, nr_predictio
                 [predicted_val, original_sequence[current_pos + model_params.frame_size, 1]])
 
             input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted_val_w_label, (-1, 1, 2)), axis=1)
-
-            curr_loss = np.abs(
-                (original_sequence[current_pos + model_params.frame_size][0] - predicted_val) / predicted_val)
+            actual_value = original_sequence[current_pos + model_params.frame_size][0]
+            curr_loss = np.abs((actual_value - predicted_val) / actual_value)
             predictions_losses[i][prediction_nr] = curr_loss if current_pos + model_params.frame_size in reset_indices \
                 else predictions_losses[i][prediction_nr - 1] + curr_loss
 
