@@ -74,7 +74,7 @@ class ModelTrainingParameters:
             loss = self.loss + ":{}".format(self.nr_bins)
         else:
             loss = self.loss
-        return "WvNet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_Norm:{}_Loss:{}_GradClip:{}_LPass:{}_WNz:{}".format(
+        return "WvNet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_Norm:{}_Loss:{}_GradClip:{}_LPass:{}_WNz:{}_Gamma:{}".format(
             self.nr_layers,
             self.n_epochs,
             self.nr_train_steps,
@@ -87,7 +87,8 @@ class ModelTrainingParameters:
             loss,
             self.clip_grad_by_value,
             self.cutoff_freq,
-            self.white_noise_dev)
+            self.white_noise_dev,
+            self.gamma_windows_in_trial != None)
 
     def _compute_model_path(self, model_path):
         if model_path is None:
