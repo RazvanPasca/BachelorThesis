@@ -43,7 +43,7 @@ def generate_prediction_name(seq_addr):
 
 
 def generate_multi_plot(model, model_params, epoch, starting_point, nr_prediction_steps, all_reset_indices,
-                        nr_of_sequences_to_plot=6):
+                        nr_of_sequences_to_plot):
     pred_seqs = model_params.dataset.prediction_sequences
     all_prediction_losses_norm_mean = {}
 
@@ -90,7 +90,7 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
                                      starting_point + model_params.frame_size, plt_path)
 
             prediction_losses_normalized_seq_avg = prediction_losses_normalized / nr_of_sequences_to_plot
-            save_range_accumulated_errors_in_csv(epoch, prediction_losses_normalized_seq_avg, reset_indices_, dir_name)
+            log_range_accumulated_errors(epoch, prediction_losses_normalized_seq_avg, reset_indices_, dir_name)
             all_prediction_losses_norm_mean[source].append(np.mean(prediction_losses_normalized_seq_avg))
 
     return all_prediction_losses_norm_mean
@@ -104,26 +104,26 @@ def get_reset_indices_array(model_params, reset_indices):
     return reset_indices_, reset_indices_np_sorted
 
 
-def save_range_accumulated_errors_in_csv(epoch, prediction_losses, reset_indices, dir_name):
+def log_range_accumulated_errors(epoch, prediction_losses, reset_indices, dir_name):
     csv_name = os.path.join(dir_name, "prediction_losses_means.csv")
 
     if os.path.exists(csv_name):
         with open(csv_name, 'a') as f:
             errors_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            errors_writer.writerow([epoch] + prediction_losses)
+            errors_writer.writerow(np.insert(prediction_losses, 0, epoch))
 
     else:
         with open(csv_name, 'w') as f:
             errors_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             errors_writer.writerow(["Epoch"] + list(reset_indices))
-            errors_writer.writerow([epoch] + prediction_losses)
+            errors_writer.writerow(np.insert(prediction_losses, 0, epoch))
 
 
 def get_sequence_prediction(model, model_params, original_sequence, nr_predictions, image_name,
                             starting_point,
                             reset_indices, plot=True):
-    """Generates prediction given an original sequence as input
-
+    """
+    Generates prediction given an original sequence as input
 
      Args:
             model: instance of the keras model used for predicting
