@@ -1,11 +1,8 @@
-import numpy as np
 from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 
-from datasets.DATASET_PATHS import GABI_CAT_DATASET_PATH as CAT_DATASET_PATH
 from datasets.DATASET_PATHS import GABI_MOUSEACH_DATASET_PATH as MOUSEACH_DATASET_PATH
-from datasets.DATASET_PATHS import GABI_MOUSE_DATASET_PATH as MOUSE_DATASET_PATH
 from datasets.LFPDataset import LFPDataset
 
 

@@ -3,7 +3,6 @@ import datetime
 import numpy as np
 from keras.models import load_model
 
-from output_utils import get_normalized_prediction_losses
 from plot_utils import get_sequence_prediction, generate_prediction_name, \
     create_dir_if_not_exists, prepare_file_for_writing
 from tf_utils import configure_gpu
