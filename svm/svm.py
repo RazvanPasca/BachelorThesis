@@ -136,13 +136,13 @@ if __name__ == '__main__':
     # x, y = load_cat_dataset(CAT_DATASET_PATH, label='movie_frame')
     # x, y = load_mouse_dataset(MOUSEACH_DATASET_PATH, label='contrast', ignore_channels=True)
 
-    file_redirect = "output.txt"
-    max_iterations = -1
-
-    if not (file_redirect is None):
-        sys.stdout = open(file_redirect, 'w+')
+    file_redirect = "output_windowsize_{}.txt"
+    max_iterations = 100000
 
     for window_size in [1000, 800, 400, 200]:
+        if not (file_redirect is None):
+            sys.stdout = open(file_redirect.format(window_size), 'w+')
+
         x, y, labels_to_index = load_cat_tf_record(CAT_TFRECORDS_PATH_TOBEFORMATED.format(window_size))
         print(labels_to_index)
 
