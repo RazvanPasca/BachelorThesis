@@ -1,12 +1,13 @@
-import os
 import csv
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from keras import callbacks
 from keras.callbacks import TensorBoard
 
-from output_utils import decode_model_output, get_normalized_prediction_losses, get_cumulated_error_mean_per_sequence
+from output_utils import decode_model_output, get_normalized_erros_per_sequence
 
 
 def create_dir_if_not_exists(directory_path):
@@ -17,60 +18,6 @@ def create_dir_if_not_exists(directory_path):
 def prepare_file_for_writing(file_path, text):
     with open(file_path, "w") as f:
         f.write(text)
-
-
-def plot_predictions(original_sequence, image_title, nr_predictions, frame_size, predicted_sequence,
-                     save_path,
-                     starting_point,
-                     prediction_losses=None,
-                     vlines_coords=None):
-    title = image_title
-    x1 = range(starting_point + frame_size - 5, starting_point + nr_predictions + frame_size)
-    x2 = range(starting_point + frame_size, starting_point + nr_predictions + frame_size)
-    y1 = original_sequence[x1]
-    label1 = "Original sequence"
-    label2 = "Predicted sequence"
-    # for _ in range(5):
-    #     prediction_losses = np.insert(prediction_losses, 0, np.nan)
-    plot_2_overlapped_series(x1, y1, label1, x2, predicted_sequence, label2, title, save_path, prediction_losses,
-                             vlines_coords)
-
-
-def plot_2_overlapped_series(x1, y1, label1, x2, y2, label2, image_title, save_path, prediction_losses=None,
-                             vlines_coords=None):
-    plt.figure(figsize=(16, 12))
-
-    nr_plot_rows = 2 if prediction_losses is not None else 1
-    plt.subplot(nr_plot_rows, 1, 1)
-    plt.title(image_title)
-    plt.plot(x1, y1, '.-', label=label1, color="blue")
-    plt.plot(x2, y2, '.-', label=label2, color="red")
-
-    l, r = plt.xlim()
-    low_lim = np.min(y1)
-    hi_lim = np.max(y1)
-
-    low_lim = low_lim - abs(low_lim / 2)
-    hi_lim = hi_lim + abs(hi_lim / 2)
-    plt.ylim(low_lim, hi_lim)
-    ymin = min(low_lim, np.min(y2))
-    ymax = max(hi_lim, np.max(y2))
-    if vlines_coords is not None:
-        plt.vlines(vlines_coords, ymin=ymin, ymax=ymax, lw=0.2)
-    plt.legend()
-
-    if prediction_losses is not None:
-        plt.subplot(nr_plot_rows, 1, 2)
-        plt.plot(x2, prediction_losses)
-        plt.xlim(l, r)
-        ymin = np.nanmin(prediction_losses)
-        ymax = np.nanmax(prediction_losses)
-
-        if vlines_coords is not None:
-            plt.vlines(vlines_coords[:-1], ymin=ymin, ymax=ymax, lw=0.2)
-
-    plt.savefig(save_path + '/' + image_title + ".png")
-    plt.close()
 
 
 def get_channel_index_from_name(name):
@@ -96,23 +43,26 @@ def generate_prediction_name(seq_addr):
 
 
 def generate_multi_plot(model, model_params, epoch, starting_point, nr_prediction_steps, all_reset_indices,
-                        nr_of_sequences_to_plot=6):
+                        nr_of_sequences_to_plot):
     pred_seqs = model_params.dataset.prediction_sequences
-    all_prediction_losses_norm = {}
+    all_prediction_losses_norm_mean = {}
 
     for source in pred_seqs:
         dir_name_root = "{}/{}".format(model_params.model_path, source)
-        all_prediction_losses_norm[source] = []
+        all_prediction_losses_norm_mean[source] = []
 
         for reset_indices in all_reset_indices:
-            dir_name = "{}/WinSize:{}".format(dir_name_root, list(reset_indices)[:10])
+            reset_indices_, reset_indices_np_sorted = get_reset_indices_array(model_params, reset_indices)
+
+            dir_name = "{}/WinSize:{}".format(dir_name_root, reset_indices_[:10])
             create_dir_if_not_exists(dir_name)
             plt_path = "{}/E:{}".format(dir_name, epoch)
+
             sequence_predictions = []
             sequence_names = []
             original_sequences = []
             vlines_coords_list = []
-            prediction_losses_means = []
+            prediction_losses_normalized = np.zeros(reset_indices_.size)
             prediction_losses = []
 
             for sequence, addr in pred_seqs[source][:nr_of_sequences_to_plot]:
@@ -126,9 +76,8 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
                                                                              starting_point,
                                                                              reset_indices, plot=False)
 
-                error_mean_per_sequence = get_cumulated_error_mean_per_sequence(losses[0], np.array(
-                    list(reset_indices)) - model_params.frame_size)
-                prediction_losses_means.append(error_mean_per_sequence)
+                normalized_errors_per_sequence = get_normalized_erros_per_sequence(losses[0], reset_indices_)
+                prediction_losses_normalized += normalized_errors_per_sequence
                 prediction_losses.append(losses)
                 sequence_predictions.append(predictions)
                 sequence_names.append(image_name)
@@ -139,40 +88,42 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
                               starting_point + model_params.frame_size, plt_path)
             generate_errors_subplots(prediction_losses, vlines_coords_list, sequence_names,
                                      starting_point + model_params.frame_size, plt_path)
-            save_range_accumulated_errors_in_csv(epoch, prediction_losses,
-                                                 np.array(list(reset_indices)) - model_params.frame_size, dir_name)
 
-            prediction_losses_normalized = get_normalized_prediction_losses(reset_indices, prediction_losses_means)
-            all_prediction_losses_norm[source].append(prediction_losses_normalized)
+            prediction_losses_normalized_seq_avg = prediction_losses_normalized / nr_of_sequences_to_plot
+            log_range_accumulated_errors(epoch, prediction_losses_normalized_seq_avg, reset_indices_, dir_name)
+            all_prediction_losses_norm_mean[source].append(np.mean(prediction_losses_normalized_seq_avg))
 
-    return all_prediction_losses_norm
+    return all_prediction_losses_norm_mean
 
 
-def save_range_accumulated_errors_in_csv(epoch, prediction_losses, reset_indices, dir_name):
+def get_reset_indices_array(model_params, reset_indices):
+    reset_indices_np_sorted = (np.array(list(reset_indices)) - model_params.frame_size)
+    reset_indices_np_sorted.sort()
+    pos_reset_indices = reset_indices_np_sorted > 0
+    reset_indices_ = reset_indices_np_sorted[pos_reset_indices]
+    return reset_indices_, reset_indices_np_sorted
+
+
+def log_range_accumulated_errors(epoch, prediction_losses, reset_indices, dir_name):
     csv_name = os.path.join(dir_name, "prediction_losses_means.csv")
-    reset_indices.sort()
-
-    pos_reset_indices = reset_indices > 0
-    values_np = np.mean(np.array(prediction_losses)[:, 0, reset_indices[pos_reset_indices] - 1], axis=0)
 
     if os.path.exists(csv_name):
         with open(csv_name, 'a') as f:
             errors_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            errors_writer.writerow(np.insert(prediction_losses, 0, epoch))
 
-            errors_writer.writerow([epoch] + values_np)
     else:
         with open(csv_name, 'w') as f:
             errors_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-
             errors_writer.writerow(["Epoch"] + list(reset_indices))
-            errors_writer.writerow([epoch] + values_np)
+            errors_writer.writerow(np.insert(prediction_losses, 0, epoch))
 
 
 def get_sequence_prediction(model, model_params, original_sequence, nr_predictions, image_name,
                             starting_point,
                             reset_indices, plot=True):
-    """Generates prediction given an original sequence as input
-
+    """
+    Generates prediction given an original sequence as input
 
      Args:
             model: instance of the keras model used for predicting
@@ -213,13 +164,6 @@ def get_sequence_prediction(model, model_params, original_sequence, nr_predictio
             curr_loss = np.abs((actual_value - predicted_val) / actual_value)
             predictions_losses[i][prediction_nr] = curr_loss if current_pos + model_params.frame_size in reset_indices \
                 else predictions_losses[i][prediction_nr - 1] + curr_loss
-
-    if plot:
-        image_name += "GenSteps:{}_".format(reset_indices)
-        plot_predictions(original_sequence, image_name, nr_predictions,
-                         model_params.frame_size, predicted_sequences, model_params.model_path, starting_point,
-                         prediction_losses=predictions_losses,
-                         vlines_coords=vlines_coords)
 
     return predictions_losses, predicted_sequences, vlines_coords
 
@@ -367,7 +311,8 @@ class PlotCallback(callbacks.Callback):
             for i, error in enumerate(source_errors):
                 summary_value = summary.value.add()
                 summary_value.simple_value = error
-                summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source, self.all_reset_indices[i])
+                summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source,
+                                                                            list(self.all_reset_indices[i])[:10])
             self.pred_error_writer.add_summary(summary, epoch)
         self.pred_error_writer.flush()
 
