@@ -136,20 +136,21 @@ if __name__ == '__main__':
     # x, y = load_cat_dataset(CAT_DATASET_PATH, label='movie_frame')
     # x, y = load_mouse_dataset(MOUSEACH_DATASET_PATH, label='contrast', ignore_channels=True)
 
-    file_redirect = "output_windowsize_{}.txt"
-    max_iterations = 100000
+    file_redirect_output = True
+    max_iterations = 2
 
     for window_size in [1000, 800, 400, 200]:
-        if not (file_redirect is None):
-            sys.stdout = open(file_redirect.format(window_size), 'w+')
-
         x, y, labels_to_index = load_cat_tf_record(CAT_TFRECORDS_PATH_TOBEFORMATED.format(window_size))
-        print(labels_to_index)
 
         X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, shuffle=True)
 
         for kernel in ["linear", "poly", "rbf"]:
             for i in np.arange(-1, 2, 0.33):
+                if file_redirect_output:
+                    file_redirect_name = "WS-{}-C-{}-K-{}-MaxIt-{}".format(window_size, 10 ** i, kernel, max_iterations)
+                    sys.stdout = open(file_redirect_name, 'w+')
+
+                print(labels_to_index)
                 print("Window size={}".format(window_size))
                 print("C={}".format(10 ** i))
                 print("Kernel={}".format(kernel))
@@ -169,3 +170,6 @@ if __name__ == '__main__':
                 if not len(y_test) is 0:
                     print("TEST CONFUSION MATRIX:")
                     compute_confusion_matrix(svc, X_test, y_test)
+
+                if file_redirect_output:
+                    sys.stdout.close()
