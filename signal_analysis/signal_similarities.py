@@ -2,7 +2,7 @@ import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from datasets.DATASET_PATHS import PASCA_MOUSEACH_DATASET_PATH, PASCA_MOUSE_DATASET_PATH
+from datasets.paths import MOUSEACH_DATASET_PATH, MOUSE_DATASET_PATH
 from datasets.MouseLFP import MouseLFP
 
 
@@ -123,7 +123,7 @@ def compare_signals(dataset, dir_name):
 
 def signal_histograms():
     for normalization in ["MuLaw", "Zsc", "Brute"]:
-        dataset = MouseLFP(PASCA_MOUSEACH_DATASET_PATH, cutoff_freq=-1, channels_to_keep=[-1],
+        dataset = MouseLFP(MOUSEACH_DATASET_PATH, cutoff_freq=-1, channels_to_keep=[-1],
                            conditions_to_keep=[0], trials_to_keep=[1], normalization=normalization)
         for cond in range(dataset.number_of_conditions):
             for trial in range(dataset.trials_per_condition):
@@ -144,7 +144,7 @@ def signal_histograms():
                 plt.close()
 
     for normalization in ["MuLaw", "Zsc", "Brute"]:
-        dataset = MouseLFP(PASCA_MOUSE_DATASET_PATH, cutoff_freq=7, channels_to_keep=[-1],
+        dataset = MouseLFP(MOUSE_DATASET_PATH, cutoff_freq=7, channels_to_keep=[-1],
                            conditions_to_keep=[-1], trials_to_keep=[-1], normalization=normalization)
         for cond in range(dataset.number_of_conditions):
             for trial in range(dataset.trials_per_condition):
@@ -164,6 +164,6 @@ def signal_histograms():
 
 
 if __name__ == '__main__':
-    dataset = MouseLFP(PASCA_MOUSE_DATASET_PATH, cutoff_freq=[30, 70], channels_to_keep=[-1],
+    dataset = MouseLFP(MOUSE_DATASET_PATH, cutoff_freq=[30, 70], channels_to_keep=[-1],
                        conditions_to_keep=[1], trials_to_keep=[0], normalization="Zsc")
     compare_signals(dataset, "MouseControl/Bpass")

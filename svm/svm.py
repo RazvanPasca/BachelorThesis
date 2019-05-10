@@ -3,10 +3,8 @@ from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 
-from datasets.DATASET_PATHS import GABI_CAT_DATASET_PATH as CAT_DATASET_PATH
-from datasets.DATASET_PATHS import GABI_MOUSEACH_DATASET_PATH as MOUSEACH_DATASET_PATH
-from datasets.DATASET_PATHS import GABI_MOUSE_DATASET_PATH as MOUSE_DATASET_PATH
 from datasets.LFPDataset import LFPDataset
+from datasets.paths import MOUSE_DATASET_PATH
 
 
 def load_cat_dataset(path, label='condition'):
@@ -82,8 +80,10 @@ def compute_confusion_matrix(svc, x, y):
 
 
 if __name__ == '__main__':
-    # x, y = load_cat_dataset(CAT_DATASET_PATH, label='condition')
-    x, y = load_mouse_dataset(MOUSEACH_DATASET_PATH, label='contrast', ignore_channels=True)
+    # x, y, labels_to_index = load_cat_tf_record("/home/gabir/Repos/wavenet-vae/cat_windows{}.tfrecords".format(1000))
+    # print(labels_to_index)
+    # x, y = load_cat_dataset(CAT_DATASET_PATH, label='movie_frame')
+    x, y = load_mouse_dataset(MOUSE_DATASET_PATH, label='orientation', ignore_channels=True)
 
     X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, shuffle=True)
 

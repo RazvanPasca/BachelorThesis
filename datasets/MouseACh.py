@@ -1,4 +1,4 @@
-from datasets.DATASET_PATHS import PASCA_MOUSEACH_DATASET_PATH
+from datasets.paths import MOUSEACH_DATASET_PATH
 
 from datasets.MouseLFP import MouseLFP
 
@@ -12,7 +12,7 @@ class MouseACh(MouseLFP):
                  nr_bins=256, nr_of_seqs=6, normalization="Zsc", cutoff_freq=50, white_noise_dev=-1,
                  condition_on_gamma=False,
                  gamma_windows_in_trial=None):
-        super().__init__(PASCA_MOUSEACH_DATASET_PATH,
+        super().__init__(MOUSEACH_DATASET_PATH,
                          channels_to_keep=channels_to_keep,
                          conditions_to_keep=conditions_to_keep,
                          trials_to_keep=trials_to_keep,
