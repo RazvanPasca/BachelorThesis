@@ -56,7 +56,7 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
 
             dir_name = "{}/WinSize:{}".format(dir_name_root, reset_indices_[:10])
             create_dir_if_not_exists(dir_name)
-            plt_path = "{}/E:{}".format(dir_name, epoch)
+            plt_path = "{}/E:{}_Conditioning:{}".format(dir_name, epoch, model_params.condition_on_gamma)
 
             sequence_predictions = []
             sequence_names = []
@@ -85,9 +85,11 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
                 vlines_coords_list.append(vlines_coords)
 
             generate_subplots(original_sequences, sequence_predictions, vlines_coords_list, sequence_names,
-                              starting_point + model_params.frame_size, plt_path)
+                              starting_point + model_params.frame_size, plt_path,
+                              model_params.gamma_windows_in_trial)
             generate_errors_subplots(prediction_losses, vlines_coords_list, sequence_names,
-                                     starting_point + model_params.frame_size, plt_path)
+                                     starting_point + model_params.frame_size, plt_path,
+                                     model_params.gamma_windows_in_trial)
 
             prediction_losses_normalized_seq_avg = prediction_losses_normalized / nr_of_sequences_to_plot
             log_range_accumulated_errors(epoch, prediction_losses_normalized_seq_avg, reset_indices_, dir_name)
@@ -161,7 +163,7 @@ def get_sequence_prediction(model, model_params, original_sequence, nr_predictio
 
             input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted_val_w_label, (-1, 1, 2)), axis=1)
             actual_value = original_sequence[current_pos + model_params.frame_size][0]
-            curr_loss = np.abs((actual_value - predicted_val) / actual_value)
+            curr_loss = np.abs(actual_value - predicted_val)
             predictions_losses[i][prediction_nr] = curr_loss if current_pos + model_params.frame_size in reset_indices \
                 else predictions_losses[i][prediction_nr - 1] + curr_loss
 
@@ -169,7 +171,7 @@ def get_sequence_prediction(model, model_params, original_sequence, nr_predictio
 
 
 def generate_subplots(original_sequences, sequence_predictions, vlines_coords_list, sequence_names,
-                      prediction_starting_point, save_path):
+                      prediction_starting_point, save_path, gamma_windows):
     nr_rows = 2
     nr_cols = len(sequence_predictions) // nr_rows
     colors = ["red", "green"]
@@ -179,13 +181,15 @@ def generate_subplots(original_sequences, sequence_predictions, vlines_coords_li
     original_sequences_x_indices = range(len(original_sequences[0]))
 
     show_vlines = len(vlines_coords_list[0]) != sequence_predictions[0][0].size
-    gamma_indices = np.where(original_sequences[0][:, 1] == 1)
 
     for i, subplot in enumerate(subplots.flatten()):
         sequence_values = original_sequences[i][:, 0]
         subplot.plot(original_sequences_x_indices, sequence_values[original_sequences_x_indices],
                      label="Original sequence", color="blue", linewidth=1)
-        subplot.scatter(gamma_indices, sequence_values[gamma_indices], color="cyan", s=3)
+
+        for gamma_range in gamma_windows:
+            subplot.axvspan(gamma_range[0], gamma_range[1], alpha=0.5)
+
         for j, sequence_prediction in enumerate(sequence_predictions[i]):
             subplot.plot(predictions_x_indices, sequence_prediction, label="Predicted sequence {}".format(j),
                          color=colors[j], linewidth=1)
@@ -202,22 +206,23 @@ def generate_subplots(original_sequences, sequence_predictions, vlines_coords_li
 
 
 def generate_errors_subplots(prediction_losses, vlines_coords_list, sequence_names, prediction_starting_point,
-                             save_path):
+                             save_path, gamma_windows):
     nr_rows = 2
     nr_cols = len(prediction_losses) // nr_rows
     fig, subplots = plt.subplots(nr_rows, nr_cols, sharex=True, figsize=(25, 15))
     vlines_coords_list = [np.array(coords_list) - prediction_starting_point + 1 for coords_list in vlines_coords_list]
     show_vlines = vlines_coords_list[0].size != prediction_losses[0][0].size
-    # gamma_indices = np.where(original_sequences[0][:, 1] == 1)
 
     if show_vlines:
         lim = np.max(prediction_losses[:nr_cols * nr_rows])
         lim1 = np.min(prediction_losses[:nr_cols * nr_rows])
 
     for i, subplot in enumerate(subplots.flatten()):
-        # sequence_values = original_sequences[i][:, 0]
         subplot.plot(prediction_losses[i][0], linewidth=1, label="Prediction accumulated errors", color="blue")
-        # subplot.scatter(gamma_indices, sequence_values[gamma_indices], color="cyan", s=3)
+        for gamma_range in gamma_windows:
+            subplot.axvspan(gamma_range[0] - prediction_starting_point + 1,
+                            gamma_range[1] - prediction_starting_point + 1,
+                            alpha=0.5)
         if show_vlines:
             subplot.vlines(vlines_coords_list[i], ymin=lim1, ymax=lim, lw=0.5)
         subplot.set_title(sequence_names[i])
