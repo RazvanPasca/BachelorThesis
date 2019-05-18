@@ -47,12 +47,13 @@ def train_model(model_params):
                                         nr_predictions=-1,
                                         starting_point=0,
                                         all_reset_indices=[model_params.dataset.gamma_windows_in_trial,
-                                                           list(range(1, model_params.dataset.trial_length)),
                                                            [model_params.dataset.trial_length - 1]])
 
     path_models_ = model_params.model_path + "/models/"
     create_dir_if_not_exists(path_models_)
-    save_model_callback = ModelCheckpoint(filepath=path_models_ + "{epoch:02d}.h5", period=model_params.logging_period)
+    save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_params.model_path),
+                                          monitor="val_loss",
+                                          save_best_only=True)
 
     model.fit_generator(model_params.dataset.train_frame_generator(model_params.frame_size,
                                                                    model_params.batch_size,

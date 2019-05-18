@@ -58,17 +58,24 @@ class MouseLFP(LFPDataset):
             'VAL': [],
             'TRAIN': []
         }
-        for seq_nr in range(self.validation.shape[2] * self.validation.shape[0]):
-            cond_index = np.random.choice(len(self.conditions_to_keep))
-            trial_index = np.random.choice(len(self.trials_to_keep))
-            channel_nr = seq_nr % self.validation.shape[2]
-            for key in self.prediction_sequences.keys():
-                sequence_and_source = self.get_sequence_from(cond_index, trial_index, channel_nr, key)
-                gamma_label = self.gamma_info
-                sequence_w_gamma_labels = np.concatenate(
-                    (sequence_and_source[0].reshape(self.trial_length, 1), gamma_label), axis=1)
-                sequence_and_source = replace_at_index(sequence_and_source, 0, sequence_w_gamma_labels)
-                self.prediction_sequences[key].append(sequence_and_source)
+        nr_signals_in_val = min(6, self.validation.shape[2] * self.validation.shape[1] * self.validation.shape[0])
+
+        seq_nr = 0
+        for channel_nr in range(len(self.channels_to_keep)):
+            for cond_index in range(len(self.conditions_to_keep)):
+                for trial_index in range(len(self.trials_to_keep)):
+                    channel_nr = channel_nr % self.validation.shape[2]
+                    if seq_nr < nr_signals_in_val:
+                        seq_nr += 1
+                        for key in self.prediction_sequences.keys():
+                            sequence_and_source = self.get_sequence_from(cond_index, trial_index, channel_nr, key)
+                            gamma_label = self.gamma_info
+                            sequence_w_gamma_labels = np.concatenate(
+                                (sequence_and_source[0].reshape(self.trial_length, 1), gamma_label), axis=1)
+                            sequence_and_source = replace_at_index(sequence_and_source, 0, sequence_w_gamma_labels)
+                            self.prediction_sequences[key].append(sequence_and_source)
+                    else:
+                        break
 
     def _split_lfp_data(self):
         self.all_lfp_data = []
@@ -291,10 +298,12 @@ class MouseLFP(LFPDataset):
     def get_sequence(self, condition_index, trial_index, channel_index, data_source):
         data_address = {
             'Condition': self.conditions_to_keep[condition_index],
-            'T': trial_index,
+            'T': self.trials_to_keep[trial_index],
             'C': channel_index
         }
         return data_source[condition_index, trial_index, channel_index, :], data_address
+
+    """Not used currently"""
 
     def _get_train_val_test_split_channel_wise(self, channels_to_keep, conditions_to_keep, val_perc, test_perc):
         nr_test_trials = round(test_perc * self.trials_per_condition)

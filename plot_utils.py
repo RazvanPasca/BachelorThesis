@@ -43,7 +43,7 @@ def generate_prediction_name(seq_addr):
 
 
 def generate_multi_plot(model, model_params, epoch, starting_point, nr_prediction_steps, all_reset_indices,
-                        nr_of_sequences_to_plot):
+                        nr_of_sequences_to_plot, nr_rows):
     pred_seqs = model_params.dataset.prediction_sequences
     all_prediction_losses_norm_mean = {}
 
@@ -86,10 +86,10 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
 
             generate_subplots(original_sequences, sequence_predictions, vlines_coords_list, sequence_names,
                               starting_point + model_params.frame_size, plt_path,
-                              model_params.gamma_windows_in_trial)
+                              model_params.gamma_windows_in_trial, nr_rows)
             generate_errors_subplots(prediction_losses, vlines_coords_list, sequence_names,
                                      starting_point + model_params.frame_size, plt_path,
-                                     model_params.gamma_windows_in_trial)
+                                     model_params.gamma_windows_in_trial, nr_rows)
 
             prediction_losses_normalized_seq_avg = prediction_losses_normalized / nr_of_sequences_to_plot
             log_range_accumulated_errors(epoch, prediction_losses_normalized_seq_avg, reset_indices_, dir_name)
@@ -171,8 +171,7 @@ def get_sequence_prediction(model, model_params, original_sequence, nr_predictio
 
 
 def generate_subplots(original_sequences, sequence_predictions, vlines_coords_list, sequence_names,
-                      prediction_starting_point, save_path, gamma_windows):
-    nr_rows = 2
+                      prediction_starting_point, save_path, gamma_windows, nr_rows):
     nr_cols = len(sequence_predictions) // nr_rows
     colors = ["red", "green"]
     prediction_length = len(sequence_predictions[0][0])
@@ -206,8 +205,7 @@ def generate_subplots(original_sequences, sequence_predictions, vlines_coords_li
 
 
 def generate_errors_subplots(prediction_losses, vlines_coords_list, sequence_names, prediction_starting_point,
-                             save_path, gamma_windows):
-    nr_rows = 2
+                             save_path, gamma_windows, nr_rows):
     nr_cols = len(prediction_losses) // nr_rows
     fig, subplots = plt.subplots(nr_rows, nr_cols, sharex=True, figsize=(25, 15))
     vlines_coords_list = [np.array(coords_list) - prediction_starting_point + 1 for coords_list in vlines_coords_list]
@@ -247,7 +245,7 @@ class PlotCallback(callbacks.Callback):
     """
 
     def __init__(self, model_params, plot_period, nr_predictions, starting_point, all_reset_indices,
-                 nr_plot_rows=2):
+                 nr_plot_rows=3):
         super().__init__()
 
         self.model_params = model_params
@@ -283,7 +281,8 @@ class PlotCallback(callbacks.Callback):
                                                              self.starting_point,
                                                              nr_prediction_steps=self.nr_prediction_steps,
                                                              all_reset_indices=self.all_reset_indices,
-                                                             nr_of_sequences_to_plot=self.nr_of_sequences_to_plot)
+                                                             nr_of_sequences_to_plot=self.nr_of_sequences_to_plot,
+                                                             nr_rows=self.nr_plot_rows)
 
             self.write_pred_losses_to_tboard(all_pred_losses_normalized, self.epoch)
             self.update_all_pred_losses(all_pred_losses_normalized)
