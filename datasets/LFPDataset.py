@@ -4,7 +4,7 @@ import os
 
 import numpy as np
 
-from signal_utils import butter_pass_filter
+from signal_analysis.signal_utils import butter_pass_filter
 
 
 class LFPDataset:

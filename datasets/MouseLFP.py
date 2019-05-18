@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from datasets.LFPDataset import LFPDataset
-from signal_utils import mu_law_encoding, mu_law_fn, rescale
+from signal_analysis.signal_utils import mu_law_encoding, mu_law_fn, rescale
 from tf_utils import replace_at_index
 
 

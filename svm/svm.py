@@ -8,6 +8,7 @@ from sklearn.svm import SVC
 
 from datasets.LFPDataset import LFPDataset
 from datasets.paths import CAT_TFRECORDS_PATH_TOBEFORMATED
+from signal_analysis.signal_utils import butter_pass_filter
 
 
 def load_cat_dataset(path, label='condition'):
@@ -116,7 +117,7 @@ def load_tf_record(path):
     return reconstructed_data
 
 
-def load_cat_tf_record(path):
+def load_cat_tf_record(path, cuttof_freq=None):
     cat_scenes_dataset = load_tf_record(path)
     labels = set([sample[0] for sample in cat_scenes_dataset])
     labels_to_index = {}
@@ -125,11 +126,11 @@ def load_cat_tf_record(path):
     x = []
     y = []
     for sample in cat_scenes_dataset:
-        x.append(sample[4])
+        x.append(sample[4] if cuttof_freq is None else butter_pass_filter(sample[4], cuttof_freq, 1000, "band"))
         y.append(labels_to_index[sample[0]])
     x = np.array(x)
     x /= x.max()
-    return x, y, labels_to_index
+    return x, np.array(y), labels_to_index
 
 
 if __name__ == '__main__':
