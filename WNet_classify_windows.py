@@ -30,8 +30,7 @@ def train_model(model_params, X_train, Y_train, X_test, Y_test, nr_classes, mode
                               clipvalue=model_params["clip_grad_by_value"],
                               skip_conn_filters=model_params["skip_conn_filters"],
                               regularization_coef=model_params["regularization_coef"],
-                              nr_output_classes=nr_classes,
-                              multiloss_weights=model_params["multiloss_weights"])
+                              nr_output_classes=nr_classes)
 
     tensorboard_callback = TensorBoard(log_dir=model_path, write_graph=True)
     log_callback = CSVLogger(model_path + "/session_log.csv")
@@ -74,3 +73,4 @@ if __name__ == '__main__':
                                                             test_size=model_parameters["val_coverage_per_epoch"],
                                                             shuffle_seed=42)
         train_model(model_parameters, X_train, Y_train, X_test, Y_test, len(labels_to_index), model_path)
+

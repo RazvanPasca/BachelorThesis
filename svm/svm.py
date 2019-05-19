@@ -113,7 +113,6 @@ def load_tf_record(path):
             reconstructed_data.append((scene, trial, movie, channel, signal))
         except:
             print("An exception occurred in sample {}".format(string_record))
-
     return reconstructed_data
 
 
@@ -170,3 +169,4 @@ if __name__ == '__main__':
                 if not len(y_test) is 0:
                     print("TEST CONFUSION MATRIX:")
                     compute_confusion_matrix(svc, X_test, y_test)
+

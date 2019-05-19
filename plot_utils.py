@@ -340,3 +340,4 @@ class TensorBoardWrapper(TensorBoard):
         x, y = next(self.batch_gen)
         self.validation_data = (x, y.reshape(-1, 1), np.ones(self.batch_size))
         return super().on_epoch_end(epoch, logs)
+

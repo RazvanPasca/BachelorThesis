@@ -21,35 +21,34 @@
     19
   ],
   "trials_to_keep": [
-    3,
-    4
+    3
   ],
   "n_epochs": 400,
   "batch_size": 32,
-  "nr_layers": 8,
-  "nr_filters": 16,
-  "skip_conn_filters": 16,
+  "nr_layers": 9,
+  "nr_filters": 512,
+  "skip_conn_filters": 512,
   "lr": 1e-05,
   "loss": "CE",
   "clip_grad_by_value": 5,
-  "nr_bins": 256,
-  "regularization_coef": 0.0,
+  "nr_bins": 512,
+  "regularization_coef": 0.001,
   "normalization": "Zsc",
   "dataset": "MouseControl",
-  "white_noise_dev": 0.01,
-  "train_coverage_per_epoch": 0.003,
-  "val_coverage_per_epoch": 0.02,
   "logging_period": 3,
+  "white_noise_dev": -0.01,
+  "train_coverage_per_epoch": 0.5,
+  "val_coverage_per_epoch": 0.25,
   "multiloss_weights": {
     "Sfmax": 1
   },
-  "save_path": "./LFP_models",
   "cutoff_freq": [
-    20,
+    0,
     80
   ],
+  "save_path": "/data2/razpa/LFP_models",
   "random_seed": 42,
-  "condition_on_gamma": true,
+  "condition_on_gamma": false,
   "gamma_windows_in_trial": [
     [
       400,

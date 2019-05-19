@@ -1,4 +1,4 @@
-from keras import Input, Model, optimizers
+from keras import Input, Model, optimizers, metrics
 from keras.activations import softmax
 from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense
 from keras.regularizers import l2
@@ -45,7 +45,7 @@ def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef, fi
 
 
 def get_wavenet_model(nr_filters, input_shape, nr_layers, lr, clipvalue, skip_conn_filters,
-                      regularization_coef, nr_output_classes, multiloss_weights=None):
+                      regularization_coef, nr_output_classes):
     input_ = Input(shape=input_shape)
     A, B = wavenet_block(nr_filters, 2, 1, regularization_coef=regularization_coef, first=True)(input_)
     skip_connections = [B]
@@ -67,5 +67,6 @@ def get_wavenet_model(nr_filters, input_shape, nr_layers, lr, clipvalue, skip_co
 
     model = Model(inputs=input_, outputs=output)
     optimizer = optimizers.adam(lr=lr, clipvalue=clipvalue)
-    model.compile(loss="sparse_categorical_crossentropy", optimizer=optimizer, loss_weights=multiloss_weights)
+    model.compile(loss="sparse_categorical_crossentropy", optimizer=optimizer, metrics= [metrics.sparse_categorical_accuracy])
     return model
+
