@@ -67,6 +67,6 @@ def get_wavenet_model(nr_filters, input_shape, nr_layers, lr, clipvalue, skip_co
 
     model = Model(inputs=input_, outputs=output)
     optimizer = optimizers.adam(lr=lr, clipvalue=clipvalue)
-    model.compile(loss="sparse_categorical_crossentropy", optimizer=optimizer, metrics= [metrics.sparse_categorical_accuracy])
+    model.compile(loss="sparse_categorical_crossentropy", optimizer=optimizer,
+                  metrics=[metrics.sparse_categorical_accuracy])
     return model
-
