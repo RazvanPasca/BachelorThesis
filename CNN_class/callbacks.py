@@ -1,10 +1,8 @@
-import itertools
-
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-import numpy as np
 from keras.callbacks import Callback
-from sklearn.metrics import confusion_matrix
+
+from output_utils import compute_conf_matrix, log_f1_to_text, plot_conf_matrix
 
 
 class AccLossPlotter(Callback):
@@ -33,8 +31,8 @@ class AccLossPlotter(Callback):
 
     def on_epoch_end(self, epoch, logs={}):
         self.epoch_count += 1
-        self.val_acc.append(logs.get('val_acc'))
-        self.acc.append(logs.get('acc'))
+        self.val_acc.append(logs.get('val_sparse_categorical_accuracy'))
+        self.acc.append(logs.get('sparse_categorical_accuracy'))
         self.loss.append(logs.get('loss'))
         self.val_loss.append(logs.get('val_loss'))
         epochs = [x for x in range(self.epoch_count)]
@@ -92,14 +90,20 @@ class ConfusionMatrixPlotter(Callback):
 
     """
 
-    def __init__(self, X_val, Y_val, classes, save_path, normalize=False, cmap=plt.cm.Blues, title='Confusion Matrix'):
+    def __init__(self, X_train, Y_train, X_val, Y_val, classes, save_path, logging_period, normalize=False,
+                 cmap=plt.cm.Blues,
+                 title='Confusion Matrix', ):
         self.X_val = X_val
         self.Y_val = Y_val
+        self.X_train = X_train
+        self.Y_train = Y_train
         self.title = title
         self.classes = classes
         self.normalize = normalize
         self.cmap = cmap
         self.save_path = save_path
+        self.epoch = 0
+        self.logging_period = logging_period
 
         plt.title(self.title)
 
@@ -107,47 +111,18 @@ class ConfusionMatrixPlotter(Callback):
         pass
 
     def on_epoch_end(self, epoch, logs={}):
-        pred = self.model.predict(self.X_val)
-        max_pred = np.argmax(pred, axis=1)
-        max_y = self.Y_val
-        cnf_mat = confusion_matrix(max_y, max_pred)
-        plt.figure(figsize=(16, 12))
+        """Val conf matrix"""
+        if self.epoch % self.logging_period == 0:
+            f1, precision, recall, cnf_mat = compute_conf_matrix(self.model, self.X_val, self.Y_val)
+            plot_conf_matrix(cnf_mat, self.classes, self.cmap, self.normalize,
+                             self.save_path + "/" + "E:{}_val_conf_matrix.png".format(self.epoch))
+            log_f1_to_text(f1, precision, recall,
+                           fname=self.save_path + "/" + "E:{}_val_precision_recall_f1.txt".format(self.epoch))
 
-        if self.normalize:
-            cnf_mat = cnf_mat.astype('float') / cnf_mat.sum(axis=1)[:, np.newaxis]
-
-        thresh = cnf_mat.max() / 2.
-        for i, j in itertools.product(range(cnf_mat.shape[0]), range(cnf_mat.shape[1])):
-            plt.text(j, i, cnf_mat[i, j],
-                     horizontalalignment="center",
-                     color="white" if cnf_mat[i, j] > thresh else "black")
-
-        plt.imshow(cnf_mat, interpolation='nearest', cmap=self.cmap)
-
-        # Labels
-        # tick_marks = np.arange(len(self.classes))
-        # plt.xticks(tick_marks, self.classes, rotation=45)
-        # plt.yticks(tick_marks, self.classes)
-
-        predicted_positives = np.sum(cnf_mat, axis=0)
-        actual_positives = np.sum(cnf_mat, axis=1)
-
-        precision = np.diag(cnf_mat) / predicted_positives
-        recall = np.diag(cnf_mat) / actual_positives
-
-        f1 = 2 * (precision * recall) / (precision + recall + 0.00001)
-
-        formatter = "{:10}|{:10.4}|{:10.4}|{:10.4}\n"
-        with open(self.save_path + "/" + "precision_recall_f1.txt", "w+") as f:
-            f.write(formatter.format("Class", "Precision", "Recall", "F1"))
-            for i in range(precision.shape[0]):
-                f.write(formatter.format(i, precision[i], recall[i], f1[i]))
-
-        plt.colorbar()
-
-        plt.tight_layout()
-        plt.ylabel('True label')
-        plt.xlabel('Predicted label')
-        # plt.draw()
-        plt.savefig(self.save_path + "/" + "conf_matrix.png")
-        plt.close()
+            """Train conf matrix"""
+            f1, precision, recall, cnf_mat = compute_conf_matrix(self.model, self.X_train, self.Y_train)
+            log_f1_to_text(f1, precision, recall,
+                           fname=self.save_path + "/" + "E:{}_train_precision_recall_f1.txt".format(self.epoch))
+            plot_conf_matrix(cnf_mat, self.classes, self.cmap, self.normalize,
+                             self.save_path + "/" + "E:{}_train_conf_matrix.png".format(self.epoch))
+        self.epoch += 1
