@@ -102,9 +102,7 @@ class ModelTrainingParameters:
                     self.get_model_name(),
                     os.getpid(),
                     datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    self.random_seed)
-            )
-            )
+                    self.random_seed)))
         else:
             self.model_path = model_path
 

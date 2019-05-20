@@ -2,7 +2,7 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from keras.callbacks import Callback
 
-from output_utils import compute_conf_matrix, log_f1_to_text, plot_conf_matrix
+from output_utils import compute_conf_matrix, log_metrics_to_text, plot_conf_matrix
 
 
 class AccLossPlotter(Callback):
@@ -113,16 +113,16 @@ class ConfusionMatrixPlotter(Callback):
     def on_epoch_end(self, epoch, logs={}):
         """Val conf matrix"""
         if self.epoch % self.logging_period == 0:
-            f1, precision, recall, cnf_mat = compute_conf_matrix(self.model, self.X_val, self.Y_val)
+            metrics, cnf_mat = compute_conf_matrix(self.model, self.X_val, self.Y_val)
             plot_conf_matrix(cnf_mat, self.classes, self.cmap, self.normalize,
                              self.save_path + "/" + "E:{}_val_conf_matrix.png".format(self.epoch))
-            log_f1_to_text(f1, precision, recall,
-                           fname=self.save_path + "/" + "E:{}_val_precision_recall_f1.txt".format(self.epoch))
+            log_metrics_to_text(metrics, self.classes,
+                                fname=self.save_path + "/" + "E:{}_val_precision_recall_f1.txt".format(self.epoch))
 
             """Train conf matrix"""
-            f1, precision, recall, cnf_mat = compute_conf_matrix(self.model, self.X_train, self.Y_train)
-            log_f1_to_text(f1, precision, recall,
-                           fname=self.save_path + "/" + "E:{}_train_precision_recall_f1.txt".format(self.epoch))
+            metrics, cnf_mat = compute_conf_matrix(self.model, self.X_train, self.Y_train)
+            log_metrics_to_text(metrics, self.classes,
+                                fname=self.save_path + "/" + "E:{}_train_precision_recall_f1.txt".format(self.epoch))
             plot_conf_matrix(cnf_mat, self.classes, self.cmap, self.normalize,
                              self.save_path + "/" + "E:{}_train_conf_matrix.png".format(self.epoch))
         self.epoch += 1

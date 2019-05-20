@@ -92,12 +92,14 @@ def plot_2_overlapped_series(x1, y1, label1, x2, y2, label2, image_title, save_p
     plt.close()
 
 
-def log_f1_to_text(f1, precision, recall, fname):
-    formatter = "{:10}|{:10.4}|{:10.4}|{:10.4}\n"
+def log_metrics_to_text(metrics, classes, fname):
+    formatter = ",".join("{:25}" for _ in range(len(metrics) - 1)) + "\n"
     with open(fname, "w+") as f:
-        f.write(formatter.format("Class", "Precision", "Recall", "F1"))
-        for i in range(precision.shape[0]):
-            f.write(formatter.format(i, precision[i], recall[i], f1[i]))
+        keys = list(metrics.keys())
+        f.write(formatter.format("Class", *keys[:-2]), )
+        for i in range(len(classes)):
+            f.write(formatter.format(classes[i], *[metrics[key][i] for key in keys[:-2]]))
+        f.write(str([(key, val) for key, val in list(metrics.items())[-2:]]))
 
 
 def compute_conf_matrix(model, X, Y):
@@ -108,10 +110,16 @@ def compute_conf_matrix(model, X, Y):
 
     predicted_positives = np.sum(cnf_mat, axis=0)
     actual_positives = np.sum(cnf_mat, axis=1)
-    precision = np.diag(cnf_mat) / predicted_positives
-    recall = np.diag(cnf_mat) / actual_positives
-    f1 = 2 * (precision * recall) / (precision + recall + 0.00001)
-    return f1, precision, recall, cnf_mat
+    cnf_mat_diag = np.diag(cnf_mat)
+    precision = np.around(cnf_mat_diag / predicted_positives, decimals=4)
+    recall = np.around(cnf_mat_diag / actual_positives, decimals=4)
+    f1 = np.around(2 * (precision * recall) / (precision + recall + 0.00001), decimals=4)
+    diag_sum = np.sum(cnf_mat_diag)
+    micro_precision = np.around(diag_sum / np.sum(predicted_positives), decimals=4)
+    micro_recall = np.around(diag_sum / np.sum(actual_positives), decimals=4)
+    metrics = {"precision": precision, "recall": recall, "f1": f1, "micro_precision": micro_precision,
+               "micro_recall": micro_recall}
+    return metrics, cnf_mat
 
 
 def plot_conf_matrix(cnf_mat, classes, cmap, normalize, save_path):
