@@ -62,34 +62,34 @@ def train_model(model_params, X_train, Y_train, X_test, Y_test, classes, model_p
 if __name__ == '__main__':
     model_parameters = classify_params.model_params
     configure_gpu(model_parameters["gpu"])
-    file_redirect = "{}/output_windowsize_{}.txt"
+    file_redirect = "{}/output.txt"
 
     model_path = classify_params.get_model_name(model_parameters)
     create_dir_if_not_exists(model_path)
-    for window_size in [1000]:
-        if not (file_redirect is None):
-            sys.stdout = open(file_redirect.format(model_path, window_size), 'w+')
 
-        X, Y, labels_to_index = load_cat_tf_record(CAT_TFRECORDS_PATH_TOBEFORMATED.format(window_size),
-                                                   model_parameters["cutoff_freq"])
-        class_count = collections.Counter(Y)
-        nr_samples = Y.size
+    if not (file_redirect is None):
+        sys.stdout = open(file_redirect.format(model_path), 'w+')
 
-        X = np.expand_dims(X, axis=2)
-        print(labels_to_index)
-        print(class_count)
+    X, Y, labels_to_index = load_cat_tf_record(CAT_TFRECORDS_PATH_TOBEFORMATED.format(model_parameters["window_size"]),
+                                               model_parameters["cutoff_freq"])
+    class_count = collections.Counter(Y)
+    nr_samples = Y.size
 
-        for key, val in class_count.items():
-            class_count[key] = 1 - class_count[key] / nr_samples
+    X = np.expand_dims(X, axis=2)
+    print(labels_to_index)
+    print(class_count)
 
-        classes = []
+    for key, val in class_count.items():
+        class_count[key] = 1 - class_count[key] / nr_samples
 
-        for index in range(len(labels_to_index)):
-            for label, label_index in labels_to_index.items():
-                if index == label_index:
-                    classes.append(str(label))
+    classes = []
 
-        X_train, X_test, Y_train, Y_test = train_test_split(X, Y,
-                                                            test_size=model_parameters["val_coverage_per_epoch"],
-                                                            shuffle_seed=model_parameters["shuffle_seed"])
-        train_model(model_parameters, X_train, Y_train, X_test, Y_test, classes, model_path, class_count)
+    for index in range(len(labels_to_index)):
+        for label, label_index in labels_to_index.items():
+            if index == label_index:
+                classes.append(str(label))
+
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y,
+                                                        test_size=model_parameters["val_coverage_per_epoch"],
+                                                        shuffle_seed=model_parameters["shuffle_seed"])
+    train_model(model_parameters, X_train, Y_train, X_test, Y_test, classes, model_path, class_count)

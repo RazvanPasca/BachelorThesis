@@ -4,7 +4,7 @@ from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense
 from keras.regularizers import l2
 
 
-def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef, first=False):
+def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef):
     def f(input_):
         residual = input_
 
