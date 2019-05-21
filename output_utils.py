@@ -128,9 +128,10 @@ def plot_conf_matrix(cnf_mat, classes, cmap, normalize, save_path):
         cnf_mat = cnf_mat.astype('float') / cnf_mat.sum(axis=1)[:, np.newaxis]
     thresh = cnf_mat.max() / 2.
     for i, j in itertools.product(range(cnf_mat.shape[0]), range(cnf_mat.shape[1])):
-        plt.text(j, i, cnf_mat[i, j],
+        plt.text(j, i, "{0:.4f}".format(cnf_mat[i, j]),
                  horizontalalignment="center",
-                 color="white" if cnf_mat[i, j] > thresh else "black")
+                 color="orange" if cnf_mat[i, j] > thresh else "black")
+
     plt.imshow(cnf_mat, interpolation='nearest', cmap=cmap)
     # Labels
     if classes is not None:

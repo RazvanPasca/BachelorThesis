@@ -1,4 +1,5 @@
 import datetime
+import os
 
 model_params = {
     "nr_classes": -1,
@@ -16,13 +17,16 @@ model_params = {
     "gpu": 0,
     "shuffle_seed": 40,
     "logging_period": 3,
-    "window_size": 200,
+    "window_size": 1000,
+    "ClassW": False,
+    "AvsW": True,
 }
 
 
 def get_model_name(model_params):
-    return "./CatClassification/WvNet_L:{}_Ep:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_" \
-           "Norm:ZscBrute_Loss:CE_GradClip:{}_LPass:{}_Seed:{}_TrainTest:{}_WinSize:{}/{}".format(
+    return "./CatClassification/AvsW:{}/K3_WvNet_L:{}_Ep:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_" \
+           "Norm:ZscBrute_GradClip:{}_LPass:{}_Seed:{}_TrainTest:{}_WinSize:{}_ClassW:{}/PID:{}__Date:{}".format(
+        model_params["AvsW"],
         model_params["nr_layers"],
         model_params["n_epochs"],
         model_params["lr"],
@@ -35,4 +39,6 @@ def get_model_name(model_params):
         model_params["shuffle_seed"],
         model_params["val_coverage_per_epoch"],
         model_params["window_size"],
+        model_params["ClassW"],
+        os.getpid(),
         datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))

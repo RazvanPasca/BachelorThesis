@@ -47,12 +47,12 @@ def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef):
 def get_wavenet_model(nr_filters, input_shape, nr_layers, lr, clipvalue, skip_conn_filters,
                       regularization_coef, nr_output_classes):
     input_ = Input(shape=input_shape)
-    A, B = wavenet_block(nr_filters, 2, 1, regularization_coef=regularization_coef, first=True)(input_)
+    A, B = wavenet_block(nr_filters, 3, 1, regularization_coef=regularization_coef)(input_)
     skip_connections = [B]
 
     for i in range(1, nr_layers):
         dilation_rate = 2 ** i
-        A, B = wavenet_block(nr_filters, 2, dilation_rate, regularization_coef=regularization_coef)(A)
+        A, B = wavenet_block(nr_filters, 3, dilation_rate, regularization_coef=regularization_coef)(A)
         skip_connections.append(B)
 
     net = Add(name="Skip_Merger")(skip_connections)

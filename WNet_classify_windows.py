@@ -12,11 +12,37 @@ from svm.svm import load_cat_tf_record
 from tf_utils import configure_gpu
 
 
-def train_test_split(x, y, test_size, shuffle_seed):
+def get_classes_list(labels_to_index, AvsW):
+    classes = []
+    if not AvsW:
+        for index in range(len(labels_to_index)):
+            for label, label_index in labels_to_index.items():
+                if index == label_index:
+                    classes.append(str(label))
+    else:
+        aerial_index = labels_to_index[b'aerial_view']
+        water_index = labels_to_index[b'water_channel']
+        classes = ['water_channel', 'aerial_view'] if aerial_index > water_index else ['aerial_view', 'water_channel']
+
+    return classes
+
+
+def train_test_split(x, y, test_size, shuffle_seed, AvsW, labels_to_index):
     np.random.seed(shuffle_seed)
+
+    if AvsW:
+        aerial_view_index = labels_to_index[b'aerial_view']
+        water_channel_index = labels_to_index[b'water_channel']
+        keep_indices = np.where((y == aerial_view_index) | (y == water_channel_index))
+        x = x[keep_indices]
+        y = y[keep_indices]
+        y[y == aerial_view_index] = 1 if aerial_view_index > water_channel_index else 0
+        y[y == water_channel_index] = 0 if aerial_view_index > water_channel_index else 1
+
     nr_train_examples = round((1 - test_size) * y.size)
     indices = np.arange(y.size)
     np.random.shuffle(indices)
+
     x_shuffled = x[indices]
     y_shuffled = y[indices]
     return x_shuffled[:nr_train_examples], x_shuffled[nr_train_examples:], \
@@ -33,12 +59,15 @@ def train_model(model_params, X_train, Y_train, X_test, Y_test, classes, model_p
                               regularization_coef=model_params["regularization_coef"],
                               nr_output_classes=len(classes))
 
-    tensorboard_callback = TensorBoard(log_dir=model_path, write_graph=True)
+    tboard_callback = TensorBoard(log_dir=model_path, write_graph=True)
     log_callback = CSVLogger(model_path + "/session_log.csv")
     metric_callback = callbacks.AccLossPlotter(model_path)
-    conf_matrix_callback = callbacks.ConfusionMatrixPlotter(X_train, Y_train, X_test, Y_test, classes,
+    conf_matrix_callback = callbacks.ConfusionMatrixPlotter(X_train, Y_train,
+                                                            X_test, Y_test,
+                                                            classes,
                                                             model_path,
-                                                            model_params["logging_period"])
+                                                            model_params["logging_period"],
+                                                            normalize=True)
     save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_path),
                                           monitor="val_loss",
                                           save_best_only=True)
@@ -51,45 +80,42 @@ def train_model(model_params, X_train, Y_train, X_test, Y_test, classes, model_p
               verbose=2,
               shuffle=True,
               class_weight=class_weights,
-              callbacks=[tensorboard_callback, log_callback, save_model_callback, metric_callback,
-                         conf_matrix_callback])
+              callbacks=[tboard_callback, log_callback, save_model_callback, metric_callback, conf_matrix_callback])
 
     print('Saving model and results...')
     model.save(model_params.model_path + "/" + "final_model.h5")
     print('\nDone!')
 
 
-if __name__ == '__main__':
-    model_parameters = classify_params.model_params
-    configure_gpu(model_parameters["gpu"])
-    file_redirect = "{}/output.txt"
-
-    model_path = classify_params.get_model_name(model_parameters)
-    create_dir_if_not_exists(model_path)
-
-    if not (file_redirect is None):
-        sys.stdout = open(file_redirect.format(model_path), 'w+')
-
+def main():
     X, Y, labels_to_index = load_cat_tf_record(CAT_TFRECORDS_PATH_TOBEFORMATED.format(model_parameters["window_size"]),
                                                model_parameters["cutoff_freq"])
     class_count = collections.Counter(Y)
     nr_samples = Y.size
-
     X = np.expand_dims(X, axis=2)
     print(labels_to_index)
     print(class_count)
 
     for key, val in class_count.items():
-        class_count[key] = 1 - class_count[key] / nr_samples
+        class_count[key] = 1 - class_count[key] / nr_samples if model_parameters["ClassW"] else 1
 
-    classes = []
-
-    for index in range(len(labels_to_index)):
-        for label, label_index in labels_to_index.items():
-            if index == label_index:
-                classes.append(str(label))
+    classes = get_classes_list(labels_to_index, model_parameters["AvsW"])
 
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y,
                                                         test_size=model_parameters["val_coverage_per_epoch"],
-                                                        shuffle_seed=model_parameters["shuffle_seed"])
+                                                        shuffle_seed=model_parameters["shuffle_seed"],
+                                                        AvsW=model_parameters["AvsW"],
+                                                        labels_to_index=labels_to_index)
     train_model(model_parameters, X_train, Y_train, X_test, Y_test, classes, model_path, class_count)
+
+
+if __name__ == '__main__':
+    model_parameters = classify_params.model_params
+    configure_gpu(model_parameters["gpu"])
+    model_path = classify_params.get_model_name(model_parameters)
+    create_dir_if_not_exists(model_path)
+    file_redirect = "{}/output.txt"
+    if not (file_redirect is None):
+        sys.stdout = open(file_redirect.format(model_path), 'w+')
+
+    main()
