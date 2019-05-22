@@ -25,9 +25,9 @@
   ],
   "n_epochs": 400,
   "batch_size": 32,
-  "nr_layers": 9,
-  "nr_filters": 512,
-  "skip_conn_filters": 512,
+  "nr_layers": 6,
+  "nr_filters": 16,
+  "skip_conn_filters": 16,
   "lr": 1e-05,
   "loss": "CE",
   "clip_grad_by_value": 5,
@@ -43,10 +43,10 @@
     "Sfmax": 1
   },
   "cutoff_freq": [
-    0,
+    1,
     80
   ],
-  "save_path": "/data2/razpa/LFP_models",
+  "save_path": "./LFP_models",
   "random_seed": 42,
   "condition_on_gamma": false,
   "gamma_windows_in_trial": [

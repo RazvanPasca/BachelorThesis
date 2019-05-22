@@ -1,5 +1,4 @@
 import collections
-import sys
 
 import numpy as np
 from keras.callbacks import CSVLogger, TensorBoard, ModelCheckpoint
@@ -29,15 +28,32 @@ def get_classes_list(labels_to_index, AvsW):
 
 def train_test_split(x, y, test_size, shuffle_seed, AvsW, labels_to_index):
     np.random.seed(shuffle_seed)
+    new_labels_to_index = labels_to_index
 
-    if AvsW:
+    if AvsW == "1v1":
         aerial_view_index = labels_to_index[b'aerial_view']
         water_channel_index = labels_to_index[b'water_channel']
         keep_indices = np.where((y == aerial_view_index) | (y == water_channel_index))
         x = x[keep_indices]
         y = y[keep_indices]
-        y[y == aerial_view_index] = 1 if aerial_view_index > water_channel_index else 0
-        y[y == water_channel_index] = 0 if aerial_view_index > water_channel_index else 1
+        new_aerial_view_index = 1 if aerial_view_index > water_channel_index else 0
+        new_water_channel_index = 0 if aerial_view_index > water_channel_index else 1
+        y[y == aerial_view_index] = new_aerial_view_index
+        y[y == water_channel_index] = new_water_channel_index
+        new_labels_to_index = {b"aerial_view": new_aerial_view_index, b"water_channel": new_water_channel_index}
+
+    elif AvsW == "merge":
+        aerial_view_index = labels_to_index[b'aerial_view']
+        water_channel_index = labels_to_index[b'water_channel']
+        replace_indices = np.where((y == aerial_view_index) | (y == water_channel_index))
+        new_index = min(aerial_view_index, water_channel_index)
+        max_index = max(aerial_view_index, water_channel_index)
+        y[replace_indices] = new_index
+        y[y > max_index] = y[y > max_index] - 1
+        del new_labels_to_index[b'aerial_view']
+        del new_labels_to_index[b'water_channel']
+        new_labels_to_index[b'merged'] = new_index
+        new_labels_to_index = {key: val - 1 if val > max_index else val for key, val in new_labels_to_index.items()}
 
     nr_train_examples = round((1 - test_size) * y.size)
     indices = np.arange(y.size)
@@ -46,7 +62,7 @@ def train_test_split(x, y, test_size, shuffle_seed, AvsW, labels_to_index):
     x_shuffled = x[indices]
     y_shuffled = y[indices]
     return x_shuffled[:nr_train_examples], x_shuffled[nr_train_examples:], \
-           y_shuffled[:nr_train_examples], y_shuffled[nr_train_examples:]
+           y_shuffled[:nr_train_examples], y_shuffled[nr_train_examples:], new_labels_to_index
 
 
 def train_model(model_params, X_train, Y_train, X_test, Y_test, classes, model_path, class_weights):
@@ -88,25 +104,31 @@ def train_model(model_params, X_train, Y_train, X_test, Y_test, classes, model_p
 
 
 def main():
-    X, Y, labels_to_index = load_cat_tf_record(CAT_TFRECORDS_PATH_TOBEFORMATED.format(model_parameters["window_size"]),
-                                               model_parameters["cutoff_freq"])
-    class_count = collections.Counter(Y)
-    nr_samples = Y.size
+    X, Y, labels_to_index = load_cat_tf_record(
+        CAT_TFRECORDS_PATH_TOBEFORMATED.format(model_parameters["window_size"]),
+        model_parameters["cutoff_freq"])
+
     X = np.expand_dims(X, axis=2)
     print(labels_to_index)
+
+    X_train, X_test, Y_train, Y_test, new_labels_to_index = train_test_split(X, Y,
+                                                                             test_size=model_parameters[
+                                                                                 "val_coverage_per_epoch"],
+                                                                             shuffle_seed=model_parameters[
+                                                                                 "shuffle_seed"],
+                                                                             AvsW=model_parameters["AvsW"],
+                                                                             labels_to_index=labels_to_index)
+
+    print(new_labels_to_index)
+
+    Y_new = np.concatenate((Y_train, Y_test))
+    class_count = collections.Counter(Y_new)
+    nr_samples = Y_new.size
     print(class_count)
 
-    for key, val in class_count.items():
-        class_count[key] = 1 - class_count[key] / nr_samples if model_parameters["ClassW"] else 1
-
-    classes = get_classes_list(labels_to_index, model_parameters["AvsW"])
-
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y,
-                                                        test_size=model_parameters["val_coverage_per_epoch"],
-                                                        shuffle_seed=model_parameters["shuffle_seed"],
-                                                        AvsW=model_parameters["AvsW"],
-                                                        labels_to_index=labels_to_index)
-    train_model(model_parameters, X_train, Y_train, X_test, Y_test, classes, model_path, class_count)
+    class_weights = {key: 1 - val / nr_samples if model_parameters["ClassW"] else 1 for key, val in class_count.items()}
+    classes = get_classes_list(new_labels_to_index, model_parameters["AvsW"])
+    train_model(model_parameters, X_train, Y_train, X_test, Y_test, classes, model_path, class_weights)
 
 
 if __name__ == '__main__':
@@ -115,7 +137,7 @@ if __name__ == '__main__':
     model_path = classify_params.get_model_name(model_parameters)
     create_dir_if_not_exists(model_path)
     file_redirect = "{}/output.txt"
-    if not (file_redirect is None):
-        sys.stdout = open(file_redirect.format(model_path), 'w+')
+    # if not (file_redirect is None):
+    #     sys.stdout = open(file_redirect.format(model_path), 'w+')
 
     main()

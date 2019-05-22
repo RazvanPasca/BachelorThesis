@@ -11,15 +11,15 @@ model_params = {
     "lr": 1e-05,
     "loss": "CE",
     "clip_grad_by_value": 5,
-    "regularization_coef": 0.0,
-    "val_coverage_per_epoch": 0.3,
+    "regularization_coef": 0.001,
+    "val_coverage_per_epoch": 0.2,
     "cutoff_freq": [1, 80],
     "gpu": 0,
     "shuffle_seed": 40,
     "logging_period": 3,
     "window_size": 1000,
     "ClassW": False,
-    "AvsW": True,
+    "AvsW": "1v1",  # one of 1v1, merge or all
 }
 
 
