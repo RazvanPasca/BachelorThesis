@@ -124,8 +124,9 @@ def load_cat_tf_record(path, cuttof_freq=None):
         labels_to_index[label] = index
     x = []
     y = []
+    filter_type = "band" if len(cuttof_freq) > 1 else "low"
     for sample in cat_scenes_dataset:
-        x.append(sample[4] if cuttof_freq is None else butter_pass_filter(sample[4], cuttof_freq, 1000, "band"))
+        x.append(sample[4] if cuttof_freq is None else butter_pass_filter(sample[4], cuttof_freq, 1000, filter_type))
         y.append(labels_to_index[sample[0]])
     x = np.array(x)
     x /= x.max()

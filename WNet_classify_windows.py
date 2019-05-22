@@ -13,7 +13,7 @@ from tf_utils import configure_gpu
 
 def get_classes_list(labels_to_index, AvsW):
     classes = []
-    if not AvsW:
+    if AvsW in ["1v1", "merge"]:
         for index in range(len(labels_to_index)):
             for label, label_index in labels_to_index.items():
                 if index == label_index:
@@ -105,8 +105,7 @@ def train_model(model_params, X_train, Y_train, X_test, Y_test, classes, model_p
 
 def main():
     X, Y, labels_to_index = load_cat_tf_record(
-        CAT_TFRECORDS_PATH_TOBEFORMATED.format(model_parameters["window_size"]),
-        model_parameters["cutoff_freq"])
+        CAT_TFRECORDS_PATH_TOBEFORMATED.format(model_parameters["window_size"]), model_parameters["cutoff_freq"])
 
     X = np.expand_dims(X, axis=2)
     print(labels_to_index)

@@ -19,7 +19,7 @@ model_params = {
     "logging_period": 3,
     "window_size": 1000,
     "ClassW": False,
-    "AvsW": "1v1",  # one of 1v1, merge or all
+    "AvsW": "merge",  # one of 1v1, merge or all
 }
 
 
