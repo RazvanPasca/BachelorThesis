@@ -3,9 +3,9 @@ import collections
 import numpy as np
 from keras.callbacks import CSVLogger, TensorBoard, ModelCheckpoint
 
-import callbacks.MetricsPlotCallback
 from Wavenet_class import classify_params, callbacks
 from Wavenet_class.wavenet_classifier_model import get_wavenet_model
+from callbacks.MetricsPlotCallback import MetricsPlotCallback
 from datasets.paths import CAT_TFRECORDS_PATH_TOBEFORMATED
 from plot_utils import create_dir_if_not_exists
 from svm.svm import load_cat_tf_record
@@ -14,7 +14,7 @@ from tf_utils import configure_gpu
 
 def get_classes_list(labels_to_index, AvsW):
     classes = []
-    if AvsW in ["1v1", "merge"]:
+    if AvsW in ["all", "merge"]:
         for index in range(len(labels_to_index)):
             for label, label_index in labels_to_index.items():
                 if index == label_index:
@@ -78,7 +78,7 @@ def train_model(model_params, X_train, Y_train, X_test, Y_test, classes, model_p
 
     tboard_callback = TensorBoard(log_dir=model_path, write_graph=True)
     log_callback = CSVLogger(model_path + "/session_log.csv")
-    metric_callback = callbacks.MetricsPlotCallback.MetricsPlotCallback(model_path)
+    plot_metric_callback = MetricsPlotCallback(model_path)
     conf_matrix_callback = callbacks.ConfusionMatrixPlotter(X_train, Y_train,
                                                             X_test, Y_test,
                                                             classes,
@@ -97,7 +97,8 @@ def train_model(model_params, X_train, Y_train, X_test, Y_test, classes, model_p
               verbose=2,
               shuffle=True,
               class_weight=class_weights,
-              callbacks=[tboard_callback, log_callback, save_model_callback, metric_callback, conf_matrix_callback])
+              callbacks=[tboard_callback, log_callback, save_model_callback, plot_metric_callback,
+                         conf_matrix_callback])
 
     print('Saving model and results...')
     model.save(model_params.model_path + "/" + "final_model.h5")
