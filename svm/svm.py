@@ -1,7 +1,9 @@
+import multiprocessing
 import sys
 
 import numpy as np
 import tensorflow as tf
+from joblib import Parallel, delayed
 from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
@@ -79,8 +81,11 @@ def load_mouse_dataset(path, label='orientation', ignore_channels=False):
 
 def compute_confusion_matrix(svc, x, y):
     y_pred = svc.predict(x)
-    print(confusion_matrix(y, y_pred))
-    print(classification_report(y, y_pred))
+    conf_mat = confusion_matrix(y, y_pred)
+    clas_rep = classification_report(y, y_pred)
+    print(conf_mat)
+    print(clas_rep)
+    return conf_mat, clas_rep
 
 
 def load_tf_record(path):
@@ -133,44 +138,70 @@ def load_cat_tf_record(path, cuttof_freq=None):
     return x, np.array(y), labels_to_index
 
 
+def main():
+    max_iterations = 1
+    file_redirect_output = True
+    # what are your inputs, and what operation do you want to
+    # perform on each input. For example...
+    gammas = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000]
+    Cs = [22, 24, 26, 16, 18, 20]
+
+    cart_prod = [(gamma, c) for c in Cs for gamma in gammas]
+
+    print(cart_prod)
+
+    num_cores = multiprocessing.cpu_count()
+
+    x, y, labels_to_index = load_cat_tf_record(CAT_TFRECORDS_PATH_TOBEFORMATED.format(1000))
+    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, shuffle=True)
+
+    results = Parallel(n_jobs=num_cores)(delayed(train_svm_with_params)(
+        gamma, C, X_test, X_train, file_redirect_output, "linear", labels_to_index, max_iterations,
+        1000, y_test, y_train
+    ) for gamma, C in cart_prod)
+
+
+def train_svm_with_params(gamma,
+                          X_test,
+                          X_train,
+                          file_redirect_output,
+                          kernel,
+                          labels_to_index,
+                          max_iterations,
+                          window_size,
+                          y_test,
+                          y_train):
+    C = 22
+    if file_redirect_output:
+        file_redirect_name = "WS-{}-C-{}-gamma-{}-K-{}-MaxIt-{}".format(window_size, C, gamma, kernel, max_iterations)
+        sys.stdout = open(file_redirect_name, 'w+')
+    print(labels_to_index)
+    print("Window size={}".format(window_size))
+    print("C={}".format(C))
+    print("gamma={}".format(gamma))
+    print("Kernel={}".format(kernel))
+    print("Max iterations={}".format(max_iterations))
+    svc = SVC(kernel=kernel,
+              C=C,
+              gamma=gamma,
+              max_iter=max_iterations,
+              cache_size=15000,
+              class_weight='balanced',
+              verbose=False)
+    svc.fit(X_train, y_train)
+    print("TRAIN CONFUSION MATRIX:")
+    conf_mat_train, _ = compute_confusion_matrix(svc, X_train, y_train)
+    print("TEST CONFUSION MATRIX:")
+    conf_mat_test, _ = compute_confusion_matrix(svc, X_test, y_test)
+    data = np.array([conf_mat_train, conf_mat_test])
+    if file_redirect_output:
+        data.dump(file_redirect_name + ".npy")
+    if file_redirect_output:
+        sys.stdout.close()
+
+
 if __name__ == '__main__':
     # x, y = load_cat_dataset(CAT_DATASET_PATH, label='movie_frame')
     # x, y = load_mouse_dataset(MOUSEACH_DATASET_PATH, label='contrast', ignore_channels=True)
 
-    file_redirect_output = True
-    max_iterations = 2
-
-    for window_size in [1000, 800, 400, 200]:
-        x, y, labels_to_index = load_cat_tf_record(CAT_TFRECORDS_PATH_TOBEFORMATED.format(window_size))
-
-        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, shuffle=True)
-
-        for kernel in ["linear", "poly", "rbf"]:
-            for i in np.arange(-1, 2, 0.33):
-                if file_redirect_output:
-                    file_redirect_name = "WS-{}-C-{}-K-{}-MaxIt-{}".format(window_size, 10 ** i, kernel, max_iterations)
-                    sys.stdout = open(file_redirect_name, 'w+')
-
-                print(labels_to_index)
-                print("Window size={}".format(window_size))
-                print("C={}".format(10 ** i))
-                print("Kernel={}".format(kernel))
-                print("Max iterations={}".format(max_iterations))
-                svc = SVC(kernel=kernel,
-                          C=10 ** i,
-                          max_iter=max_iterations,
-                          cache_size=15000,
-                          class_weight='balanced',
-                          verbose=False)
-
-                svc.fit(X_train, y_train)
-
-                print("TRAIN CONFUSION MATRIX:")
-                compute_confusion_matrix(svc, X_train, y_train)
-
-                if not len(y_test) is 0:
-                    print("TEST CONFUSION MATRIX:")
-                    compute_confusion_matrix(svc, X_test, y_test)
-
-                if file_redirect_output:
-                    sys.stdout.close()
+    main()
