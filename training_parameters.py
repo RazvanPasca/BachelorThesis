@@ -8,7 +8,7 @@ LOCAL_CONFIG_PATH = "train_params_cfg.json"
 
 
 class ModelTrainingParameters:
-    def __init__(self, model_path=None):
+    def __init__(self, model_path=None, local_config_path="train_params_cfg.json"):
         self.save_path = None
         self.clip_grad_by_value = None
         self.loss = None
@@ -32,9 +32,9 @@ class ModelTrainingParameters:
             if os.path.exists(config_path):
                 self._load_configuration_from_json(config_path)
             else:
-                self._load_configuration_from_json(LOCAL_CONFIG_PATH)
+                self._load_configuration_from_json(local_config_path)
         else:
-            self._load_configuration_from_json(LOCAL_CONFIG_PATH)
+            self._load_configuration_from_json(local_config_path)
 
         self.frame_size = 2 ** self.nr_layers
 
@@ -102,9 +102,7 @@ class ModelTrainingParameters:
                     self.get_model_name(),
                     os.getpid(),
                     datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    self.random_seed)
-            )
-            )
+                    self.random_seed)))
         else:
             self.model_path = model_path
 

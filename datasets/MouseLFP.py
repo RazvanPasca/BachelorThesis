@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from datasets.LFPDataset import LFPDataset
-from signal_utils import mu_law_encoding, mu_law_fn, rescale
+from signal_analysis.signal_utils import mu_law_encoding, mu_law_fn, rescale
 from tf_utils import replace_at_index
 
 
@@ -21,7 +21,7 @@ class MouseLFP(LFPDataset):
                  normalization="Zsc",
                  cutoff_freq=50,
                  white_noise_dev=-1,
-                 noisy_channels=(3, 6, 30, 22, 23, 19, 18, 32),
+                 noisy_channels=(3, 6, 32),
                  gamma_windows_in_trial=None,
                  condition_on_gamma=False):
         super().__init__(dataset_path, normalization=normalization, cutoff_freq=cutoff_freq, random_seed=random_seed,
@@ -58,16 +58,24 @@ class MouseLFP(LFPDataset):
             'VAL': [],
             'TRAIN': []
         }
-        for seq_nr in range(self.validation.shape[2]):
-            cond_index = np.random.choice(len(self.conditions_to_keep))
-            trial_index = np.random.choice(len(self.trials_to_keep))
-            for key in self.prediction_sequences.keys():
-                sequence_and_source = self.get_sequence_from(cond_index, trial_index, seq_nr, key)
-                gamma_label = self.gamma_info
-                sequence_w_gamma_labels = np.concatenate(
-                    (sequence_and_source[0].reshape(self.trial_length, 1), gamma_label), axis=1)
-                sequence_and_source = replace_at_index(sequence_and_source, 0, sequence_w_gamma_labels)
-                self.prediction_sequences[key].append(sequence_and_source)
+        nr_signals_in_val = min(6, self.validation.shape[2] * self.validation.shape[1] * self.validation.shape[0])
+
+        seq_nr = 0
+        for channel_nr in range(len(self.channels_to_keep)):
+            for cond_index in range(len(self.conditions_to_keep)):
+                for trial_index in range(len(self.trials_to_keep)):
+                    channel_nr = channel_nr % self.validation.shape[2]
+                    if seq_nr < nr_signals_in_val:
+                        seq_nr += 1
+                        for key in self.prediction_sequences.keys():
+                            sequence_and_source = self.get_sequence_from(cond_index, trial_index, channel_nr, key)
+                            gamma_label = self.gamma_info
+                            sequence_w_gamma_labels = np.concatenate(
+                                (sequence_and_source[0].reshape(self.trial_length, 1), gamma_label), axis=1)
+                            sequence_and_source = replace_at_index(sequence_and_source, 0, sequence_w_gamma_labels)
+                            self.prediction_sequences[key].append(sequence_and_source)
+                    else:
+                        break
 
     def _split_lfp_data(self):
         self.all_lfp_data = []
@@ -289,11 +297,13 @@ class MouseLFP(LFPDataset):
 
     def get_sequence(self, condition_index, trial_index, channel_index, data_source):
         data_address = {
-            'Condition': condition_index,
-            'T': trial_index,
+            'Condition': self.conditions_to_keep[condition_index],
+            'T': self.trials_to_keep[trial_index],
             'C': channel_index
         }
-        return data_source[data_address['Condition'], data_address['T'], channel_index, :], data_address
+        return data_source[condition_index, trial_index, channel_index, :], data_address
+
+    """Not used currently"""
 
     def _get_train_val_test_split_channel_wise(self, channels_to_keep, conditions_to_keep, val_perc, test_perc):
         nr_test_trials = round(test_perc * self.trials_per_condition)

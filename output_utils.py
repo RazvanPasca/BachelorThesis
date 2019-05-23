@@ -1,5 +1,8 @@
+import itertools
+
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.metrics import confusion_matrix
 
 
 def decode_model_output(model_logits, model_params):
@@ -86,4 +89,59 @@ def plot_2_overlapped_series(x1, y1, label1, x2, y2, label2, image_title, save_p
             plt.vlines(vlines_coords[:-1], ymin=ymin, ymax=ymax, lw=0.2)
 
     plt.savefig(save_path + '/' + image_title + ".png")
+    plt.close()
+
+
+def log_metrics_to_text(metrics, classes, fname):
+    formatter = ",".join("{:25}" for _ in range(len(metrics) - 1)) + "\n"
+    with open(fname, "w+") as f:
+        keys = list(metrics.keys())
+        f.write(formatter.format("Class", *keys[:-2]), )
+        for i in range(len(classes)):
+            f.write(formatter.format(classes[i], *[metrics[key][i] for key in keys[:-2]]))
+        f.write(str([(key, val) for key, val in list(metrics.items())[-2:]]))
+
+
+def compute_conf_matrix(model, X, Y):
+    pred = model.predict(X)
+    max_pred = np.argmax(pred, axis=1)
+    max_y = Y
+    cnf_mat = confusion_matrix(max_y, max_pred)
+
+    predicted_positives = np.sum(cnf_mat, axis=0)
+    actual_positives = np.sum(cnf_mat, axis=1)
+    cnf_mat_diag = np.diag(cnf_mat)
+    precision = np.around(cnf_mat_diag / predicted_positives, decimals=4)
+    recall = np.around(cnf_mat_diag / actual_positives, decimals=4)
+    f1 = np.around(2 * (precision * recall) / (precision + recall + 0.00001), decimals=4)
+    diag_sum = np.sum(cnf_mat_diag)
+    micro_precision = np.around(diag_sum / np.sum(predicted_positives), decimals=4)
+    micro_recall = np.around(diag_sum / np.sum(actual_positives), decimals=4)
+    metrics = {"precision": precision, "recall": recall, "f1": f1, "micro_precision": micro_precision,
+               "micro_recall": micro_recall}
+    return metrics, cnf_mat
+
+
+def plot_conf_matrix(cnf_mat, classes, cmap, normalize, save_path):
+    plt.figure(figsize=(16, 12))
+    if normalize:
+        cnf_mat = cnf_mat.astype('float') / cnf_mat.sum(axis=1)[:, np.newaxis]
+    thresh = cnf_mat.max() / 2.
+    for i, j in itertools.product(range(cnf_mat.shape[0]), range(cnf_mat.shape[1])):
+        plt.text(j, i, "{0:.4f}".format(cnf_mat[i, j]),
+                 horizontalalignment="center",
+                 color="orange" if cnf_mat[i, j] > thresh else "black")
+
+    plt.imshow(cnf_mat, interpolation='nearest', cmap=cmap)
+    # Labels
+    if classes is not None:
+        tick_marks = np.arange(len(classes))
+        plt.xticks(tick_marks, classes, rotation=45)
+        plt.yticks(tick_marks, classes)
+
+    plt.colorbar()
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.savefig(save_path)
     plt.close()

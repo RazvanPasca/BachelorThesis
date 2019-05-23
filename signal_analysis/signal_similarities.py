@@ -2,8 +2,8 @@ import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from datasets.paths import MOUSEACH_DATASET_PATH, MOUSE_DATASET_PATH
 from datasets.MouseLFP import MouseLFP
+from datasets.paths import MOUSEACH_DATASET_PATH, MOUSE_DATASET_PATH
 
 
 def rmse(a, b):
@@ -164,6 +164,6 @@ def signal_histograms():
 
 
 if __name__ == '__main__':
-    dataset = MouseLFP(MOUSE_DATASET_PATH, cutoff_freq=[30, 70], channels_to_keep=[-1],
+    dataset = MouseLFP(MOUSE_DATASET_PATH, cutoff_freq=[1, 80], channels_to_keep=[-1],
                        conditions_to_keep=[1], trials_to_keep=[0], normalization="Zsc")
     compare_signals(dataset, "MouseControl/Bpass")
