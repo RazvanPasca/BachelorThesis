@@ -1,9 +1,9 @@
 import datetime
-import numpy as np
-import matplotlib.pyplot as plt
-import cv2
+import json
 
-from scipy.misc import imresize
+import matplotlib.pyplot as plt
+import numpy as np
+
 from datasets.paths import CAT_DATASET_SIGNAL_PATH
 from datasets.paths import CAT_DATASET_STIMULI_PATH
 
@@ -52,7 +52,7 @@ class CatLFPStimuli:
             image_causing_frame = self._get_stimuli_for_sequence(trial_index, data_indexes, batch_start,
                                                                  batch_start + frame_size)
             x.append(frame.reshape(frame_size, 47))
-            y.append(image_causing_frame)
+            y.append(image_causing_frame[:, :, np.newaxis])
             if len(x) == batch_size:
                 yield np.array(x), np.array(y)
                 x = []
@@ -84,6 +84,7 @@ class CatLFPStimuli:
     def _normalize_data(self):
         for channel in range(self.signal.shape[2]):
             self.signal[:, :, channel, :] /= np.max(self.signal[:, :, channel, :])
+        self.stimuli = self.stimuli / np.max(self.stimuli)
 
 
 if __name__ == '__main__':

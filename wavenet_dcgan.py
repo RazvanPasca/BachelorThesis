@@ -79,15 +79,15 @@ def get_wavenet_dcgan_model(nr_filters, input_shape, nr_layers, lr, loss, clipva
 
     generator = Dense(16 * generator_filter_size * img_size // 16 * img_size // 16, activation="relu")(net)
     generator = Reshape((img_size // 16, img_size // 16,  generator_filter_size * 16))(generator)
-    generator = BatchNormalization()(generator)
+    # generator = BatchNormalization()(generator)
     generator = Activation('relu')(generator)
-    generator = deconv2d(generator, filters=generator_filter_size * 8)
-    generator = deconv2d(generator, filters=generator_filter_size * 4)
-    generator = deconv2d(generator, filters=generator_filter_size * 2)
-    generator = deconv2d(generator, filters=generator_filter_size)
-    generator = deconv2d(generator, filters=1, kernel_size=(3, 3), strides=(1, 1), bn_relu=False)
+    generator = deconv2d(generator, filters=generator_filter_size * 8, bn_relu=False)
+    generator = deconv2d(generator, filters=generator_filter_size * 4, bn_relu=False)
+    generator = deconv2d(generator, filters=generator_filter_size * 2, bn_relu=False)
+    output = deconv2d(generator, filters=1, bn_relu=False)
+    # output = deconv2d(generator, filters=1, kernel_size=(3, 3), strides=(1, 1), bn_relu=False)
 
-    output = Activation('tanh')(generator)
+    # output = Activation('tanh')(generator)
 
     model = Model(inputs=input_, outputs=output)
     optimizer = optimizers.adam(lr=lr, clipvalue=clipvalue)

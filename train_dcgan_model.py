@@ -64,6 +64,7 @@ def train_model(model_params):
                                     nr_output_classes=model_params.zs,
                                     multiloss_weights=model_params.multiloss_weights)
 
+    print(model.summary())
     # TODO make activation callback work with multiple output
 
     tensorboard_callback = TensorReconBoardWrapper(
