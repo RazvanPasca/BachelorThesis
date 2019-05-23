@@ -11,13 +11,15 @@ class ModelTrainingParameters:
             setattr(self, k, v)
 
         self.dataset = CatLFPStimuli()
-        self.nr_train_steps = self.dataset.train.size // self.batch_size * self.train_coverage_per_epoch
-        self.nr_val_steps = self.dataset.validation.size // self.batch_size * self.val_coverage_per_epoch
+        self.nr_train_steps = (self.dataset.train.size // self.batch_size * self.train_coverage_per_epoch) // \
+                              self.dataset.number_of_channels
+        self.nr_val_steps = (self.dataset.validation.size // self.batch_size * self.val_coverage_per_epoch) // \
+                            self.dataset.number_of_channels
         self._compute_model_path()
         self.frame_size = 2 ** self.nr_layers
 
     def get_model_name(self):
-        return "EncL:{}_Ep:{}_StpEp:{}_Perc:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_Norm:Brute_Loss:MSE_GradClip:{}_LPass:{}".format(
+        return "EncL:{}_Ep:{}_StpEp:{}_Perc:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_Norm:Brute_Loss:{}_GradClip:{}_LPass:{}".format(
             self.nr_layers,
             self.n_epochs,
             self.nr_train_steps,
@@ -27,6 +29,7 @@ class ModelTrainingParameters:
             self.nr_filters,
             self.skip_conn_filters,
             self.regularization_coef,
+            self.loss,
             self.clip_grad_by_value,
             self.cutoff_freq)
 
