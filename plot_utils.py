@@ -1,11 +1,9 @@
 import csv
+import itertools
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow as tf
-from keras import callbacks
-from keras.callbacks import TensorBoard
 
 from output_utils import decode_model_output, get_normalized_erros_per_sequence
 
@@ -231,113 +229,31 @@ def generate_errors_subplots(prediction_losses, vlines_coords_list, sequence_nam
     plt.close()
 
 
+def plot_conf_matrix(cnf_mat, classes, cmap, normalize, save_path):
+    plt.figure(figsize=(16, 12))
+    if normalize:
+        cnf_mat = cnf_mat.astype('float') / cnf_mat.sum(axis=1)[:, np.newaxis]
+    thresh = cnf_mat.max() / 2.
+    for i, j in itertools.product(range(cnf_mat.shape[0]), range(cnf_mat.shape[1])):
+        plt.text(j, i, "{0:.4f}".format(cnf_mat[i, j]),
+                 horizontalalignment="center",
+                 color="orange" if cnf_mat[i, j] > thresh else "black")
+
+    plt.imshow(cnf_mat, interpolation='nearest', cmap=cmap)
+    # Labels
+    if classes is not None:
+        tick_marks = np.arange(len(classes))
+        plt.xticks(tick_marks, classes, rotation=45)
+        plt.yticks(tick_marks, classes)
+
+    plt.colorbar()
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.savefig(save_path)
+    plt.close()
+
+
 def plot_pred_losses(pred_losses, name):
     for source, source_pred_errors in pred_losses.items():
         pass
-
-
-class PlotCallback(callbacks.Callback):
-    """Callback used for plotting at certain epochs the generations of the model
-
-        If nr_predictions is smaller than 1, the model will predict up to the end of the signal
-
-        If starting point is smaller than 1, the model will start predicting from the beginning of the signal-frame size
-    """
-
-    def __init__(self, model_params, plot_period, nr_predictions, starting_point, all_reset_indices,
-                 nr_plot_rows=3):
-        super().__init__()
-
-        self.model_params = model_params
-        self.epoch = 0
-        self.get_nr_prediction_steps(model_params, nr_predictions, starting_point)
-        self.plot_period = plot_period
-        self.starting_point = starting_point
-        # self.get_all_reset_indices(all_reset_indices, model_params, starting_point)
-        self.all_reset_indices = self.get_all_reset_indices(all_reset_indices)
-        self.nr_plot_rows = nr_plot_rows
-        self.nr_of_sequences_to_plot = self.model_params.dataset.nr_of_seqs // nr_plot_rows * nr_plot_rows
-        self.all_pred_losses_normalized = {"VAL": [],
-                                           "TRAIN": []}
-
-    def get_all_reset_indices(self, all_reset_indices):
-        set_all_reset_indices = [set(tuple(reset_indices)) for reset_indices in all_reset_indices]
-        return set_all_reset_indices
-
-    def set_model(self, model):
-        self.pred_error_writer = tf.summary.FileWriter(self.model_params.model_path)
-        super().set_model(model)
-
-    def on_train_begin(self, logs={}):
-        create_dir_if_not_exists(self.model_params.model_path)
-        self.model_params.serialize_to_json(self.model_params.model_path)
-        return
-
-    def on_epoch_end(self, epoch, logs={}):
-        self.epoch += 1
-
-        if self.epoch % self.plot_period == 0 or self.epoch == 1:
-            all_pred_losses_normalized = generate_multi_plot(self.model, self.model_params, self.epoch,
-                                                             self.starting_point,
-                                                             nr_prediction_steps=self.nr_prediction_steps,
-                                                             all_reset_indices=self.all_reset_indices,
-                                                             nr_of_sequences_to_plot=self.nr_of_sequences_to_plot,
-                                                             nr_rows=self.nr_plot_rows)
-
-            self.write_pred_losses_to_tboard(all_pred_losses_normalized, self.epoch)
-            self.update_all_pred_losses(all_pred_losses_normalized)
-            plot_pred_losses(self.all_pred_losses_normalized, self.model_params.model_path + "/pred_error_log")
-
-    def on_train_end(self, logs=None):
-        all_pred_losses_normalized = generate_multi_plot(self.model, self.model_params, "TrainEnd", self.starting_point,
-                                                         nr_prediction_steps=self.nr_prediction_steps,
-                                                         all_reset_indices=self.all_reset_indices,
-                                                         nr_of_sequences_to_plot=self.nr_of_sequences_to_plot)
-        self.update_all_pred_losses(all_pred_losses_normalized)
-        self.write_pred_losses_to_tboard(all_pred_losses_normalized, self.epoch)
-        self.pred_error_writer.close()
-
-    def get_nr_prediction_steps(self, model_params, nr_predictions, starting_point):
-        self.nr_prediction_steps = nr_predictions if nr_predictions > 0 else model_params.dataset.trial_length
-        self.nr_prediction_steps = min(self.nr_prediction_steps,
-                                       model_params.dataset.trial_length - starting_point - model_params.frame_size - 1)
-
-    def get_all_reset_indices_2(self, all_reset_indices, model_params, starting_point):
-        self.all_reset_indices = all_reset_indices
-        self.limit = model_params.dataset.trial_length - model_params.frame_size - 1 - starting_point
-        if self.all_reset_indices[-1] > self.limit:
-            self.all_reset_indices = self.all_reset_indices[:-1]
-            self.all_reset_indices.append(self.limit)
-
-    def write_pred_losses_to_tboard(self, all_pred_losses_normalized, epoch):
-        for source, source_errors in all_pred_losses_normalized.items():
-            summary = tf.Summary()
-            for i, error in enumerate(source_errors):
-                summary_value = summary.value.add()
-                summary_value.simple_value = error
-                summary_value.tag = "{}_Norm_Pred_Error_GenWSize:{}".format(source,
-                                                                            list(self.all_reset_indices[i])[:10])
-            self.pred_error_writer.add_summary(summary, epoch)
-        self.pred_error_writer.flush()
-
-    def update_all_pred_losses(self, all_pred_losses_normalized):
-        for source, source_pred_errors in all_pred_losses_normalized.items():
-            self.all_pred_losses_normalized[source].append(source_pred_errors)
-
-
-class TensorBoardWrapper(TensorBoard):
-    """Sets the self.validation_data property for use with TensorBoard callback."""
-
-    def __init__(self, batch_gen, nb_steps, **kwargs):
-        super().__init__(**kwargs)
-        self.batch_gen = batch_gen  # The generator.
-        self.nb_steps = nb_steps  # Number of times to call next() on the generator.
-
-    def on_epoch_end(self, epoch, logs=None):
-        # Fill in the `validation_data` property. Obviously this is specific to how your generator works.
-        # Below is an example that yields images and classification tags.
-        # After it's filled in, the regular on_epoch_end method has access to the validation_data.
-        x, y = next(self.batch_gen)
-        self.validation_data = (x, y.reshape(-1, 1), np.ones(self.batch_size))
-        return super().on_epoch_end(epoch, logs)
-

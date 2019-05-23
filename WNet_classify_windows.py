@@ -3,8 +3,9 @@ import collections
 import numpy as np
 from keras.callbacks import CSVLogger, TensorBoard, ModelCheckpoint
 
-from CNN_class import classify_params, callbacks
-from CNN_class.wavenet_classifier import get_wavenet_model
+import callbacks.MetricsPlotCallback
+from Wavenet_class import classify_params, callbacks
+from Wavenet_class.wavenet_classifier_model import get_wavenet_model
 from datasets.paths import CAT_TFRECORDS_PATH_TOBEFORMATED
 from plot_utils import create_dir_if_not_exists
 from svm.svm import load_cat_tf_record
@@ -77,7 +78,7 @@ def train_model(model_params, X_train, Y_train, X_test, Y_test, classes, model_p
 
     tboard_callback = TensorBoard(log_dir=model_path, write_graph=True)
     log_callback = CSVLogger(model_path + "/session_log.csv")
-    metric_callback = callbacks.AccLossPlotter(model_path)
+    metric_callback = callbacks.MetricsPlotCallback.MetricsPlotCallback(model_path)
     conf_matrix_callback = callbacks.ConfusionMatrixPlotter(X_train, Y_train,
                                                             X_test, Y_test,
                                                             classes,

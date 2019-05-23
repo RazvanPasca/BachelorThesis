@@ -1,5 +1,3 @@
-import itertools
-
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import confusion_matrix
@@ -122,26 +120,3 @@ def compute_conf_matrix(model, X, Y):
     return metrics, cnf_mat
 
 
-def plot_conf_matrix(cnf_mat, classes, cmap, normalize, save_path):
-    plt.figure(figsize=(16, 12))
-    if normalize:
-        cnf_mat = cnf_mat.astype('float') / cnf_mat.sum(axis=1)[:, np.newaxis]
-    thresh = cnf_mat.max() / 2.
-    for i, j in itertools.product(range(cnf_mat.shape[0]), range(cnf_mat.shape[1])):
-        plt.text(j, i, "{0:.4f}".format(cnf_mat[i, j]),
-                 horizontalalignment="center",
-                 color="orange" if cnf_mat[i, j] > thresh else "black")
-
-    plt.imshow(cnf_mat, interpolation='nearest', cmap=cmap)
-    # Labels
-    if classes is not None:
-        tick_marks = np.arange(len(classes))
-        plt.xticks(tick_marks, classes, rotation=45)
-        plt.yticks(tick_marks, classes)
-
-    plt.colorbar()
-    plt.tight_layout()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-    plt.savefig(save_path)
-    plt.close()

@@ -1,6 +1,3 @@
-import datetime
-import json
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -20,10 +17,8 @@ class CatLFPStimuli:
         self._normalize_data()
         self.nr_conditions = self.signal.shape[0]
         self.trials_per_condition = self.signal.shape[1]
-
         self._split_dataset(val_perc, test_perc)
 
-        np.random.seed(datetime.datetime.now().microsecond)
 
     def _split_dataset(self, val_perc, test_perc):
         nr_of_trials = self.nr_conditions * self.trials_per_condition

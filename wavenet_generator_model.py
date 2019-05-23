@@ -1,6 +1,6 @@
 from keras import losses, Input, Model, optimizers
 from keras.activations import softmax
-from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense, K, Reshape, Lambda
+from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense, Reshape, Lambda
 from keras.regularizers import l2
 
 
