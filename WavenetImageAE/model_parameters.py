@@ -1,9 +1,9 @@
 model_parameters = {
+    "nr_layers": 6,
     "skip_conn_filters": 128,
-    "nr_filters": 128,
+    "nr_filters": 256,
     "lr": 1e-05,
-    "nr_layers": 4,
-    "batch_size": 32,
+    "batch_size": 16,
     "loss": "MSE",
     "n_epochs": 100,
     "clip_grad_by_value": 5,
@@ -11,14 +11,14 @@ model_parameters = {
     "random_seed": 42,
     "logging_period": 3,
     "cutoff_freq": [
-        1,
+        0,
         80
     ],
     "nr_rec": 12,
-    "train_coverage_per_epoch": 0.5,
-    "val_coverage_per_epoch": 0.25,
+    "train_coverage_per_epoch": 0.001,
+    "val_coverage_per_epoch": 0.001,
     "movies_to_keep": None,
     "labels_to_keep": None,
     "gpu": 0,
-    "save_path": "./SceneGen",
+    "save_path": "/data2/razpa/SceneGen",
 }
