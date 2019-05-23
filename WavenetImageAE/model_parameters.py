@@ -10,8 +10,6 @@ model_parameters = {
     "regularization_coef": 0.001,
     "random_seed": 42,
     "logging_period": 3,
-    "nr_train_steps": 100,
-    "nr_val_steps": 10,
     "cutoff_freq": [
         1,
         80

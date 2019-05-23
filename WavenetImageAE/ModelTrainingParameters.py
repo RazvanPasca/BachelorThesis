@@ -11,6 +11,8 @@ class ModelTrainingParameters:
             setattr(self, k, v)
 
         self.dataset = CatLFPStimuli()
+        self.nr_train_steps = self.dataset.train.size // self.batch_size
+        self.nr_val_steps = self.dataset.validation.size // self.batch_size
         self._compute_model_path()
         self.frame_size = 2 ** self.nr_layers
 
