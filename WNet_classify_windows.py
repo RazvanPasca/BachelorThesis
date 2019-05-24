@@ -3,8 +3,8 @@ import collections
 import numpy as np
 from keras.callbacks import CSVLogger, TensorBoard, ModelCheckpoint
 
-from Wavenet_class import classify_params, callbacks
-from Wavenet_class.wavenet_classifier_model import get_wavenet_model
+from WavenetClassifier import classify_params, callbacks
+from WavenetClassifier.wavenet_classifier_model import get_wavenet_model
 from callbacks.MetricsPlotCallback import MetricsPlotCallback
 from datasets.paths import CAT_TFRECORDS_PATH_TOBEFORMATED
 from plot_utils import create_dir_if_not_exists

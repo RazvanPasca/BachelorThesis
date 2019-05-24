@@ -17,7 +17,8 @@ def train_model(model_params):
                                     loss=model_params.loss,
                                     clipvalue=model_params.clip_grad_by_value,
                                     skip_conn_filters=model_params.skip_conn_filters,
-                                    regularization_coef=model_params.regularization_coef, )
+                                    regularization_coef=model_params.regularization_coef,
+                                    z_dim=model_params.z_dim)
 
     print(model.summary())
 

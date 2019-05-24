@@ -14,7 +14,7 @@ def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef, fi
         tanh_out = Conv1D(filters=n_filters,
                           kernel_size=filter_size,
                           dilation_rate=dilation_rate,
-                          padding='causal',
+                          padding='same',
                           activation='tanh',
                           kernel_regularizer=l2(regularization_coef),
                           name="Tanh_{}".format(dilation_rate))(input_)
@@ -22,7 +22,7 @@ def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef, fi
         sigmoid_out = Conv1D(filters=n_filters,
                              kernel_size=filter_size,
                              dilation_rate=dilation_rate,
-                             padding='causal',
+                             padding='same',
                              activation='sigmoid',
                              kernel_regularizer=l2(regularization_coef),
                              name="Sigmoid_{}".format(dilation_rate))(input_)
@@ -31,13 +31,13 @@ def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef, fi
 
         skip_out = Conv1D(filters=n_filters * 2,
                           kernel_size=1,
-                          padding='causal',
+                          padding='same',
                           kernel_regularizer=l2(regularization_coef),
                           name="Skip_Conv_{}".format(dilation_rate))(merged)
 
         out = Conv1D(filters=n_filters,
                      kernel_size=1,
-                     padding='causal',
+                     padding='same',
                      kernel_regularizer=l2(regularization_coef),
                      name="Res_Conv_{}".format(dilation_rate))(merged)
 
@@ -58,7 +58,7 @@ def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(2, 2), bn_re
 
 
 def get_wavenet_dcgan_model(nr_filters, input_shape, nr_layers, lr, loss, clipvalue, skip_conn_filters,
-                            regularization_coef, img_size=64, generator_filter_size=64):
+                            regularization_coef, z_dim, img_size=64, generator_filter_size=64):
     input_ = Input(shape=input_shape)
     A, B = wavenet_block(nr_filters, 3, 1, regularization_coef=regularization_coef, first=True)(input_)
     skip_connections = [B]
@@ -74,14 +74,14 @@ def get_wavenet_dcgan_model(nr_filters, input_shape, nr_layers, lr, loss, clipva
                  name="Skip_FConv_1")(net)
     net = Conv1D(skip_conn_filters, 1, kernel_regularizer=l2(regularization_coef), name="Skip_FConv_2")(net)
     net = Flatten()(net)
-    net = Dense(100, activation="relu")(net)
-    generator = Dense(8 * generator_filter_size * img_size // 16 * img_size // 16, activation="relu")(net)
-    generator = Reshape((img_size // 16, img_size // 16, generator_filter_size * 8))(generator)
+    net = Dense(z_dim, activation="relu")(net)
+    generator = Dense(16 * generator_filter_size * img_size // 16 * img_size // 16, activation="relu")(net)
+    generator = Reshape((img_size // 16, img_size // 16, generator_filter_size * 16))(generator)
     # generator = BatchNormalization()(generator)
     generator = Activation('relu')(generator)
+    generator = deconv2d(generator, filters=generator_filter_size * 8, bn_relu=False)
     generator = deconv2d(generator, filters=generator_filter_size * 4, bn_relu=False)
     generator = deconv2d(generator, filters=generator_filter_size * 2, bn_relu=False)
-    generator = deconv2d(generator, filters=generator_filter_size * 1, bn_relu=False)
     output = deconv2d(generator, filters=1, bn_relu=False)
     # output = deconv2d(generator, filters=1, kernel_size=(3, 3), strides=(1, 1), bn_relu=False)
 

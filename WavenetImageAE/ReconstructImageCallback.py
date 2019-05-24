@@ -50,7 +50,7 @@ class ReconstructImageCallback(callbacks.Callback):
         return train_batch, val_batch
 
     def on_epoch_end(self, epoch, logs={}):
-        if self.epoch_count < 5 or self.epoch_count % self.logging_period == 0:
+        if self.epoch_count % self.logging_period == 0:
             reconstructions = self.model.predict(self.full_batch)
             train_reconstr = reconstructions[:self.nr_rec]
             val_reconstr = reconstructions[self.nr_rec:]

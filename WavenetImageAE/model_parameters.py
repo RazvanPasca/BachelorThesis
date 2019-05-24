@@ -8,6 +8,8 @@ model_parameters = {
     "n_epochs": 100,
     "clip_grad_by_value": 5,
     "regularization_coef": 0.001,
+    "z_dim": 100,
+    "train_val_split": 0.2,
     "random_seed": 42,
     "logging_period": 3,
     "cutoff_freq": [

@@ -78,7 +78,7 @@ class CatLFPStimuli:
 
     def _load_data(self, signal_path, stimuli_path):
         self.signal = np.load(signal_path)[self.movies_to_keep, ...].reshape((-1, 20, 47, 28000))
-        self.stimuli = np.load(stimuli_path)[self.movies_to_keep, ...].reshape((-1, 700, 64, 64))
+        self.stimuli = np.load(stimuli_path)[self.movies_to_keep, ...]
 
     def _get_stimuli_for_sequence(self, movie_index, seq_start, seq_end):
         image_number = (seq_start - 100) // 40
@@ -91,7 +91,7 @@ class CatLFPStimuli:
 
 
 if __name__ == '__main__':
-    dataset = CatLFPStimuli(movies_to_keep=0)
+    dataset = CatLFPStimuli(val_perc=0.15, movies_to_keep=[0])
     for x, y in dataset.train_frame_generator(100, 2):
         print(x.shape)
         print(y.shape)
