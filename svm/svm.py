@@ -122,20 +122,35 @@ def load_tf_record(path):
 
 
 def load_cat_tf_record(path, cuttof_freq=None):
+    data_dict = {1: {},
+                 2: {},
+                 3: {}}
     cat_scenes_dataset = load_tf_record(path)
+
     labels = set([sample[0] for sample in cat_scenes_dataset])
     labels_to_index = {}
     for index, label in enumerate(labels):
         labels_to_index[label] = index
-    x = []
-    y = []
+
     filter_type = "band" if len(cuttof_freq) > 1 else "low"
     for sample in cat_scenes_dataset:
-        x.append(sample[4] if cuttof_freq is None else butter_pass_filter(sample[4], cuttof_freq, 1000, filter_type))
-        y.append(labels_to_index[sample[0]])
-    x = np.array(x)
-    x /= x.max()
-    return x, np.array(y), labels_to_index
+        trial_dict_for_movie = data_dict[sample[2]]
+        label = labels_to_index[sample[0]]
+        if sample[1] in trial_dict_for_movie:
+            trial_dict_for_movie[sample[1]].append((filter_input_sample(cuttof_freq, filter_type, sample[4]), label))
+        else:
+            trial_dict_for_movie[sample[1]] = [(filter_input_sample(cuttof_freq, filter_type, sample[4]), label)]
+
+    for movie_key, trial_dict in data_dict.copy().items():
+        reindexed_trial_dict = {}
+        for i, old_trial_key in enumerate(trial_dict.keys()):
+            reindexed_trial_dict[i] = trial_dict[old_trial_key]
+        data_dict[movie_key] = reindexed_trial_dict
+    return data_dict, labels_to_index
+
+
+def filter_input_sample(cuttof_freq, filter_type, sample):
+    return sample if cuttof_freq is None else butter_pass_filter(sample, cuttof_freq, 1000, filter_type)
 
 
 def main():

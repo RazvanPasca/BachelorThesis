@@ -105,31 +105,50 @@ def train_model(model_params, X_train, Y_train, X_test, Y_test, classes, model_p
     print('\nDone!')
 
 
-def main():
-    X, Y, labels_to_index = load_cat_tf_record(
+def main(movies_to_keep, val_perc, concatenate_channels):
+    data_dict, labels_to_index = load_cat_tf_record(
         CAT_TFRECORDS_PATH_TOBEFORMATED.format(model_parameters["window_size"]), model_parameters["cutoff_freq"])
 
-    X = np.expand_dims(X, axis=2)
-    print(labels_to_index)
+    nr_trials = 20
+    shuffled_trial_indexes = np.arange(nr_trials)
+    np.random.shuffle(shuffled_trial_indexes)
+    nr_val_trials = round(val_perc * nr_trials)
+    train_trials = shuffled_trial_indexes[:-nr_val_trials]
+    val_trials = shuffled_trial_indexes[-nr_val_trials:]
 
-    X_train, X_test, Y_train, Y_test, new_labels_to_index = train_test_split(X, Y,
-                                                                             test_size=model_parameters[
-                                                                                 "val_coverage_per_epoch"],
-                                                                             shuffle_seed=model_parameters[
-                                                                                 "shuffle_seed"],
-                                                                             AvsW=model_parameters["AvsW"],
-                                                                             labels_to_index=labels_to_index)
+    dataset = [list(data_dict[movie].values()) for movie in movies_to_keep]  # list of 3 values
+    data_dict = None
 
-    print(new_labels_to_index)
+    dataset_train = [frame for movie in dataset for trial_index in train_trials for frame in movie[trial_index]]
+    X_train, Y_train = np.array([sample[0] for sample in dataset_train]), \
+                       np.array([sample[1] for sample in dataset_train])
 
-    Y_new = np.concatenate((Y_train, Y_test))
+    dataset_val = [frame for movie in dataset for trial_index in val_trials for frame in movie[trial_index]]
+    X_val, Y_val = np.array([sample[0] for sample in dataset_val]), \
+                   np.array([sample[1] for sample in dataset_val])
+
+    X_train = np.expand_dims(X_train, axis=2)
+    X_val = np.expand_dims(X_val, axis=2)
+
+    Y_new = np.concatenate((Y_train, Y_val))
     class_count = collections.Counter(Y_new)
     nr_samples = Y_new.size
-    print(class_count)
+
+    Y_train = np.expand_dims(Y_train, axis=1)
+    Y_val = np.expand_dims(Y_val, axis=1)
 
     class_weights = {key: 1 - val / nr_samples if model_parameters["ClassW"] else 1 for key, val in class_count.items()}
-    classes = get_classes_list(new_labels_to_index, model_parameters["AvsW"])
-    train_model(model_parameters, X_train, Y_train, X_test, Y_test, classes, model_path, class_weights)
+
+    classes = get_classes_list(labels_to_index, model_parameters["AvsW"])
+
+    # print(class_count)
+    # print(labels_to_index)
+    # print(class_weights)
+    # print(X_train.shape)
+    # print(Y_train.shape)
+    # print(classes)
+
+    train_model(model_parameters, X_train, Y_train, X_val, Y_val, classes, model_path, class_weights)
 
 
 if __name__ == '__main__':
@@ -141,4 +160,5 @@ if __name__ == '__main__':
     # if not (file_redirect is None):
     #     sys.stdout = open(file_redirect.format(model_path), 'w+')
 
-    main()
+    main(movies_to_keep=[1, 2, 3], val_perc=0.2,
+         concatenate_channels=False)

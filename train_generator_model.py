@@ -1,12 +1,12 @@
 from keras.callbacks import CSVLogger, ModelCheckpoint
 
+from WavenetImageAE.wavenet_generator_model import get_wavenet_model
 from callbacks.GenErrorPlotCallback import GenErrorPlotCallback as PlotCallback
 from callbacks.TboardCallbackWrapper import TboardCallbackWrapper as TensorBoardWrapper
 from plot_utils import create_dir_if_not_exists
 from test_model import test_model
 from tf_utils import configure_gpu
 from training_parameters import ModelTrainingParameters
-from wavenet_generator_model import get_wavenet_model
 
 
 def log_training_session(model_params):
