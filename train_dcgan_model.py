@@ -6,7 +6,7 @@ from WavenetImageAE.model_parameters import model_parameters
 from WavenetImageAE.wavenet_dcgan_model import get_wavenet_dcgan_model
 from callbacks.MetricsPlotCallback import MetricsPlotCallback
 from callbacks.TboardCallbackWrapper import TboardCallbackWrapper
-from tf_utils import configure_gpu
+from utils.tf_utils import configure_gpu
 
 
 def train_model(model_params):

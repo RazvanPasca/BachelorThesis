@@ -48,3 +48,12 @@ def inv_mu_law_fn(x, mu=256):
     val = np.sign(x) * (1 / (mu - 1)) * (((1 + mu - 1) ** np.abs(x)) - 1)
     assert (-1 <= val <= 1)
     return val
+
+
+def get_filter_type(cuttof_freq):
+    filter_type = None if cuttof_freq is None else "band" if len(cuttof_freq) == 2 else "low"
+    return filter_type
+
+
+def filter_input_sample(sample, cuttof_freq, filter_type):
+    return sample if filter_type is None else butter_pass_filter(sample, cuttof_freq, 1000, filter_type)

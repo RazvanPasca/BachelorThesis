@@ -10,7 +10,7 @@ from sklearn.svm import SVC
 
 from datasets.LFPDataset import LFPDataset
 from datasets.paths import CAT_TFRECORDS_PATH_TOBEFORMATED
-from signal_analysis.signal_utils import butter_pass_filter
+from signal_analysis.signal_utils import get_filter_type, filter_input_sample
 
 
 def load_cat_dataset(path, label='condition'):
@@ -132,14 +132,14 @@ def load_cat_tf_record(path, cuttof_freq=None):
     for index, label in enumerate(labels):
         labels_to_index[label] = index
 
-    filter_type = "band" if len(cuttof_freq) > 1 else "low"
+    filter_type = get_filter_type(cuttof_freq)
     for sample in cat_scenes_dataset:
         trial_dict_for_movie = data_dict[sample[2]]
         label = labels_to_index[sample[0]]
         if sample[1] in trial_dict_for_movie:
-            trial_dict_for_movie[sample[1]].append((filter_input_sample(cuttof_freq, filter_type, sample[4]), label))
+            trial_dict_for_movie[sample[1]].append((filter_input_sample(sample[4], cuttof_freq, filter_type), label))
         else:
-            trial_dict_for_movie[sample[1]] = [(filter_input_sample(cuttof_freq, filter_type, sample[4]), label)]
+            trial_dict_for_movie[sample[1]] = [(filter_input_sample(sample[4], cuttof_freq, filter_type), label)]
 
     for movie_key, trial_dict in data_dict.copy().items():
         reindexed_trial_dict = {}
@@ -147,10 +147,6 @@ def load_cat_tf_record(path, cuttof_freq=None):
             reindexed_trial_dict[i] = trial_dict[old_trial_key]
         data_dict[movie_key] = reindexed_trial_dict
     return data_dict, labels_to_index
-
-
-def filter_input_sample(cuttof_freq, filter_type, sample):
-    return sample if cuttof_freq is None else butter_pass_filter(sample, cuttof_freq, 1000, filter_type)
 
 
 def main():

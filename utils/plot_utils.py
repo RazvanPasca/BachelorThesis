@@ -5,7 +5,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from output_utils import decode_model_output, get_normalized_erros_per_sequence
+from utils.output_utils import decode_model_output, get_normalized_erros_per_sequence
 
 
 def create_dir_if_not_exists(directory_path):

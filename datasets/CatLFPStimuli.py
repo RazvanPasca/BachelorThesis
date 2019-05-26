@@ -3,14 +3,18 @@ import numpy as np
 
 from datasets.paths import CAT_DATASET_SIGNAL_PATH
 from datasets.paths import CAT_DATASET_STIMULI_PATH
+from signal_analysis.signal_utils import get_filter_type, filter_input_sample
 
 
 class CatLFPStimuli:
     def __init__(self,
                  movies_to_keep=[0],
+                 cutoff_freq=None,
                  val_perc=0.20,
                  test_perc=0.0,
                  random_seed=42):
+
+        self.cutoff_freq = cutoff_freq
 
         np.random.seed(random_seed)
         self.movies_to_keep = np.array(movies_to_keep)
@@ -76,8 +80,11 @@ class CatLFPStimuli:
         trial_index = np.random.choice(data_source.shape[1])
         return data_source[movie_index, trial_index], (movie_index, trial_index)
 
-    def _load_data(self, signal_path, stimuli_path):
-        self.signal = np.load(signal_path)[self.movies_to_keep, ...].reshape((-1, 20, 47, 28000))
+    def _load_data(self, signal_path, stimuli_path, ):
+
+        self.signal = np.load(signal_path)[self.movies_to_keep, ...]
+        filter_type = get_filter_type(self.cutoff_freq)
+        self.signal = filter_input_sample(self.signal, self.cutoff_freq, filter_type)
         self.stimuli = np.load(stimuli_path)[self.movies_to_keep, ...]
 
     def _get_stimuli_for_sequence(self, movie_index, seq_start, seq_end):

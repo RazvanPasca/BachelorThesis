@@ -3,10 +3,10 @@ import datetime
 import numpy as np
 from keras.models import load_model
 
-from plot_utils import get_sequence_prediction, generate_prediction_name, \
+from WavenetGenerator.training_parameters import ModelTrainingParameters
+from utils.plot_utils import get_sequence_prediction, generate_prediction_name, \
     create_dir_if_not_exists, prepare_file_for_writing
-from tf_utils import configure_gpu
-from training_parameters import ModelTrainingParameters
+from utils.tf_utils import configure_gpu
 
 
 def get_error_estimates(model, model_parameters, nr_of_estimates, generated_window_size, file_to_save, source):

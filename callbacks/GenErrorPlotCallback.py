@@ -1,7 +1,7 @@
 import tensorflow as tf
 from keras import callbacks
 
-from plot_utils import create_dir_if_not_exists, generate_multi_plot, plot_pred_losses
+from utils.plot_utils import create_dir_if_not_exists, generate_multi_plot, plot_pred_losses
 
 
 class GenErrorPlotCallback(callbacks.Callback):

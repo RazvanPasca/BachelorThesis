@@ -2,7 +2,7 @@ import datetime
 import os
 
 from datasets.CatLFPStimuli import CatLFPStimuli
-from plot_utils import create_dir_if_not_exists
+from utils.plot_utils import create_dir_if_not_exists
 
 
 class ModelTrainingParameters:
@@ -11,6 +11,7 @@ class ModelTrainingParameters:
             setattr(self, k, v)
 
         self.dataset = CatLFPStimuli(val_perc=self.train_val_split,
+                                     cutoff_freq=self.cutoff_freq,
                                      movies_to_keep=self.movies_to_keep)
         self.nr_train_steps = (self.dataset.train.size // self.batch_size * self.train_coverage_per_epoch) // \
                               self.dataset.number_of_channels

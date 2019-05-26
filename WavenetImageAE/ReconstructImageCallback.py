@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from keras import callbacks
 
-from plot_utils import create_dir_if_not_exists
+from utils.plot_utils import create_dir_if_not_exists
 
 
 def plot_images_reconstructions(images_reconstr, original_images, save_path, name):
