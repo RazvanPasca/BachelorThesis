@@ -1,12 +1,17 @@
 from keras import Input, Model, optimizers, metrics
 from keras.activations import softmax
-from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense
+from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense, Lambda, Reshape
 from keras.regularizers import l2
 
 
 def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef, first):
     def f(input_):
-        residual = input_
+        if first:
+            residual = Lambda(lambda x: x[:, :, 0], output_shape=(1,))(input_)
+            residual = Reshape(target_shape=(-1, 1))(residual)
+        else:
+            residual = input_
+
         tanh_out = Conv1D(filters=n_filters,
                           kernel_size=filter_size,
                           dilation_rate=dilation_rate,

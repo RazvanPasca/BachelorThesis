@@ -109,7 +109,7 @@ def load_tf_record(path):
                         .int64_list
                         .value[0])
 
-            signal = (example.features.feature['signal'].float_list.value)
+            signal = np.array(example.features.feature['signal'].float_list.value)
 
             reconstructed_data.append((scene, trial, movie, signal))
         except:

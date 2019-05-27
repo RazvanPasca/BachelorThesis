@@ -16,7 +16,7 @@ model_params = {
     "cutoff_freq": None,
     "movies_to_keep": [1, 2, 3],  # list with [1,2,3] or w/e
     "gpu": 0,
-    "concatenate_channels": False,
+    "concatenate_channels": True,
     "shuffle_seed": 40,
     "logging_period": 3,
     "window_size": 1000,

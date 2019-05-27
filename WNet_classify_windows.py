@@ -44,13 +44,11 @@ def new_train_test_split(data_dict, movies_to_keep, val_perc, AvsW, labels_to_in
                                                                            new_labels_to_index, train_trials,
                                                                            val_trials)
 
-    X_train = np.expand_dims(X_train, axis=2)
-    X_val = np.expand_dims(X_val, axis=2)
-
     return X_train, X_val, Y_train, Y_val, new_labels_to_index
 
 
 def filter_by_labels(AvsW, dataset, concat_channels, labels_to_index, new_labels_to_index, train_trials, val_trials):
+    win_size = 1000
     if AvsW == "all":
 
         X_train = []
@@ -59,12 +57,13 @@ def filter_by_labels(AvsW, dataset, concat_channels, labels_to_index, new_labels
             for trial_index in train_trials:
                 for example in movie[trial_index]:
                     if concat_channels:
+                        # pdb.set_trace()
                         X_train.append(example[0].reshape((47, -1)).transpose())
                         Y_train.append([example[1]])
                     else:
-                        nr_examples_indiv_channels = example[0].size // 1000
+                        nr_examples_indiv_channels = example[0].size // win_size
                         for i in range(nr_examples_indiv_channels):
-                            X_train.append(example[0][i * 1000: (i + 1) * 1000])
+                            X_train.append(example[0][i * win_size: (i + 1) * win_size])
                             Y_train.append(example[1])
 
         X_val = []
@@ -76,9 +75,9 @@ def filter_by_labels(AvsW, dataset, concat_channels, labels_to_index, new_labels
                         X_val.append(example[0].reshape((47, -1)).transpose())
                         Y_val.append([example[1]])
                     else:
-                        nr_examples_indiv_channels = example[0].size // 1000
+                        nr_examples_indiv_channels = example[0].size // win_size
                         for i in range(nr_examples_indiv_channels):
-                            X_val.append(example[0][i * 1000: (i + 1) * 1000])
+                            X_val.append(example[0][i * win_size: (i + 1) * win_size])
                             Y_val.append(example[1])
 
         X_train, Y_train, X_val, Y_val = np.stack(X_train), np.stack(Y_train), np.stack(X_val), np.stack(Y_val)
@@ -99,10 +98,10 @@ def filter_by_labels(AvsW, dataset, concat_channels, labels_to_index, new_labels
                             Y_train.append([new_aerial_view_index if
                                             example[1] == aerial_view_index else new_water_channel_index])
                     else:
-                        nr_examples_indiv_channels = example[0].size // 1000
+                        nr_examples_indiv_channels = example[0].size // win_size
                         for i in range(nr_examples_indiv_channels):
                             if example[1] == aerial_view_index or example[1] == water_channel_index:
-                                X_train.append(example[0][i * 1000: (i + 1) * 1000])
+                                X_train.append(example[0][i * win_size: (i + 1) * win_size])
                                 Y_train.append([new_aerial_view_index if
                                                 example[1] == aerial_view_index else new_water_channel_index])
 
@@ -117,11 +116,11 @@ def filter_by_labels(AvsW, dataset, concat_channels, labels_to_index, new_labels
                             Y_train.append([new_aerial_view_index if
                                             example[1] == aerial_view_index else new_water_channel_index])
                     else:
-                        nr_examples_indiv_channels = example[0].size // 1000
+                        nr_examples_indiv_channels = example[0].size // win_size
                         for i in range(nr_examples_indiv_channels):
-                            X_val.append(example[0][i * 1000: (i + 1) * 1000])
+                            X_val.append(example[0][i * win_size: (i + 1) * win_size])
                             if example[1] == aerial_view_index or example[1] == water_channel_index:
-                                X_train.append(example[0][i * 1000: (i + 1) * 1000])
+                                X_train.append(example[0][i * win_size: (i + 1) * win_size])
                                 Y_train.append(new_aerial_view_index if
                                                example[1] == aerial_view_index else new_water_channel_index)
 
@@ -134,16 +133,47 @@ def filter_by_labels(AvsW, dataset, concat_channels, labels_to_index, new_labels
         water_channel_index = labels_to_index[b'water_channel']
         new_index = min(aerial_view_index, water_channel_index)
         max_index = max(aerial_view_index, water_channel_index)
-        dataset_train = [frame for movie in dataset for trial_index in train_trials for frame in movie[trial_index]]
-        X_train, Y_train = np.array([sample[0] for sample in dataset_train]), \
-                           np.array(
-                               [sample[1] if sample[1] not in [aerial_view_index, water_channel_index] else new_index
-                                for sample in dataset_train])
+        X_train = []
+        Y_train = []
+        for movie in dataset:
+            for trial_index in train_trials:
+                for example in movie[trial_index]:
+                    if concat_channels:
+                        X_train.append(example[0].reshape((47, -1)).transpose())
+                        if example[1] == aerial_view_index or example[1] == water_channel_index:
+                            Y_train.append([new_index])
+                        else:
+                            Y_train.append([example[1] if example[1] < max_index else example[1] - 1])
+                    else:
+                        nr_examples_indiv_channels = example[0].size // win_size
+                        for i in range(nr_examples_indiv_channels):
+                            X_train.append(example[0][i * win_size: (i + 1) * win_size])
+                            if example[1] == aerial_view_index or example[1] == water_channel_index:
+                                Y_train.append([new_index])
+                            else:
+                                Y_train.append([example[1] if example[1] < max_index else example[1] - 1])
 
-        dataset_val = [frame for movie in dataset for trial_index in val_trials for frame in movie[trial_index]]
-        X_val, Y_val = np.array([sample[0] for sample in dataset_val]), \
-                       np.array([sample[1] if sample[1] not in [aerial_view_index, water_channel_index] else
-                                 new_index for sample in dataset_val])
+        X_val = []
+        Y_val = []
+        for movie in dataset:
+            for trial_index in val_trials:
+                for example in movie[trial_index]:
+                    if concat_channels:
+                        X_val.append(example[0].reshape((47, -1)).transpose())
+                        if example[1] == aerial_view_index or example[1] == water_channel_index:
+                            Y_val.append([new_index])
+                        else:
+                            Y_val.append([example[1] if example[1] < max_index else example[1] - 1])
+                    else:
+                        nr_examples_indiv_channels = example[0].size // win_size
+                        for i in range(nr_examples_indiv_channels):
+                            X_val.append(example[0][i * win_size: (i + 1) * win_size])
+                            if example[1] == aerial_view_index or example[1] == water_channel_index:
+                                Y_val.append([new_index])
+                            else:
+                                Y_val.append([example[1] if example[1] < max_index else example[1] - 1])
+
+        X_train, Y_train, X_val, Y_val = np.stack(X_train), np.stack(Y_train), np.stack(X_val), np.stack(Y_val)
 
         del new_labels_to_index[b'aerial_view']
         del new_labels_to_index[b'water_channel']
@@ -214,7 +244,7 @@ def train_model(model_params, X_train, Y_train, X_test, Y_test, classes, model_p
     save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_path),
                                           monitor="val_loss",
                                           save_best_only=True)
-
+    print(model.summary())
     model.fit(x=X_train,
               y=Y_train,
               batch_size=model_params["batch_size"],
