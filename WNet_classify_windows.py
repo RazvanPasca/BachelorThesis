@@ -7,9 +7,9 @@ from WavenetClassifier import classify_params, callbacks
 from WavenetClassifier.wavenet_classifier_model import get_wavenet_model
 from callbacks.MetricsPlotCallback import MetricsPlotCallback
 from datasets.paths import CAT_TFRECORDS_PATH_TOBEFORMATED
-from plot_utils import create_dir_if_not_exists
 from svm.svm import load_cat_tf_record
-from tf_utils import configure_gpu
+from utils.plot_utils import create_dir_if_not_exists
+from utils.tf_utils import configure_gpu
 
 
 def get_classes_list(labels_to_index, AvsW):
@@ -25,6 +25,80 @@ def get_classes_list(labels_to_index, AvsW):
         classes = ['water_channel', 'aerial_view'] if aerial_index > water_index else ['aerial_view', 'water_channel']
 
     return classes
+
+
+def new_train_test_split(data_dict, movies_to_keep, val_perc, AvsW, labels_to_index):
+    nr_trials = 20
+    shuffled_trial_indexes = np.arange(nr_trials)
+    np.random.shuffle(shuffled_trial_indexes)
+    nr_val_trials = round(val_perc * nr_trials)
+    train_trials = shuffled_trial_indexes[:-nr_val_trials]
+    val_trials = shuffled_trial_indexes[-nr_val_trials:]
+    print("Validation trials:{}".format(val_trials))
+    dataset = [list(data_dict[movie].values()) for movie in movies_to_keep]  # list of 3 values
+    new_labels_to_index = labels_to_index.copy()
+
+    X_train, X_val, Y_train, Y_val, new_labels_to_index = filter_by_labels(AvsW, dataset, labels_to_index,
+                                                                           new_labels_to_index, train_trials,
+                                                                           val_trials)
+
+    X_train = np.expand_dims(X_train, axis=2)
+    X_val = np.expand_dims(X_val, axis=2)
+
+    return X_train, X_val, Y_train, Y_val, new_labels_to_index
+
+
+def filter_by_labels(AvsW, dataset, labels_to_index, new_labels_to_index, train_trials, val_trials):
+    if AvsW == "all":
+        dataset_train = [frame for movie in dataset for trial_index in train_trials for frame in movie[trial_index]]
+        X_train, Y_train = np.array([sample[0] for sample in dataset_train]), \
+                           np.array([sample[1] for sample in dataset_train])
+
+        dataset_val = [frame for movie in dataset for trial_index in val_trials for frame in movie[trial_index]]
+        X_val, Y_val = np.array([sample[0] for sample in dataset_val]), np.array([sample[1] for sample in dataset_val])
+
+    elif AvsW == "1v1":
+        aerial_view_index = labels_to_index[b'aerial_view']
+        water_channel_index = labels_to_index[b'water_channel']
+        new_aerial_view_index, new_water_channel_index = (0, 1) if aerial_view_index < water_channel_index else (1, 0)
+
+        dataset_train = [frame for movie in dataset for trial_index in train_trials for frame in movie[trial_index]
+                         if frame[1] == aerial_view_index or frame[1] == water_channel_index]
+
+        X_train, Y_train = np.array([sample[0] for sample in dataset_train]), \
+                           np.array(
+                               [new_aerial_view_index if sample[1] == aerial_view_index else new_water_channel_index
+                                for sample in dataset_train])
+
+        dataset_val = [frame for movie in dataset for trial_index in val_trials for frame in movie[trial_index]
+                       if frame[1] == aerial_view_index or frame[1] == water_channel_index]
+        X_val, Y_val = np.array([sample[0] for sample in dataset_val]), \
+                       np.array([new_aerial_view_index if sample[1] == aerial_view_index else new_water_channel_index
+                                 for sample in dataset_val])
+        new_labels_to_index = {b"aerial_view": new_aerial_view_index, b"water_channel": new_water_channel_index}
+
+    elif AvsW == "merge":
+        aerial_view_index = labels_to_index[b'aerial_view']
+        water_channel_index = labels_to_index[b'water_channel']
+        new_index = min(aerial_view_index, water_channel_index)
+        max_index = max(aerial_view_index, water_channel_index)
+        dataset_train = [frame for movie in dataset for trial_index in train_trials for frame in movie[trial_index]]
+        X_train, Y_train = np.array([sample[0] for sample in dataset_train]), \
+                           np.array(
+                               [sample[1] if sample[1] not in [aerial_view_index, water_channel_index] else new_index
+                                for sample in dataset_train])
+
+        dataset_val = [frame for movie in dataset for trial_index in val_trials for frame in movie[trial_index]]
+        X_val, Y_val = np.array([sample[0] for sample in dataset_val]), \
+                       np.array([sample[1] if sample[1] not in [aerial_view_index, water_channel_index] else
+                                 new_index for sample in dataset_val])
+
+        del new_labels_to_index[b'aerial_view']
+        del new_labels_to_index[b'water_channel']
+        new_labels_to_index[b'merged'] = new_index
+        new_labels_to_index = {key: val - 1 if val > max_index else val for key, val in new_labels_to_index.items()}
+
+    return X_train, X_val, Y_train, Y_val, new_labels_to_index
 
 
 def train_test_split(x, y, test_size, shuffle_seed, AvsW, labels_to_index):
@@ -109,26 +183,9 @@ def main(movies_to_keep, val_perc, concatenate_channels):
     data_dict, labels_to_index = load_cat_tf_record(
         CAT_TFRECORDS_PATH_TOBEFORMATED.format(model_parameters["window_size"]), model_parameters["cutoff_freq"])
 
-    nr_trials = 20
-    shuffled_trial_indexes = np.arange(nr_trials)
-    np.random.shuffle(shuffled_trial_indexes)
-    nr_val_trials = round(val_perc * nr_trials)
-    train_trials = shuffled_trial_indexes[:-nr_val_trials]
-    val_trials = shuffled_trial_indexes[-nr_val_trials:]
-
-    dataset = [list(data_dict[movie].values()) for movie in movies_to_keep]  # list of 3 values
-    data_dict = None
-
-    dataset_train = [frame for movie in dataset for trial_index in train_trials for frame in movie[trial_index]]
-    X_train, Y_train = np.array([sample[0] for sample in dataset_train]), \
-                       np.array([sample[1] for sample in dataset_train])
-
-    dataset_val = [frame for movie in dataset for trial_index in val_trials for frame in movie[trial_index]]
-    X_val, Y_val = np.array([sample[0] for sample in dataset_val]), \
-                   np.array([sample[1] for sample in dataset_val])
-
-    X_train = np.expand_dims(X_train, axis=2)
-    X_val = np.expand_dims(X_val, axis=2)
+    X_train, X_val, Y_train, Y_val, new_labels_to_index = new_train_test_split(data_dict, movies_to_keep, val_perc,
+                                                                               model_parameters["AvsW"],
+                                                                               labels_to_index)
 
     Y_new = np.concatenate((Y_train, Y_val))
     class_count = collections.Counter(Y_new)
@@ -139,14 +196,14 @@ def main(movies_to_keep, val_perc, concatenate_channels):
 
     class_weights = {key: 1 - val / nr_samples if model_parameters["ClassW"] else 1 for key, val in class_count.items()}
 
-    classes = get_classes_list(labels_to_index, model_parameters["AvsW"])
+    classes = get_classes_list(new_labels_to_index, model_parameters["AvsW"])
 
-    # print(class_count)
-    # print(labels_to_index)
-    # print(class_weights)
-    # print(X_train.shape)
-    # print(Y_train.shape)
-    # print(classes)
+    print(class_count)
+    print(new_labels_to_index)
+    print(class_weights)
+    print(X_train.shape)
+    print(Y_train.shape)
+    print(len(classes))
 
     train_model(model_parameters, X_train, Y_train, X_val, Y_val, classes, model_path, class_weights)
 
