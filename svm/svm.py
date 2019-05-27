@@ -109,13 +109,9 @@ def load_tf_record(path):
                         .int64_list
                         .value[0])
 
-            channel = int(example.features.feature['channel']
-                          .int64_list
-                          .value[0])
-
             signal = (example.features.feature['signal'].float_list.value)
 
-            reconstructed_data.append((scene, trial, movie, channel, signal))
+            reconstructed_data.append((scene, trial, movie, signal))
         except:
             print("An exception occurred in sample {}".format(string_record))
     return reconstructed_data
@@ -137,9 +133,11 @@ def load_cat_tf_record(path, cuttof_freq=None):
         trial_dict_for_movie = data_dict[sample[2]]
         label = labels_to_index[sample[0]]
         if sample[1] in trial_dict_for_movie:
-            trial_dict_for_movie[sample[1]].append((filter_input_sample(sample[4], cuttof_freq, filter_type), label))
+            trial_dict_for_movie[sample[1]].append(
+                (filter_input_sample(sample[3], cuttof_freq, filter_type), label))
         else:
-            trial_dict_for_movie[sample[1]] = [(filter_input_sample(sample[4], cuttof_freq, filter_type), label)]
+            trial_dict_for_movie[sample[1]] = [
+                (filter_input_sample(sample[3], cuttof_freq, filter_type), label)]
 
     for movie_key, trial_dict in data_dict.copy().items():
         reindexed_trial_dict = {}

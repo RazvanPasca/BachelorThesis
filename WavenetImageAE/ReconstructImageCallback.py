@@ -11,7 +11,7 @@ def plot_images_reconstructions(images_reconstr, original_images, save_path, nam
     if original_images.shape[3] == 1:
         original_images = np.squeeze(original_images, axis=3)
 
-    nr_cols = images_reconstr.shape[0] // 2
+    nr_cols = 6
     nr_rows = images_reconstr.shape[0] // 6 * 2
     fig, subplots = plt.subplots(nr_rows, nr_cols, sharex=True, figsize=(25, 15), num=name)
     for i, subplot_row in enumerate(subplots):
