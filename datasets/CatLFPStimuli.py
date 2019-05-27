@@ -51,7 +51,7 @@ class CatLFPStimuli:
         y = []
         while 1:
             frame, image_causing_frame = self._get_random_frame_stimuli(frame_size, data, data_indexes)
-            x.append(frame.reshape(frame_size, 47))
+            x.append(frame.transpose())
             y.append(image_causing_frame[:, :, np.newaxis])
             if len(x) == batch_size:
                 yield np.array(x), np.array(y)

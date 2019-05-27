@@ -1,9 +1,9 @@
 model_parameters = {
     "nr_layers": 6,
-    "skip_conn_filters": 8,
-    "nr_filters": 8,
+    "skip_conn_filters": 128,
+    "nr_filters": 256,
     "lr": 1e-05,
-    "batch_size": 64,
+    "batch_size": 16,
     "loss": "MSE",
     "n_epochs": 100,
     "clip_grad_by_value": 5,
