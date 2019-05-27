@@ -12,15 +12,12 @@ model_parameters = {
     "train_val_split": 0.2,
     "random_seed": 42,
     "logging_period": 3,
-    "cutoff_freq": [
-        0,
-        80
-    ],
+    "cutoff_freq": None,
     "nr_rec": 12,
     "train_coverage_per_epoch": 0.001,
     "val_coverage_per_epoch": 0.001,
-    "movies_to_keep": None,
+    "movies_to_keep": [0],
     "labels_to_keep": None,
     "gpu": 0,
-    "save_path": "/data2/razpa/SceneGen",
+    "save_path": "./data2/razpa/SceneGen",
 }
