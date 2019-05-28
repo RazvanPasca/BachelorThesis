@@ -1,7 +1,24 @@
 from keras import losses, Input, Model, optimizers
+from keras.backend import tf
+from keras.engine import Layer, InputSpec
 from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense, Reshape, Lambda, BatchNormalization, \
-    Conv2DTranspose
+    Conv2D, LeakyReLU, UpSampling2D
 from keras.regularizers import l2
+
+
+class ReflectionPadding2D(Layer):
+    def __init__(self, padding=(1, 1), **kwargs):
+        self.padding = tuple(padding)
+        self.input_spec = [InputSpec(ndim=4)]
+        super(ReflectionPadding2D, self).__init__(**kwargs)
+
+    def compute_output_shape(self, s):
+        """ If you are using "channels_last" configuration"""
+        return s[0], s[1] + 2 * self.padding[0], s[2] + 2 * self.padding[1], s[3]
+
+    def call(self, x, mask=None):
+        w_pad, h_pad = self.padding
+        return tf.pad(x, [[0, 0], [h_pad, h_pad], [w_pad, w_pad], [0, 0]], 'REFLECT')
 
 
 def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef, first=False):
@@ -47,10 +64,13 @@ def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef, fi
     return f
 
 
-def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(2, 2), bn_relu=True):
+def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(1, 1), regularization_coef=0.0, bn_relu=True):
     """Layers used during upsampling"""
-    # u = UpSampling2D(size=2)(layer_input)
-    u = Conv2DTranspose(filters, kernel_size=kernel_size, strides=strides, padding='same')(layer_input)
+    padding = kernel_size[0] // 2
+    u = UpSampling2D((2, 2), interpolation="nearest", data_format="channels_last")(layer_input)
+    u = ReflectionPadding2D((padding, padding))(u)
+    u = Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding='valid',
+               kernel_regularizer=l2(regularization_coef))(u)
     if bn_relu:
         u = BatchNormalization(momentum=0.9)(u)
         u = Activation('relu')(u)
@@ -69,23 +89,27 @@ def get_wavenet_dcgan_model(nr_filters, input_shape, nr_layers, lr, loss, clipva
         skip_connections.append(B)
 
     net = Add(name="Skip_Merger")(skip_connections)
-    net = Activation('relu')(net)
-    net = Conv1D(skip_conn_filters, 1, activation='relu', kernel_regularizer=l2(regularization_coef),
-                 name="Skip_FConv_1")(net)
+    net = LeakyReLU()(net)
+    net = Conv1D(skip_conn_filters, 1, kernel_regularizer=l2(regularization_coef), name="Skip_FConv_1")(net)
+    net = LeakyReLU()(net)
+
     net = Conv1D(skip_conn_filters, 1, kernel_regularizer=l2(regularization_coef), name="Skip_FConv_2")(net)
     net = Flatten()(net)
-    net = Dense(z_dim, activation="relu")(net)
-    generator = Dense(16 * generator_filter_size * img_size // 16 * img_size // 16, activation="relu")(net)
-    generator = Reshape((img_size // 16, img_size // 16, generator_filter_size * 16))(generator)
-    # generator = BatchNormalization()(generator)
-    generator = Activation('relu')(generator)
-    generator = deconv2d(generator, filters=generator_filter_size * 8, bn_relu=False)
-    generator = deconv2d(generator, filters=generator_filter_size * 4, bn_relu=False)
-    generator = deconv2d(generator, filters=generator_filter_size * 2, bn_relu=False)
-    output = deconv2d(generator, filters=1, bn_relu=False)
-    # output = deconv2d(generator, filters=1, kernel_size=(3, 3), strides=(1, 1), bn_relu=False)
+    net = Dense(z_dim)(net)
+    net = LeakyReLU()(net)
 
-    # output = Activation('tanh')(generator)
+    seed_img_size = img_size // 16
+    generator = Dense(16 * generator_filter_size * seed_img_size * seed_img_size)(net)
+    generator = Reshape((seed_img_size, seed_img_size, generator_filter_size * 16))(generator)
+    # generator = BatchNormalization()(generator)
+    generator = LeakyReLU()(generator)
+    generator = deconv2d(generator, filters=generator_filter_size * 8, regularization_coef=regularization_coef,
+                         bn_relu=False)
+    generator = deconv2d(generator, filters=generator_filter_size * 4, regularization_coef=regularization_coef,
+                         bn_relu=False)
+    generator = deconv2d(generator, filters=generator_filter_size * 2, regularization_coef=regularization_coef,
+                         bn_relu=False)
+    output = deconv2d(generator, filters=1, regularization_coef=regularization_coef, bn_relu=False)
 
     model = Model(inputs=input_, outputs=output)
     optimizer = optimizers.adam(lr=lr, clipvalue=clipvalue)
