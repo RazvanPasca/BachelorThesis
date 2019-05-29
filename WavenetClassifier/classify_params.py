@@ -21,8 +21,8 @@ model_params = {
     "logging_period": 3,
     "window_size": 1000,
     "ClassW": True,
-    "split_by": "time_crop",  # one of trials, scramble, time_crop
-    "AvsW": "all",  # one of 1v1, merge or all # !!!! only all merge
+    "split_by": "time_crop",  # one of trials, scramble, time_crop, random_time_crop
+    "AvsW": "all",  # one of 1v1, merge or all # !!!! only all works
     "save_path": "."
 }
 

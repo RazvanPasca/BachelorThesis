@@ -79,7 +79,7 @@ def filter_by_labels(AvsW, dataset, concat_channels, new_labels_to_index, split_
         X_val, Y_val = X[val_indices], Y[val_indices]
 
 
-    elif split_by.lower() == "time_crop":
+    elif split_by.lower() == "random_time_crop":
         X_train = []
         Y_train = []
         X_val = []
@@ -88,6 +88,27 @@ def filter_by_labels(AvsW, dataset, concat_channels, new_labels_to_index, split_
         for movie in dataset:
             for trial in movie:
                 train_examples, val_examples = shuffle_indices(len(trial), 0.2, get_sets=True)
+                examples_count = 0
+                for example in trial:
+                    if examples_count in train_examples:
+                        X_train, Y_train = append_by_concat_channels(X_train, Y_train, concat_channels, example,
+                                                                     win_size)
+                    else:
+                        X_val, Y_val = append_by_concat_channels(X_val, Y_val, concat_channels, example, win_size)
+                    examples_count += 1
+
+        X_train, Y_train, X_val, Y_val = np.stack(X_train), np.stack(Y_train), np.stack(X_val), np.stack(Y_val)
+
+
+    elif split_by.lower() == "time_crop":
+        X_train = []
+        Y_train = []
+        X_val = []
+        Y_val = []
+
+        for movie in dataset:
+            train_examples, val_examples = shuffle_indices(len(movie[0]), 0.2, get_sets=True)
+            for trial in movie:
                 examples_count = 0
                 for example in trial:
                     if examples_count in train_examples:
