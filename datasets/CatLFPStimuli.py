@@ -7,12 +7,7 @@ from signal_analysis.signal_utils import get_filter_type, filter_input_sample
 
 
 class CatLFPStimuli:
-    def __init__(self,
-                 movies_to_keep=[0],
-                 cutoff_freq=None,
-                 val_perc=0.20,
-                 test_perc=0.0,
-                 random_seed=42):
+    def __init__(self, movies_to_keep=[0, 1, 2], cutoff_freq=None, val_perc=0.20, random_seed=42):
 
         self.cutoff_freq = cutoff_freq
 
@@ -23,7 +18,7 @@ class CatLFPStimuli:
         self._normalize_data()
         self.nr_conditions = self.signal.shape[0]
         self.trials_per_condition = self.signal.shape[1]
-        self._split_dataset(val_perc, test_perc)
+        self._split_dataset(val_perc)
 
     def _retrieve_trials(self, indexes):
         movies = []
@@ -31,19 +26,16 @@ class CatLFPStimuli:
             movies.append(self.signal[i, indexes, :, :])
         return np.array(movies)
 
-    def _split_dataset(self, val_perc, test_perc):
-        nr_test_trials = round(test_perc * self.trials_per_condition)
+    def _split_dataset(self, val_perc):
         nr_val_trials = round(val_perc * self.trials_per_condition)
-        nr_train_trials = self.trials_per_condition - (nr_test_trials + nr_val_trials)
+        nr_train_trials = self.trials_per_condition - nr_val_trials
 
         trial_indexes_shuffled = np.arange(0, self.trials_per_condition)
         np.random.shuffle(trial_indexes_shuffled)
         self.train_indexes = trial_indexes_shuffled[:nr_train_trials]
         self.val_indexes = trial_indexes_shuffled[nr_train_trials:nr_train_trials + nr_val_trials]
-        self.test_indexes = trial_indexes_shuffled[-nr_test_trials:]
 
         self.validation = self._retrieve_trials(self.val_indexes)
-        self.test = self._retrieve_trials(self.test_indexes)
         self.train = self._retrieve_trials(self.train_indexes)
 
     def frame_generator(self, frame_size, batch_size, data, data_indexes):
@@ -63,9 +55,6 @@ class CatLFPStimuli:
 
     def validation_frame_generator(self, frame_size, batch_size):
         return self.frame_generator(frame_size, batch_size, self.validation, self.val_indexes)
-
-    def test_frame_generator(self, frame_size, batch_size):
-        return self.frame_generator(frame_size, batch_size, self.test, self.test_indexes)
 
     def _get_random_frame_stimuli(self, frame_size, data, data_indexes):
         random_sequence, (movie_index, trial_index) = self.get_random_sequence(data)
@@ -98,7 +87,7 @@ class CatLFPStimuli:
 
 
 if __name__ == '__main__':
-    dataset = CatLFPStimuli(val_perc=0.15, movies_to_keep=[0])
+    dataset = CatLFPStimuli(movies_to_keep=[0], val_perc=0.15)
     for x, y in dataset.train_frame_generator(100, 2):
         print(x.shape)
         print(y.shape)

@@ -69,6 +69,3 @@ class MetricsPlotCallback(Callback):
             plt.savefig(self.save_path + '/training_acc_loss.png')
         plt.close()
 
-    def on_train_end(self, logs={}):
-        if self.save_graph:
-            plt.savefig(self.save_path + '/training_acc_loss.png')

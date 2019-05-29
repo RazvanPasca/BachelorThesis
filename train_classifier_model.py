@@ -9,7 +9,7 @@ from callbacks.MetricsPlotCallback import MetricsPlotCallback
 from datasets.paths import CAT_TFRECORDS_PATH_TOBEFORMATED
 from svm.svm import load_cat_tf_record
 from utils.plot_utils import create_dir_if_not_exists
-from utils.tf_utils import configure_gpu
+from utils.tf_utils import configure_gpu, shuffle_indices
 
 
 def get_classes_list(labels_to_index, AvsW):
@@ -27,60 +27,103 @@ def get_classes_list(labels_to_index, AvsW):
     return classes
 
 
-def new_train_test_split(data_dict, movies_to_keep, val_perc, AvsW, labels_to_index, concatenate_channels, seed):
+def new_train_test_split(data_dict, movies_to_keep, val_perc, AvsW, labels_to_index, concatenate_channels, seed,
+                         split_by):
     np.random.seed(seed)
-    nr_trials = 20
-    shuffled_trial_indexes = np.arange(nr_trials)
-    np.random.shuffle(shuffled_trial_indexes)
-    nr_val_trials = round(val_perc * nr_trials)
-    train_trials = shuffled_trial_indexes[:-nr_val_trials]
-    val_trials = shuffled_trial_indexes[-nr_val_trials:]
-    print("Validation trials:{}".format(val_trials))
+
     dataset = [list(data_dict[movie].values()) for movie in movies_to_keep]  # list of 3 values
     new_labels_to_index = labels_to_index.copy()
 
     X_train, X_val, Y_train, Y_val, new_labels_to_index = filter_by_labels(AvsW, dataset, concatenate_channels,
-                                                                           labels_to_index,
-                                                                           new_labels_to_index, train_trials,
-                                                                           val_trials)
+                                                                           new_labels_to_index, split_by, val_perc)
+
+    return np.expand_dims(X_train, axis=2), np.expand_dims(X_val, axis=2), Y_train, Y_val, new_labels_to_index
+
+
+def filter_by_labels(AvsW, dataset, concat_channels, new_labels_to_index, split_by, split_perc):
+    win_size = 1000
+    nr_trials = 20
+
+    if split_by.lower() == "trials":
+        train_trials, val_trials = shuffle_indices(nr_trials, split_perc, False)
+
+        X_train = []
+        Y_train = []
+        X_val = []
+        Y_val = []
+        for movie in dataset:
+            for trial_index in train_trials:
+                for example in movie[trial_index]:
+                    X_train, Y_train = append_by_concat_channels(X_train, Y_train, concat_channels, example, win_size)
+
+        for movie in dataset:
+            for trial_index in val_trials:
+                for example in movie[trial_index]:
+                    X_val, Y_val = append_by_concat_channels(X_val, Y_val, concat_channels, example, win_size)
+
+        X_train, Y_train, X_val, Y_val = np.stack(X_train), np.stack(Y_train), np.stack(X_val), np.stack(Y_val)
+
+
+    elif split_by.lower() == "scramble":
+        X = []
+        Y = []
+
+        for movie in dataset:
+            for trial in movie:
+                for example in trial:
+                    X, Y = append_by_concat_channels(X, Y, concat_channels, example, win_size)
+
+        X, Y = np.stack(X), np.stack(Y)
+        train_indices, val_indices = shuffle_indices(X.shape[0], split_perc, False)
+        X_train, Y_train = X[train_indices], Y[train_indices]
+        X_val, Y_val = X[val_indices], Y[val_indices]
+
+
+    elif split_by.lower() == "time_crop":
+        X_train = []
+        Y_train = []
+        X_val = []
+        Y_val = []
+
+        for movie in dataset:
+            for trial in movie:
+                train_examples, val_examples = shuffle_indices(len(trial), 0.2, get_sets=True)
+                examples_count = 0
+                for example in trial:
+                    if examples_count in train_examples:
+                        X_train, Y_train = append_by_concat_channels(X_train, Y_train, concat_channels, example,
+                                                                     win_size)
+                    else:
+                        X_val, Y_val = append_by_concat_channels(X_val, Y_val, concat_channels, example, win_size)
+                    examples_count += 1
+
+        X_train, Y_train, X_val, Y_val = np.stack(X_train), np.stack(Y_train), np.stack(X_val), np.stack(Y_val)
+
+    # TODO implement label filtering on the new obtained tensors
+    # Currently just the all setting works
 
     return X_train, X_val, Y_train, Y_val, new_labels_to_index
 
 
-def filter_by_labels(AvsW, dataset, concat_channels, labels_to_index, new_labels_to_index, train_trials, val_trials):
-    win_size = 1000
+def append_by_concat_channels(X, Y, concat_channels, example, win_size):
+    if concat_channels:
+        # pdb.set_trace()
+        X.append(example[0].reshape((47, -1)).transpose())
+        Y.append([example[1]])
+    else:
+        nr_examples_indiv_channels = example[0].size // win_size
+        for i in range(nr_examples_indiv_channels):
+            X.append(example[0][i * win_size: (i + 1) * win_size])
+            Y.append(example[1])
+
+    return X, Y
+
+
+def get_updated_labels(AvsW, concat_channels, dataset, labels_to_index, new_labels_to_index, train_trials, val_trials,
+                       win_size):
     if AvsW == "all":
+        pass
 
-        X_train = []
-        Y_train = []
-        for movie in dataset:
-            for trial_index in train_trials:
-                for example in movie[trial_index]:
-                    if concat_channels:
-                        # pdb.set_trace()
-                        X_train.append(example[0].reshape((47, -1)).transpose())
-                        Y_train.append([example[1]])
-                    else:
-                        nr_examples_indiv_channels = example[0].size // win_size
-                        for i in range(nr_examples_indiv_channels):
-                            X_train.append(example[0][i * win_size: (i + 1) * win_size])
-                            Y_train.append(example[1])
-
-        X_val = []
-        Y_val = []
-        for movie in dataset:
-            for trial_index in val_trials:
-                for example in movie[trial_index]:
-                    if concat_channels:
-                        X_val.append(example[0].reshape((47, -1)).transpose())
-                        Y_val.append([example[1]])
-                    else:
-                        nr_examples_indiv_channels = example[0].size // win_size
-                        for i in range(nr_examples_indiv_channels):
-                            X_val.append(example[0][i * win_size: (i + 1) * win_size])
-                            Y_val.append(example[1])
-
-        X_train, Y_train, X_val, Y_val = np.stack(X_train), np.stack(Y_train), np.stack(X_val), np.stack(Y_val)
 
     elif AvsW == "1v1":
         aerial_view_index = labels_to_index[b'aerial_view']
@@ -179,7 +222,6 @@ def filter_by_labels(AvsW, dataset, concat_channels, labels_to_index, new_labels
         del new_labels_to_index[b'water_channel']
         new_labels_to_index[b'merged'] = new_index
         new_labels_to_index = {key: val - 1 if val > max_index else val for key, val in new_labels_to_index.items()}
-
     return X_train, X_val, Y_train, Y_val, new_labels_to_index
 
 
@@ -268,18 +310,22 @@ def main(movies_to_keep, val_perc, concatenate_channels, seed):
     X_train, X_val, Y_train, Y_val, new_labels_to_index = new_train_test_split(data_dict, movies_to_keep, val_perc,
                                                                                model_parameters["AvsW"],
                                                                                labels_to_index, concatenate_channels,
-                                                                               seed)
+                                                                               seed,
+                                                                               model_parameters["split_by"])
     print(X_train.max())
     print(X_val.max())
 
-    Y_new = np.concatenate((Y_train.flatten(), Y_val.flatten()))
-    class_count = collections.Counter(Y_new)
-    nr_samples = Y_new.size
+    train_counter = collections.Counter(Y_train.flatten())
+    val_counter = collections.Counter(Y_val.flatten())
+    class_count = train_counter + val_counter
+    nr_samples = Y_train.size + Y_val.size
 
     class_weights = {key: 1 - val / nr_samples if model_parameters["ClassW"] else 1 for key, val in class_count.items()}
 
     classes = get_classes_list(new_labels_to_index, model_parameters["AvsW"])
 
+    print(train_counter)
+    print(val_counter)
     print(class_count)
     print(new_labels_to_index)
     print(class_weights)
