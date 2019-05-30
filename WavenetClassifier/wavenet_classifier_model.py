@@ -1,7 +1,7 @@
 import keras
 from keras import Input, Model, optimizers, metrics
 from keras.activations import softmax
-from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense, Lambda, Reshape
+from keras.layers import Conv1D, Multiply, Add, Flatten, Dense, Lambda, Reshape, LeakyReLU
 from keras.regularizers import l2
 
 
@@ -61,15 +61,20 @@ def get_wavenet_model(nr_filters, input_shape, nr_layers, lr, clipvalue, skip_co
         skip_connections.append(B)
 
     net = Add(name="Skip_Merger")(skip_connections)
-    net = Activation('relu')(net)
-    net = Conv1D(skip_conn_filters, 1, activation='relu', padding="same",
-                 kernel_regularizer=l2(regularization_coef), name="Skip_FConv_1")(net)
-    net = Conv1D(skip_conn_filters, 1, padding="same",
-                 kernel_regularizer=l2(regularization_coef), name="Skip_FConv_2")(net)
+    net = LeakyReLU()(net)
+    net = Conv1D(skip_conn_filters, 1, padding="same", kernel_regularizer=l2(regularization_coef),
+                 name="Skip_FConv_1")(net)
+    net = LeakyReLU()(net)
+
+    net = Conv1D(skip_conn_filters, 1, padding="same", kernel_regularizer=l2(regularization_coef),
+                 name="Skip_FConv_2")(net)
     net = Flatten()(net)
+    net = LeakyReLU()(net)
+
+    net = Dense(128, name="Final_dense")(net)
+    net = LeakyReLU()(net)
 
     output = Dense(nr_output_classes, activation=softmax, name="Sfmax")(net)
-
     model = Model(inputs=input_, outputs=output)
     optimizer = optimizers.adam(lr=lr, clipvalue=clipvalue)
     model.compile(loss="sparse_categorical_crossentropy", optimizer=optimizer,

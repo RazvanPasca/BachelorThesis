@@ -2,7 +2,6 @@ import datetime
 import os
 
 model_params = {
-    "nr_classes": -1,
     "n_epochs": 400,
     "batch_size": 64,
     "nr_layers": 6,
@@ -17,12 +16,12 @@ model_params = {
     "movies_to_keep": [1, 2, 3],  # list with [1,2,3] or w/e
     "gpu": 0,
     "concatenate_channels": False,
-    "shuffle_seed": 40,
+    "shuffle_seed": 42,
     "logging_period": 3,
     "window_size": 1000,
     "ClassW": True,
     "split_by": "time_crop",  # one of trials, scramble, time_crop, random_time_crop
-    "AvsW": "all",  # one of 1v1, merge or all # !!!! only all works
+    "AvsW": "all",  # one of 1v1, merge or all # time_crop doesnt work properly???
     "save_path": "."
 }
 
