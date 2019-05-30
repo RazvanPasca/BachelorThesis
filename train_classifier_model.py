@@ -37,7 +37,10 @@ def new_train_test_split(data_dict, movies_to_keep, val_perc, AvsW, labels_to_in
     X_train, X_val, Y_train, Y_val, new_labels_to_index = filter_by_labels(AvsW, dataset, concatenate_channels,
                                                                            new_labels_to_index, split_by, val_perc)
 
-    return np.expand_dims(X_train, axis=2), np.expand_dims(X_val, axis=2), Y_train, Y_val, new_labels_to_index
+    if len(X_train.shape) == 2:
+        X_train, X_val = np.expand_dims(X_train, axis=2), np.expand_dims(X_val, axis=2)
+
+    return X_train, X_val, Y_train, Y_val, new_labels_to_index
 
 
 def filter_by_labels(AvsW, dataset, concat_channels, new_labels_to_index, split_by, split_perc):
@@ -345,8 +348,8 @@ def main(movies_to_keep, val_perc, concatenate_channels, seed):
 
     classes = get_classes_list(new_labels_to_index, model_parameters["AvsW"])
 
-    print(train_counter)
-    print(val_counter)
+    print(len(train_counter), train_counter)
+    print(len(val_counter), val_counter)
     print(class_count)
     print(new_labels_to_index)
     print(class_weights)
