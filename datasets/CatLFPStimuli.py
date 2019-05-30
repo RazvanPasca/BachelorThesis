@@ -7,11 +7,19 @@ from signal_analysis.signal_utils import get_filter_type, filter_input_sample
 
 
 class CatLFPStimuli:
-    def __init__(self, movies_to_keep=[0, 1, 2], cutoff_freq=None, val_perc=0.20, random_seed=42):
+    def __init__(self, movies_to_keep=[0, 1, 2], cutoff_freq=None, val_perc=0.20,
+                 normalization="max",
+                 random_seed=42,
+                 split_by="trial",
+                 chunking="consecutive",
+                 buffer=10):
 
         self.cutoff_freq = cutoff_freq
-
+        self.split_by = split_by
+        self.chunking = chunking
+        self.buffer = buffer
         np.random.seed(random_seed)
+        self.normalization = normalization
         self.movies_to_keep = np.array(movies_to_keep)
         self._load_data(CAT_DATASET_SIGNAL_PATH, CAT_DATASET_STIMULI_PATH)
         self.number_of_channels = self.signal.shape[-2]
@@ -27,16 +35,20 @@ class CatLFPStimuli:
         return np.array(movies)
 
     def _split_dataset(self, val_perc):
-        nr_val_trials = round(val_perc * self.trials_per_condition)
-        nr_train_trials = self.trials_per_condition - nr_val_trials
 
+        if self.split_by.lower() == "trials":
+            self._split_dataset_by_trials(val_perc)
+        elif self.split_by.lower() == "windows":
+            self._split_dataset_by_windows(val_perc)
+
+        self.validation = self._retrieve_trials(self.val_indexes)
+        self.train = self._retrieve_trials(self.train_indexes)
+
+    def _split_dataset_by_trials_old(self, nr_train_trials, nr_val_trials):
         trial_indexes_shuffled = np.arange(0, self.trials_per_condition)
         np.random.shuffle(trial_indexes_shuffled)
         self.train_indexes = trial_indexes_shuffled[:nr_train_trials]
         self.val_indexes = trial_indexes_shuffled[nr_train_trials:nr_train_trials + nr_val_trials]
-
-        self.validation = self._retrieve_trials(self.val_indexes)
-        self.train = self._retrieve_trials(self.train_indexes)
 
     def frame_generator(self, frame_size, batch_size, data, data_indexes):
         x = []
@@ -82,12 +94,24 @@ class CatLFPStimuli:
 
     def _normalize_data(self):
         for channel in range(self.signal.shape[2]):
-            self.signal[:, :, channel, :] /= np.max(self.signal[:, :, channel, :])
+            if self.normalization.lower() == "max":
+                self.signal[:, :, channel, :] /= np.max(self.signal[:, :, channel, :])
+            elif self.normalization.lower() == "std":
+                mean = np.mean(self.signal[:, :, channel, :])
+                std = np.std(self.signal[:, :, channel, :])
+                self.signal[:, :, channel, :] = (self.signal[:, :, channel, :] - mean) / std
+
         self.stimuli = self.stimuli / np.max(self.stimuli)
+
+    def _split_dataset_by_windows(self, val_perc):
+        pass
+
+    def _split_dataset_by_trials(self, val_perc):
+        pass
 
 
 if __name__ == '__main__':
-    dataset = CatLFPStimuli(movies_to_keep=[0], val_perc=0.15)
+    dataset = CatLFPStimuli(movies_to_keep=[0, 1, 2], val_perc=0.15)
     for x, y in dataset.train_frame_generator(100, 2):
         print(x.shape)
         print(y.shape)

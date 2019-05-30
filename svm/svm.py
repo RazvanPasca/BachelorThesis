@@ -5,10 +5,10 @@ import numpy as np
 import tensorflow as tf
 from joblib import Parallel, delayed
 from sklearn.metrics import confusion_matrix, classification_report
-from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 
 from datasets.LFPDataset import LFPDataset
+from datasets.loaders import new_train_test_split
 from datasets.paths import CAT_TFRECORDS_PATH_TOBEFORMATED
 from signal_analysis.signal_utils import get_filter_type, filter_input_sample
 
@@ -146,29 +146,50 @@ def load_cat_tf_record(path, cuttof_freq=None):
 
 
 def main():
-    max_iterations = 1
+    max_iterations = 100000
     file_redirect_output = True
-    # what are your inputs, and what operation do you want to
-    # perform on each input. For example...
-    gammas = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000]
-    Cs = [22, 24, 26, 16, 18, 20]
 
-    cart_prod = [(gamma, c) for c in Cs for gamma in gammas]
 
-    print(cart_prod)
 
     num_cores = multiprocessing.cpu_count()
 
-    x, y, labels_to_index = load_cat_tf_record(CAT_TFRECORDS_PATH_TOBEFORMATED.format(1000))
-    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, shuffle=True)
+    window_size = 1000
+    cutoff_freq = None
+    movies_to_keep = [1, 2, 3]
+    val_perc = 0.2
+    AvsW = False
+    split_by_list = ["trials", "random_time_crop", "scramble"]
 
-    results = Parallel(n_jobs=num_cores)(delayed(train_svm_with_params)(
-        gamma, C, X_test, X_train, file_redirect_output, "linear", labels_to_index, max_iterations,
-        1000, y_test, y_train
-    ) for gamma, C in cart_prod)
+    data_dict, labels_to_index = load_cat_tf_record(
+        CAT_TFRECORDS_PATH_TOBEFORMATED.format(window_size), cutoff_freq)
+
+    X_train_list = []
+    X_val_list = []
+    Y_train_list = []
+    Y_val_list = []
+
+    for split_by in split_by_list:
+        X_train, X_val, Y_train, Y_val, new_labels_to_index = new_train_test_split(data_dict, movies_to_keep, val_perc,
+                                                                                   AvsW,
+                                                                                   labels_to_index,
+                                                                                   False,
+                                                                                   42,
+                                                                                   split_by)
+
+        X_train_list.append(np.squeeze(X_train))
+        X_val_list.append(np.squeeze(X_val))
+        Y_train_list.append(np.squeeze(Y_train))
+        Y_val_list.append(np.squeeze(Y_val))
+
+    results = Parallel(n_jobs=num_cores)(delayed(train_svm_with_params)
+                                         (22, X_val, X_train, file_redirect_output, "linear", labels_to_index,
+                                          max_iterations,
+                                          1000, Y_val, Y_train, split_by) for X_train, X_val, Y_train, Y_val, split_by
+                                         in
+                                         zip(X_train_list, X_val_list, Y_train_list, Y_val_list, split_by_list))
 
 
-def train_svm_with_params(gamma,
+def train_svm_with_params(C,
                           X_test,
                           X_train,
                           file_redirect_output,
@@ -177,22 +198,22 @@ def train_svm_with_params(gamma,
                           max_iterations,
                           window_size,
                           y_test,
-                          y_train):
-    C = 22
+                          y_train,
+                          split_by):
     if file_redirect_output:
-        file_redirect_name = "WS-{}-C-{}-gamma-{}-K-{}-MaxIt-{}".format(window_size, C, gamma, kernel, max_iterations)
+        file_redirect_name = "SplitBy-{}-WS-{}-C-{}-K-{}-MaxIt-{}".format(split_by, window_size, C, kernel,
+                                                                          max_iterations)
         sys.stdout = open(file_redirect_name, 'w+')
+
     print(labels_to_index)
     print("Window size={}".format(window_size))
     print("C={}".format(C))
-    print("gamma={}".format(gamma))
     print("Kernel={}".format(kernel))
     print("Max iterations={}".format(max_iterations))
     svc = SVC(kernel=kernel,
               C=C,
-              gamma=gamma,
               max_iter=max_iterations,
-              cache_size=15000,
+              cache_size=20000,
               class_weight='balanced',
               verbose=False)
     svc.fit(X_train, y_train)

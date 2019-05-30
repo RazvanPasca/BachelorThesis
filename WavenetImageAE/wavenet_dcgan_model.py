@@ -75,6 +75,8 @@ def get_wavenet_dcgan_model(nr_filters, input_shape, nr_layers, lr, loss, clipva
     net = LeakyReLU()(net)
     net = Conv1D(skip_conn_filters, 1, kernel_regularizer=l2(regularization_coef), name="Skip_FConv_2")(net)
     net = Flatten()(net)
+    net = LeakyReLU()(net)
+
     net = Dense(z_dim)(net)
     net = LeakyReLU()(net)
 
