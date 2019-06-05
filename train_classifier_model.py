@@ -6,9 +6,8 @@ from keras.callbacks import CSVLogger, TensorBoard, ModelCheckpoint
 from WavenetClassifier import classify_params, callbacks
 from WavenetClassifier.wavenet_classifier_model import get_wavenet_model
 from callbacks.MetricsPlotCallback import MetricsPlotCallback
-from datasets.loaders import new_train_test_split
+from datasets.loaders import new_train_test_split, load_cat_tf_record
 from datasets.paths import CAT_TFRECORDS_PATH_TOBEFORMATED
-from svm.svm import load_cat_tf_record
 from utils.plot_utils import create_dir_if_not_exists
 from utils.tf_utils import configure_gpu
 
@@ -195,7 +194,13 @@ def train_model(model_params, X_train, Y_train, X_test, Y_test, classes, model_p
     save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_path),
                                           monitor="val_loss",
                                           save_best_only=True)
+
     print(model.summary())
+    steps_per_epoch = round(model_parameters["train_coverage_per_epoch"] * X_train.shape[0]) // model_params[
+        "batch_size"]
+    val_steps_per_epoch = round(model_parameters["val_coverage_per_epoch"] * X_test.shape[0]) // model_params[
+        "batch_size"]
+
     model.fit(x=X_train,
               y=Y_train,
               batch_size=model_params["batch_size"],
@@ -214,13 +219,18 @@ def train_model(model_params, X_train, Y_train, X_test, Y_test, classes, model_p
 
 def main(movies_to_keep, val_perc, concatenate_channels, seed):
     data_dict, labels_to_index = load_cat_tf_record(
-        CAT_TFRECORDS_PATH_TOBEFORMATED.format(model_parameters["window_size"]), model_parameters["cutoff_freq"])
+        CAT_TFRECORDS_PATH_TOBEFORMATED.format(model_parameters["window_size"]),
+        model_parameters["cutoff_freq"])
 
     X_train, X_val, Y_train, Y_val, new_labels_to_index = new_train_test_split(data_dict, movies_to_keep, val_perc,
                                                                                model_parameters["AvsW"],
                                                                                labels_to_index, concatenate_channels,
                                                                                seed,
-                                                                               model_parameters["split_by"])
+                                                                               model_parameters["split_by"],
+                                                                               model_parameters["window_size"])
+
+    X = np.concatenate((X_train, X_val), axis=0)
+
     print(X_train.max())
     print(X_val.max())
 

@@ -20,7 +20,7 @@ model_params = {
     "logging_period": 3,
     "window_size": 1000,
     "ClassW": True,
-    "split_by": "trials",  # one of trials, scramble, time_crop, random_time_crop
+    "split_by": "channels",  # one of trials, scramble, time_crop, random_time_crop
     "AvsW": "all",  # one of 1v1, merge or all # time_crop doesnt work properly???
     "save_path": "."
 }
