@@ -22,11 +22,11 @@ class CatLFPStimuli:
         self.normalization = normalization
         self.movies_to_keep = np.array(movies_to_keep)
         self._load_data(CAT_DATASET_SIGNAL_PATH, CAT_DATASET_STIMULI_PATH)
-        self.number_of_channels = self.signal.shape[-2]
+        # self.number_of_channels = self.signal.shape[-2]
         self._normalize_data()
-        self.nr_conditions = self.signal.shape[0]
-        self.trials_per_condition = self.signal.shape[1]
-        self._split_dataset(val_perc)
+        # self.nr_conditions = self.signal.shape[0]
+        # self.trials_per_condition = self.signal.shape[1]
+        # self._split_dataset(val_perc)
 
     def _retrieve_trials(self, indexes):
         movies = []
@@ -94,7 +94,9 @@ class CatLFPStimuli:
 
     def _normalize_data(self):
         for channel in range(self.signal.shape[2]):
-            if self.normalization.lower() == "max":
+            if self.normalization is None:
+                pass
+            elif self.normalization.lower() == "max":
                 self.signal[:, :, channel, :] /= np.max(self.signal[:, :, channel, :])
             elif self.normalization.lower() == "std":
                 mean = np.mean(self.signal[:, :, channel, :])
