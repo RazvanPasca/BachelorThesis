@@ -13,13 +13,16 @@ class ModelTrainingParameters:
         self.dataset = CatLFPStimuli(movies_to_keep=self.movies_to_keep,
                                      cutoff_freq=self.cutoff_freq,
                                      val_perc=self.train_val_split,
-                                     model=self.model)
+                                     model=self.model,
+                                     split_by=self.split_by,
+                                     slice_length=self.slice_length)
         self.nr_train_steps = (self.dataset.train.size // self.batch_size * self.train_coverage_per_epoch) // \
                               self.dataset.number_of_channels
         self.nr_val_steps = (self.dataset.validation.size // self.batch_size * self.val_coverage_per_epoch) // \
                             self.dataset.number_of_channels
         self._compute_model_path()
         self.frame_size = 2 ** self.nr_layers
+        self.input_shape = self.frame_size if self.slicing_strategy.upper() == "RANDOM" else self.slice_length
 
     def get_model_name(self):
         return "EncL:{}_Ep:{}_StpEp:{}_Perc:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_ZDim:{}_L2:{}_Norm:Brute_Loss:{}_GradClip:{}_LPass:{}".format(
@@ -39,9 +42,12 @@ class ModelTrainingParameters:
 
     def _compute_model_path(self):
         self.model_path = os.path.abspath(os.path.join(
-            self.save_path, "Movies:{}/{}/{}/Pid:{}__{}_Seed:{}".format(
-                str(self.movies_to_keep),
+            self.save_path, "Model:{}/Movies:{}/SplitBy:{}-Strategy:{}-WinL:{}-/{}/Pid:{}__{}_Seed:{}".format(
                 self.model,
+                str(self.movies_to_keep),
+                self.split_by,
+                self.slicing_strategy,
+                self.slice_length,
                 self.get_model_name(),
                 os.getpid(),
                 datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),

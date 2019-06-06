@@ -4,6 +4,7 @@ import numpy as np
 from datasets.paths import CAT_DATASET_SIGNAL_PATH
 from datasets.paths import CAT_DATASET_STIMULI_PATH
 from signal_analysis.signal_utils import get_filter_type, filter_input_sample
+from utils.tf_utils import shuffle_indices
 
 
 class CatLFPStimuli:
@@ -12,7 +13,10 @@ class CatLFPStimuli:
                  cutoff_freq=None,
                  val_perc=0.20,
                  random_seed=42,
-                 model="DCGAN"):
+                 model="DCGAN",
+                 split_by="trials",
+                 slice_length=1000,
+                 slicing_strategy="fixed"):
 
         self.cutoff_freq = cutoff_freq
 
@@ -22,33 +26,63 @@ class CatLFPStimuli:
         self.number_of_channels = self.signal.shape[-2]
         self._normalize_data()
         self.model = model
+        self.slicing_strategy = slicing_strategy.upper()
+        self.split_by = split_by.upper()
+        self.slice_length = slice_length
         self.nr_conditions = self.signal.shape[0]
         self.trials_per_condition = self.signal.shape[1]
         self._split_dataset(val_perc)
 
-    def _retrieve_trials(self, indexes):
-        movies = []
-        for i in range(self.signal.shape[0]):
-            movies.append(self.signal[i, indexes, :, :])
-        return np.array(movies)
+    def _split_dataset_by_trials(self, val_perc):
+        self.train_indexes, self.val_indexes = shuffle_indices(self.trials_per_condition, val_perc, False)
+
+        self.validation = self.signal[:, self.val_indexes, ...]
+        self.train = self.signal[:, self.train_indexes, ...]
 
     def _split_dataset(self, val_perc):
-        nr_val_trials = round(val_perc * self.trials_per_condition)
-        nr_train_trials = self.trials_per_condition - nr_val_trials
+        self.signal = self.signal[self.movies_to_keep, ...]
 
-        trial_indexes_shuffled = np.arange(0, self.trials_per_condition)
-        np.random.shuffle(trial_indexes_shuffled)
-        self.train_indexes = trial_indexes_shuffled[:nr_train_trials]
-        self.val_indexes = trial_indexes_shuffled[nr_train_trials:nr_train_trials + nr_val_trials]
+        if self.slicing_strategy == "FIXED":
+            nr_slices_per_channel = self.signal.shape[-1] // self.slice_length
+            new_dataset = self.get_dataset_with_slices()
 
-        self.validation = self._retrieve_trials(self.val_indexes)
-        self.train = self._retrieve_trials(self.train_indexes)
+            if self.split_by == "TRIALS":
+                train_indexes, val_indexes = shuffle_indices(self.trials_per_condition, val_perc, False)
+                self.train_slices = self.val_slices = np.arange(0, nr_slices_per_channel)
+                self.validation = new_dataset[:, val_indexes, ...]
+                self.train = new_dataset[:, train_indexes, ...]
 
-    def frame_generator(self, frame_size, batch_size, data, data_indexes):
+            elif self.split_by == "SLICES":
+                self.train_slices, self.val_slices = shuffle_indices(nr_slices_per_channel, val_perc, False)
+                self.validation = new_dataset[:, :, :, self.val_slices, :]
+                self.train = new_dataset[:, :, :, self.train_slices, :]
+
+        elif self.slicing_strategy == "RANDOM":
+            self._split_dataset_by_trials(val_perc)
+
+    def get_dataset_with_slices(self):
+        nr_slices_per_channel = self.signal.shape[-1] // self.slice_length
+        new_dataset = np.zeros((self.signal.shape[:-1] + (nr_slices_per_channel, self.slice_length)))
+        for movie in range(self.signal.shape[0]):
+            for trial in range(self.signal.shape[1]):
+                slices = np.zeros((nr_slices_per_channel, self.slice_length))
+                for channel in range(self.signal.shape[2]):
+                    for i in range(nr_slices_per_channel):
+                        slices[i] = self.signal[movie, trial, channel,
+                                    i * self.slice_length: (i + 1) * self.slice_length]
+                    new_dataset[movie, trial, channel] = slices
+
+        return new_dataset
+
+    def frame_generator(self, frame_size, batch_size, data, source):
         x = []
         y = []
         while 1:
-            frame, image_causing_frame = self._get_random_frame_stimuli(frame_size, data, data_indexes)
+            if self.slicing_strategy == "RANDOM":
+                frame, image_causing_frame = self._get_random_frame_stimuli_trials(frame_size, data)
+            else:
+                frame, image_causing_frame = self._get_random_frame_stimuli_slices(data, source)
+
             x.append(frame.transpose())
             y.append(image_causing_frame)
             if len(x) == batch_size:
@@ -57,16 +91,28 @@ class CatLFPStimuli:
                 y = []
 
     def train_frame_generator(self, frame_size, batch_size):
-        return self.frame_generator(frame_size, batch_size, self.train, self.train_indexes)
+        return self.frame_generator(frame_size, batch_size, self.train, "train")
 
     def validation_frame_generator(self, frame_size, batch_size):
-        return self.frame_generator(frame_size, batch_size, self.validation, self.val_indexes)
+        return self.frame_generator(frame_size, batch_size, self.validation, "val")
 
-    def _get_random_frame_stimuli(self, frame_size, data, data_indexes):
+    def _get_random_frame_stimuli_trials(self, frame_size, data):
         random_sequence, (movie_index, trial_index) = self.get_random_sequence(data)
         batch_start = np.random.choice(range(100, random_sequence.shape[-1] - frame_size))
         frame = random_sequence[:, batch_start:batch_start + frame_size]
         image_causing_frame = self._get_stimuli_for_sequence(movie_index, batch_start)
+
+        return frame, image_causing_frame
+
+    def _get_random_frame_stimuli_slices(self, data, source):
+        random_sequence, (movie_index, trial_index) = self.get_random_sequence(data)
+        slice_index = np.random.randint(low=0, high=random_sequence.shape[1])
+        frame = random_sequence[:, slice_index, :]
+        if source.lower() == "val":
+            timestamp = self.val_slices[slice_index] * self.slice_length
+        else:
+            timestamp = self.train_slices[slice_index] * self.slice_length
+        image_causing_frame = self._get_stimuli_for_sequence(movie_index, timestamp)
 
         return frame, image_causing_frame
 
@@ -98,7 +144,7 @@ class CatLFPStimuli:
 
 
 if __name__ == '__main__':
-    dataset = CatLFPStimuli(val_perc=0.15, movies_to_keep=[0])
+    dataset = CatLFPStimuli(val_perc=0.15, movies_to_keep=[0], split_by="SLICES")
     for movie in dataset.stimuli:
         for image in movie:
             plt.imshow(image, cmap="gray")

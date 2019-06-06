@@ -43,7 +43,7 @@ def get_model_callbacks(model_params, train_images_to_reconstr, val_generator, v
 
 def train_model(model_params):
     model = get_wavenet_dcgan_model(nr_filters=model_params.nr_filters,
-                                    input_shape=(model_params.frame_size, 47),
+                                    input_shape=(model_params.input_shape, 47),
                                     nr_layers=model_params.nr_layers,
                                     lr=model_params.lr,
                                     loss=model_params.loss,
