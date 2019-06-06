@@ -95,7 +95,7 @@ def get_wavenet_dcgan_model(nr_filters, input_shape, nr_layers, lr, loss, clipva
                              bn_relu=False)
         output = deconv2d(generator, filters=1, regularization_coef=regularization_coef, bn_relu=False)
 
-    elif model.upper() == "regression":
+    elif model.upper() == "REGRESSION":
         output = Dense(1, name="Regression")(net)
 
     optimizer = optimizers.adam(lr=lr, clipvalue=clipvalue)
