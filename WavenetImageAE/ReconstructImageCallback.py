@@ -28,7 +28,7 @@ def plot_images_reconstructions(images_reconstr, original_images, save_path, nam
 
 
 class ReconstructImageCallback(callbacks.Callback):
-    def __init__(self, train_batch, val_batch, logging_period, nr_rec, model_path):
+    def __init__(self, train_batch, val_batch, logging_period, nr_rec, model_path, model_type):
         super().__init__()
         self.nr_rec = nr_rec
         self.logging_period = logging_period

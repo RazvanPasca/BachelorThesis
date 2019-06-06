@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from keras.callbacks import ModelCheckpoint, CSVLogger
 
 from WavenetImageAE.ModelTrainingParameters import ModelTrainingParameters
@@ -9,6 +10,37 @@ from callbacks.TboardCallbackWrapper import TboardCallbackWrapper
 from utils.tf_utils import configure_gpu
 
 
+def get_model_callbacks(model_params, train_images_to_reconstr, val_generator, val_images_to_reconstr):
+    callbacks = []
+    tensorboard_callback = TboardCallbackWrapper(batch_gen=val_generator,
+                                                 nb_steps=10,
+                                                 log_dir=model_params.model_path,
+                                                 write_graph=True,
+                                                 histogram_freq=5,
+                                                 batch_size=model_params.batch_size)
+    callbacks.append(tensorboard_callback)
+
+    log_callback = CSVLogger(model_params.model_path + "/session_log.csv")
+    callbacks.append(log_callback)
+
+    metric_callback = MetricsPlotCallback(model_params.model_path, graphs=["loss"])
+    callbacks.append(metric_callback)
+
+    save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_params.model_path),
+                                          monitor="val_loss",
+                                          save_best_only=True)
+    callbacks.append(save_model_callback)
+
+    if model_params.model.upper() == "DCGAN":
+        reconstruct_image_callback = ReconstructImageCallback(train_images_to_reconstr,
+                                                              val_images_to_reconstr,
+                                                              model_params.logging_period,
+                                                              model_params.nr_rec,
+                                                              model_params.model_path)
+        callbacks.append(reconstruct_image_callback)
+    return callbacks
+
+
 def train_model(model_params):
     model = get_wavenet_dcgan_model(nr_filters=model_params.nr_filters,
                                     input_shape=(model_params.frame_size, 47),
@@ -18,35 +50,28 @@ def train_model(model_params):
                                     clipvalue=model_params.clip_grad_by_value,
                                     skip_conn_filters=model_params.skip_conn_filters,
                                     regularization_coef=model_params.regularization_coef,
-                                    z_dim=model_params.z_dim)
+                                    z_dim=model_params.z_dim,
+                                    model=model_params.model)
 
     print(model.summary())
 
     train_generator = model_params.dataset.train_frame_generator(model_params.frame_size, model_params.batch_size)
     val_generator = model_params.dataset.validation_frame_generator(model_params.frame_size, model_params.batch_size)
 
-    train_images_to_reconstr = next(train_generator)
-    val_images_to_reconstr = next(val_generator)
+    train_images_to_reconstr = None
+    val_images_to_reconstr = None
 
-    tensorboard_callback = TboardCallbackWrapper(batch_gen=val_generator,
-                                                 nb_steps=10,
-                                                 log_dir=model_params.model_path,
-                                                 write_graph=True,
-                                                 histogram_freq=5,
-                                                 batch_size=model_params.batch_size)
+    if model_params.model.upper() == "DCGAN":
+        train_images_to_reconstr = next(train_generator)
+        val_images_to_reconstr = next(val_generator)
 
-    log_callback = CSVLogger(model_params.model_path + "/session_log.csv")
+    callbacks = get_model_callbacks(model_params, train_images_to_reconstr, val_generator, val_images_to_reconstr)
+    print("Steps per train {} |  Steps per val {} ".format(model_params.nr_train_steps, model_params.nr_val_steps))
 
-    reconstruct_image_callback = ReconstructImageCallback(train_images_to_reconstr,
-                                                          val_images_to_reconstr,
-                                                          model_params.logging_period,
-                                                          model_params.nr_rec,
-                                                          model_params.model_path)
-    metric_callback = MetricsPlotCallback(model_params.model_path, graphs=["loss"])
-
-    save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_params.model_path),
-                                          monitor="val_loss",
-                                          save_best_only=True)
+    plt.hist([movie for movie in model_params.dataset.stimuli_mean], bins=30,
+             label=[str(i) for i in model_params.movies_to_keep])
+    plt.legend(prop={'size': 10})
+    plt.savefig("{}/movies_brightness_histo.png".format(model_params.model_path), format="png")
 
     model.fit_generator(train_generator,
                         steps_per_epoch=model_params.nr_train_steps,
@@ -55,8 +80,7 @@ def train_model(model_params):
                         validation_steps=model_params.nr_val_steps,
                         verbose=2,
                         use_multiprocessing=True,
-                        callbacks=[tensorboard_callback, save_model_callback, metric_callback, log_callback,
-                                   reconstruct_image_callback])
+                        callbacks=callbacks)
 
     print('Saving model and results...')
     model.save(model_params.model_path + "/" + "final_model.h5")

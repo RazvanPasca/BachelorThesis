@@ -5,10 +5,10 @@ from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import linkage
 from scipy.spatial.distance import pdist, squareform
 
+from datasets.LFPDataset import LFPDataset
 from datasets.paths import CAT_DATASET_PATH
 from datasets.paths import MOUSEACH_DATASET_PATH
 from datasets.paths import MOUSE_DATASET_PATH
-from datasets.LFPDataset import LFPDataset
 
 
 # methods = ["ward", "single", "average", "complete"]
@@ -83,7 +83,8 @@ def heatmap_from(data,
                  save_location,
                  plot_title,
                  methods=["average"],
-                 add_order_labels=True):
+                 add_order_labels=True,
+                 show=False):
     if not os.path.exists(save_location):
         os.makedirs(save_location)
 
@@ -98,15 +99,17 @@ def heatmap_from(data,
     results = []
     for method in methods:
         ordered_dist_mat, res_order, res_linkage = compute_serial_matrix(dist_mat, method)
-
+        plt.figure(figsize=(20, 10))
         plt.pcolormesh(ordered_dist_mat)
         plt.xlim([0, N])
         plt.ylim([0, N])
+        plt.colorbar()
         if add_order_labels:
             plt.yticks([x for x in range(len(res_order))], res_order)
         plt.savefig(os.path.join(save_location, "{0}-{1}.png".format(plot_title, method)))
-        # plt.show()
-
+        if show:
+            plt.show()
+        plt.close()
         results.append((ordered_dist_mat, res_order, res_linkage, dist_mat))
     return results
 
@@ -124,12 +127,7 @@ def compute_heatmap_on_dataset(path):
 
     dataset = load_dataset(path)
 
-    heatmap_from(
-        dataset.channels,
-        'correlation',
-        output_path,
-        plot_title,
-        add_order_labels=True)
+    heatmap_from(dataset.channels, 'correlation', output_path, plot_title, add_order_labels=True)
 
 
 def compute_heatmaps_on_channels():

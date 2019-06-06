@@ -59,7 +59,7 @@ def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(2, 2), regul
 
 
 def get_wavenet_dcgan_model(nr_filters, input_shape, nr_layers, lr, loss, clipvalue, skip_conn_filters,
-                            regularization_coef, z_dim, img_size=64, generator_filter_size=64):
+                            regularization_coef, z_dim, model, img_size=64, generator_filter_size=64, ):
     input_ = Input(shape=input_shape)
     A, B = wavenet_block(nr_filters, 3, 1, regularization_coef=regularization_coef, first=True)(input_)
     skip_connections = [B]
@@ -74,26 +74,31 @@ def get_wavenet_dcgan_model(nr_filters, input_shape, nr_layers, lr, loss, clipva
     net = Conv1D(skip_conn_filters, 1, kernel_regularizer=l2(regularization_coef), name="Skip_FConv_1")(net)
     net = LeakyReLU()(net)
     net = Conv1D(skip_conn_filters, 1, kernel_regularizer=l2(regularization_coef), name="Skip_FConv_2")(net)
+
     net = Flatten()(net)
     net = LeakyReLU()(net)
-
     net = Dense(z_dim)(net)
     net = LeakyReLU()(net)
 
-    seed_img_size = img_size // 16
-    generator = Dense(16 * generator_filter_size * seed_img_size * seed_img_size)(net)
-    generator = Reshape((seed_img_size, seed_img_size, generator_filter_size * 16))(generator)
-    # generator = BatchNormalization()(generator)
-    generator = LeakyReLU()(generator)
-    generator = deconv2d(generator, filters=generator_filter_size * 8, regularization_coef=regularization_coef,
-                         bn_relu=False)
-    generator = deconv2d(generator, filters=generator_filter_size * 4, regularization_coef=regularization_coef,
-                         bn_relu=False)
-    generator = deconv2d(generator, filters=generator_filter_size * 2, regularization_coef=regularization_coef,
-                         bn_relu=False)
-    output = deconv2d(generator, filters=1, regularization_coef=regularization_coef, bn_relu=False)
+    if model.upper() == "DCGAN":
 
-    model = Model(inputs=input_, outputs=output)
+        seed_img_size = img_size // 16
+        generator = Dense(4 * generator_filter_size * seed_img_size * seed_img_size)(net)
+        generator = Reshape((seed_img_size, seed_img_size, generator_filter_size * 4))(generator)
+        # generator = BatchNormalization()(generator)
+        generator = LeakyReLU()(generator)
+        generator = deconv2d(generator, filters=generator_filter_size * 4, regularization_coef=regularization_coef,
+                             bn_relu=False)
+        generator = deconv2d(generator, filters=generator_filter_size * 2, regularization_coef=regularization_coef,
+                             bn_relu=False)
+        generator = deconv2d(generator, filters=generator_filter_size, regularization_coef=regularization_coef,
+                             bn_relu=False)
+        output = deconv2d(generator, filters=1, regularization_coef=regularization_coef, bn_relu=False)
+
+    elif model.upper() == "regression":
+        output = Dense(1, name="Regression")(net)
+
     optimizer = optimizers.adam(lr=lr, clipvalue=clipvalue)
+    model = Model(inputs=input_, outputs=output)
     model.compile(loss=losses.MSE if loss.lower() == "mse" else losses.MAE, optimizer=optimizer)
     return model
