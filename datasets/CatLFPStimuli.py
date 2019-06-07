@@ -1,3 +1,4 @@
+import cv2 as cv
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -16,7 +17,7 @@ class CatLFPStimuli:
                  model="DCGAN",
                  split_by="trials",
                  slice_length=1000,
-                 slicing_strategy="fixed"):
+                 slicing_strategy="consecutive"):
 
         self.cutoff_freq = cutoff_freq
 
@@ -25,7 +26,7 @@ class CatLFPStimuli:
         self._load_data(CAT_DATASET_SIGNAL_PATH, CAT_DATASET_STIMULI_PATH)
         self.number_of_channels = self.signal.shape[-2]
         self._normalize_data()
-        self.model = model
+        self.model = model.upper()
         self.slicing_strategy = slicing_strategy.upper()
         self.split_by = split_by.upper()
         self.slice_length = slice_length
@@ -42,7 +43,7 @@ class CatLFPStimuli:
     def _split_dataset(self, val_perc):
         self.signal = self.signal[self.movies_to_keep, ...]
 
-        if self.slicing_strategy == "FIXED":
+        if self.slicing_strategy == "CONSECUTIVE":
             nr_slices_per_channel = self.signal.shape[-1] // self.slice_length
             new_dataset = self.get_dataset_with_slices()
 
@@ -128,14 +129,24 @@ class CatLFPStimuli:
         self.signal = filter_input_sample(self.signal, self.cutoff_freq, filter_type)
         self.stimuli = np.load(stimuli_path)[self.movies_to_keep, ...]
         self.stimuli_mean = np.mean(self.stimuli / np.max(self.stimuli), axis=(2, 3))
+        self.stimuli_edges = np.zeros(self.stimuli.shape)
+        for i, movie in enumerate(self.stimuli):
+            for j, image in enumerate(movie):
+                highThreshold = np.max(image) * 0.75
+                lowThreshold = highThreshold * 0.85
+                edges = cv.Canny(image, lowThreshold, highThreshold, L2gradient=True)
+                self.stimuli_edges[i, j, :, :] = edges
+        self.stimuli_edges_sum = np.mean(self.stimuli_edges, axis=(2, 3))
 
     def _get_stimuli_for_sequence(self, movie_index, seq_start):
         image_number = (seq_start - 100) // 40
-        if self.model.upper() == "DCGAN":
+        if self.model == "DCGAN":
             image = self.stimuli[movie_index, image_number, :, :]
             return image[:, :, np.newaxis]
-        else:
+        elif self.model == "BRIGHTNESS":
             return np.array([self.stimuli_mean[movie_index, image_number]])
+        elif self.model == "EDGES":
+            return np.array([self.stimuli_edges_sum[movie_index, image_number]])
 
     def _normalize_data(self):
         for channel in range(self.signal.shape[2]):
@@ -144,8 +155,13 @@ class CatLFPStimuli:
 
 
 if __name__ == '__main__':
-    dataset = CatLFPStimuli(val_perc=0.15, movies_to_keep=[0], split_by="SLICES")
-    for movie in dataset.stimuli:
-        for image in movie:
-            plt.imshow(image, cmap="gray")
+    movies_to_keep = [0, 1, 2]
+    dataset = CatLFPStimuli(val_perc=0.15, movies_to_keep=movies_to_keep, split_by="SLICES")
+    np.random.seed(42)
+    for movie in movies_to_keep:
+        for j in np.random.choice(700, 10):
+            plt.subplot(121), plt.imshow(dataset.stimuli[movie, j], cmap='gray')
+            plt.title('Original Image'), plt.xticks([]), plt.yticks([])
+            plt.subplot(122), plt.imshow(dataset.stimuli_edges[movie, j], cmap='gray')
+            plt.title('Edge Image'), plt.xticks([]), plt.yticks([])
             plt.show()
