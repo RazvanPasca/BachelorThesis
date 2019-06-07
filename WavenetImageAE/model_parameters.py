@@ -1,7 +1,7 @@
 model_parameters = {
     "nr_layers": 7,
-    "skip_conn_filters": 16,
-    "nr_filters": 16,
+    "skip_conn_filters": 32,
+    "nr_filters": 32,
     "lr": 3e-05,
     "batch_size": 32,
     "loss": "MAE",
@@ -15,7 +15,7 @@ model_parameters = {
     "logging_period": 3,
     "cutoff_freq": None,
     "nr_rec": 18,
-    "split_by": "slices",  # one of slices or trials
+    "split_by": "trials",  # one of slices or trials
     "slice_length": 100,  # if slicing_strategy == fixed, this gives the length of slice
     "slicing_strategy": "consecutive",  # consecutive or random
     "train_coverage_per_epoch": 0.01,
