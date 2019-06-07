@@ -4,6 +4,7 @@ import numpy as np
 
 from datasets.paths import CAT_DATASET_SIGNAL_PATH
 from datasets.paths import CAT_DATASET_STIMULI_PATH
+from datasets.paths import CAT_DATASET_STIMULI_PATH_64
 from signal_analysis.signal_utils import get_filter_type, filter_input_sample
 from utils.tf_utils import shuffle_indices
 
@@ -23,7 +24,7 @@ class CatLFPStimuli:
 
         np.random.seed(random_seed)
         self.movies_to_keep = np.array(movies_to_keep)
-        self._load_data(CAT_DATASET_SIGNAL_PATH, CAT_DATASET_STIMULI_PATH)
+        self._load_data(CAT_DATASET_SIGNAL_PATH, CAT_DATASET_STIMULI_PATH_64, CAT_DATASET_STIMULI_PATH)
         self.number_of_channels = self.signal.shape[-2]
         self._normalize_data()
         self.model = model.upper()
@@ -122,21 +123,26 @@ class CatLFPStimuli:
         trial_index = np.random.choice(data_source.shape[1])
         return data_source[movie_index, trial_index], (movie_index, trial_index)
 
-    def _load_data(self, signal_path, stimuli_path, ):
+    def _load_data(self, signal_path, stimuli_path_resized, stimuli_path):
 
         self.signal = np.load(signal_path)[self.movies_to_keep, ...]
         filter_type = get_filter_type(self.cutoff_freq)
         self.signal = filter_input_sample(self.signal, self.cutoff_freq, filter_type)
-        self.stimuli = np.load(stimuli_path)[self.movies_to_keep, ...]
-        self.stimuli_mean = np.mean(self.stimuli / np.max(self.stimuli), axis=(2, 3))
-        self.stimuli_edges = np.zeros(self.stimuli.shape)
-        for i, movie in enumerate(self.stimuli):
+        self.stimuli = np.load(stimuli_path_resized)[self.movies_to_keep, ...]
+        # self.stimuli_mean = np.mean(self.stimuli / np.max(self.stimuli), axis=(2, 3))
+        self.stimuli_orig_ = np.load(stimuli_path)[self.movies_to_keep, ...]
+        self.stimuli_edges = np.zeros(self.stimuli_orig_.shape)
+        for i, movie in enumerate(self.stimuli_orig_):
             for j, image in enumerate(movie):
-                highThreshold = np.max(image) * 0.75
-                lowThreshold = highThreshold * 0.85
+                highThreshold = np.max(image) * 0.6
+                lowThreshold = highThreshold * 0.7
                 edges = cv.Canny(image, lowThreshold, highThreshold, L2gradient=True)
+                kernel = np.ones((1, 2), np.uint8)
+                edges = cv.morphologyEx(edges, cv.MORPH_OPEN, kernel)
+                # kernel = np.ones((1, 2), np.uint8)
+                # edges = cv.morphologyEx(edges, cv.MORPH_ERODE, kernel)
                 self.stimuli_edges[i, j, :, :] = edges
-        self.stimuli_edges_sum = np.mean(self.stimuli_edges, axis=(2, 3))
+        self.stimuli_edges_sum = np.sum(self.stimuli_edges, axis=(2, 3)) / 255
 
     def _get_stimuli_for_sequence(self, movie_index, seq_start):
         image_number = (seq_start - 100) // 40
@@ -155,12 +161,12 @@ class CatLFPStimuli:
 
 
 if __name__ == '__main__':
-    movies_to_keep = [0, 1, 2]
+    movies_to_keep = [0, 1]
     dataset = CatLFPStimuli(val_perc=0.15, movies_to_keep=movies_to_keep, split_by="SLICES")
     np.random.seed(42)
     for movie in movies_to_keep:
         for j in np.random.choice(700, 10):
-            plt.subplot(121), plt.imshow(dataset.stimuli[movie, j], cmap='gray')
+            plt.subplot(121), plt.imshow(dataset.stimuli_orig_[movie, j], cmap='gray')
             plt.title('Original Image'), plt.xticks([]), plt.yticks([])
             plt.subplot(122), plt.imshow(dataset.stimuli_edges[movie, j], cmap='gray')
             plt.title('Edge Image'), plt.xticks([]), plt.yticks([])

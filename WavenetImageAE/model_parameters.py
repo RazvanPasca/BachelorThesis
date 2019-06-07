@@ -5,7 +5,7 @@ model_parameters = {
     "lr": 3e-05,
     "batch_size": 32,
     "loss": "MAE",
-    "model": "brightness",  # brightness / edges / dcgan
+    "model": "edges",  # brightness / edges / dcgan
     "n_epochs": 100,
     "clip_grad_by_value": 5,
     "regularization_coef": 0.001,
