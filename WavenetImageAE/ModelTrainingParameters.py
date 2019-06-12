@@ -13,9 +13,10 @@ class ModelTrainingParameters:
         self.dataset = CatLFPStimuli(movies_to_keep=self.movies_to_keep,
                                      cutoff_freq=self.cutoff_freq,
                                      val_perc=self.train_val_split,
-                                     model=self.model,
+                                     model_output_type=self.model,
                                      split_by=self.split_by,
-                                     slice_length=self.slice_length)
+                                     slice_length=self.slice_length,
+                                     classification_type=self.model_output_type)
         self.nr_train_steps = (self.dataset.train.size // self.batch_size * self.train_coverage_per_epoch) // \
                               self.dataset.number_of_channels
         self.nr_val_steps = (self.dataset.validation.size // self.batch_size * self.val_coverage_per_epoch) // \
@@ -43,7 +44,7 @@ class ModelTrainingParameters:
     def _compute_model_path(self):
         self.model_path = os.path.abspath(os.path.join(
             self.save_path, "Model:{}/Movies:{}/SplitBy:{}-Strategy:{}-WinL:{}-/{}/Pid:{}__{}_Seed:{}".format(
-                self.model,
+                self.model_output_type,
                 str(self.movies_to_keep),
                 self.split_by,
                 self.slicing_strategy,

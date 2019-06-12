@@ -1,4 +1,4 @@
-from keras import losses, Input, Model, optimizers
+from keras import losses, Input, Model, optimizers, metrics
 from keras.backend import tf
 from keras.engine import Layer, InputSpec
 from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense, Reshape, Lambda, BatchNormalization, \
@@ -78,7 +78,8 @@ def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(1, 1), regul
 
 
 def get_wavenet_dcgan_model(nr_filters, input_shape, nr_layers, lr, loss, clipvalue, skip_conn_filters,
-                            regularization_coef, z_dim, model, img_size=64, generator_filter_size=64, ):
+                            regularization_coef, z_dim, output_type, img_size=64, generator_filter_size=64,
+                            nr_classes=3):
     input_ = Input(shape=input_shape)
     A, B = wavenet_block(nr_filters, 3, 1, regularization_coef=regularization_coef, first=True)(input_)
     skip_connections = [B]
@@ -99,7 +100,16 @@ def get_wavenet_dcgan_model(nr_filters, input_shape, nr_layers, lr, loss, clipva
     net = Dense(z_dim)(net)
     net = LeakyReLU()(net)
 
-    if model.upper() == "DCGAN":
+    model = get_model_w_output_stage(clipvalue, generator_filter_size, img_size, input_, loss, lr, output_type, net,
+                                     nr_classes,
+                                     regularization_coef)
+    return model
+
+
+def get_model_w_output_stage(clipvalue, generator_filter_size, img_size, input_, loss, lr, output_type, net, nr_classes,
+                             regularization_coef):
+    optimizer = optimizers.adam(lr=lr, clipvalue=clipvalue)
+    if output_type.upper() == "DCGAN":
 
         seed_img_size = img_size // 16
         generator = Dense(4 * generator_filter_size * seed_img_size * seed_img_size)(net)
@@ -113,11 +123,18 @@ def get_wavenet_dcgan_model(nr_filters, input_shape, nr_layers, lr, loss, clipva
         generator = deconv2d(generator, filters=generator_filter_size, regularization_coef=regularization_coef,
                              bn_relu=False)
         output = deconv2d(generator, filters=1, regularization_coef=regularization_coef, bn_relu=False)
+        model = Model(inputs=input_, outputs=output)
+        model.compile(loss=losses.MSE if loss.lower() == "mse" else losses.MAE, optimizer=optimizer)
 
-    elif model.upper() == "BRIGHTNESS" or model.upper() == "EDGES":
+    elif output_type.upper() == "BRIGHTNESS" or output_type.upper() == "EDGES":
         output = Dense(1, name="Regression")(net)
+        model = Model(inputs=input_, outputs=output)
+        model.compile(loss=losses.MSE if loss.lower() == "mse" else losses.MAE, optimizer=optimizer)
 
-    model = Model(inputs=input_, outputs=output)
-    optimizer = optimizers.adam(lr=lr, clipvalue=clipvalue)
-    model.compile(loss=losses.MSE if loss.lower() == "mse" else losses.MAE, optimizer=optimizer)
+    elif output_type.upper() == "CLASSIFY_MOVIES":
+        output = Dense(nr_classes, activation="softmax", name="Softmax")(net)
+        model = Model(inputs=input_, outputs=output)
+        model.compile(loss="sparse_categorical_crossentropy", optimizer=optimizer,
+                      metrics=[metrics.sparse_categorical_accuracy])
+
     return model

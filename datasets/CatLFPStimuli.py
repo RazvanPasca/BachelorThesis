@@ -15,7 +15,7 @@ class CatLFPStimuli:
                  cutoff_freq=None,
                  val_perc=0.20,
                  random_seed=42,
-                 model="DCGAN",
+                 model_output_type="DCGAN",
                  split_by="trials",
                  slice_length=1000,
                  slicing_strategy="consecutive"):
@@ -27,7 +27,9 @@ class CatLFPStimuli:
         self._load_data(CAT_DATASET_SIGNAL_PATH, CAT_DATASET_STIMULI_PATH_64, CAT_DATASET_STIMULI_PATH)
         self.number_of_channels = self.signal.shape[-2]
         self._normalize_data()
-        self.model = model.upper()
+        self.classification_type = self._get_classification_type(model_output_type)
+        self.nr_classes = self._get_nr_classes()
+        self.model_output_type = model_output_type.upper()
         self.slicing_strategy = slicing_strategy.upper()
         self.split_by = split_by.upper()
         self.slice_length = slice_length
@@ -146,18 +148,30 @@ class CatLFPStimuli:
 
     def _get_stimuli_for_sequence(self, movie_index, seq_start):
         image_number = (seq_start - 100) // 40
-        if self.model == "DCGAN":
+        if self.model_output_type == "DCGAN":
             image = self.stimuli[movie_index, image_number, :, :]
             return image[:, :, np.newaxis]
-        elif self.model == "BRIGHTNESS":
+        elif self.model_output_type == "BRIGHTNESS":
             return np.array([self.stimuli_mean[movie_index, image_number]])
-        elif self.model == "EDGES":
+        elif self.model_output_type == "EDGES":
             return np.array([self.stimuli_edges_sum[movie_index, image_number]])
+        elif self.model_output_type == "CLASSIFY_MOVIES":
+            return np.array([movie_index])
 
     def _normalize_data(self):
         for channel in range(self.signal.shape[2]):
             self.signal[:, :, channel, :] /= np.max(self.signal[:, :, channel, :])
         self.stimuli = self.stimuli / np.max(self.stimuli)
+
+    def _get_classification_type(self, classification_type):
+        if classification_type.find("movies"):
+            return "movies"
+        elif classification_type.find("scenes"):
+            return "scenes"
+
+    def _get_nr_classes(self):
+        if self.classification_type == "movies":
+            return len(self.movies_to_keep)
 
 
 if __name__ == '__main__':

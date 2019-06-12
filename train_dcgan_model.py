@@ -51,7 +51,8 @@ def train_model(model_params):
                                     skip_conn_filters=model_params.skip_conn_filters,
                                     regularization_coef=model_params.regularization_coef,
                                     z_dim=model_params.z_dim,
-                                    model=model_params.model)
+                                    output_type=model_params.model,
+                                    nr_classes=model_params.dataset.nr_classes)
 
     print(model.summary())
 

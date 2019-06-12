@@ -5,7 +5,7 @@ model_parameters = {
     "lr": 3e-05,
     "batch_size": 32,
     "loss": "MAE",
-    "model": "edges",  # brightness / edges / dcgan
+    "model_output_type": "classify_movies",  # brightness / edges / dcgan / classify_movies
     "n_epochs": 100,
     "clip_grad_by_value": 5,
     "regularization_coef": 0.001,
@@ -17,7 +17,7 @@ model_parameters = {
     "nr_rec": 18,
     "split_by": "trials",  # one of slices or trials
     "slice_length": 100,  # if slicing_strategy == fixed, this gives the length of slice
-    "slicing_strategy": "consecutive",  # consecutive or random
+    "slicing_strategy": "consecutive",  # consecutive or random, should use consecutive for now
     "train_coverage_per_epoch": 0.01,
     "val_coverage_per_epoch": 0.01,
     "movies_to_keep": [0, 1, 2],  # one of [0,1,2]
