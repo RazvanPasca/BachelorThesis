@@ -22,8 +22,9 @@ def get_model_callbacks(model_params, train_images_to_reconstr, val_generator, v
 
     log_callback = CSVLogger(model_params.model_path + "/session_log.csv")
     callbacks.append(log_callback)
-
-    metric_callback = MetricsPlotCallback(model_params.model_path, graphs=["loss"])
+    
+    metrics=["loss", "acc"] if "classify" in model_params.model_output_type else ["loss"]
+    metric_callback = MetricsPlotCallback(model_params.model_path, metrics)
     callbacks.append(metric_callback)
 
     save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_params.model_path),
@@ -31,7 +32,7 @@ def get_model_callbacks(model_params, train_images_to_reconstr, val_generator, v
                                           save_best_only=True)
     callbacks.append(save_model_callback)
 
-    if model_params.model.upper() == "DCGAN":
+    if model_params.model_output_type.upper() == "DCGAN":
         reconstruct_image_callback = ReconstructImageCallback(train_images_to_reconstr,
                                                               val_images_to_reconstr,
                                                               model_params.logging_period,
@@ -51,7 +52,7 @@ def train_model(model_params):
                                     skip_conn_filters=model_params.skip_conn_filters,
                                     regularization_coef=model_params.regularization_coef,
                                     z_dim=model_params.z_dim,
-                                    output_type=model_params.model,
+                                    output_type=model_params.model_output_type,
                                     nr_classes=model_params.dataset.nr_classes)
 
     print(model.summary())
@@ -62,7 +63,7 @@ def train_model(model_params):
     train_images_to_reconstr = None
     val_images_to_reconstr = None
 
-    if model_params.model.upper() == "DCGAN":
+    if model_params.model_output_type.upper() == "DCGAN":
         train_images_to_reconstr = next(train_generator)
         val_images_to_reconstr = next(val_generator)
 

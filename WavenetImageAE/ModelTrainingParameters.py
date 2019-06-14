@@ -13,10 +13,9 @@ class ModelTrainingParameters:
         self.dataset = CatLFPStimuli(movies_to_keep=self.movies_to_keep,
                                      cutoff_freq=self.cutoff_freq,
                                      val_perc=self.train_val_split,
-                                     model_output_type=self.model,
+                                     model_output_type=self.model_output_type,
                                      split_by=self.split_by,
-                                     slice_length=self.slice_length,
-                                     classification_type=self.model_output_type)
+                                     slice_length=self.slice_length)
         self.nr_train_steps = (self.dataset.train.size // self.batch_size * self.train_coverage_per_epoch) // \
                               self.dataset.number_of_channels
         self.nr_val_steps = (self.dataset.validation.size // self.batch_size * self.val_coverage_per_epoch) // \
