@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 from keras.callbacks import ModelCheckpoint, CSVLogger
 
 from WavenetImageAE.ModelTrainingParameters import ModelTrainingParameters
@@ -22,14 +21,13 @@ def get_model_callbacks(model_params, train_images_to_reconstr, val_generator, v
 
     log_callback = CSVLogger(model_params.model_path + "/session_log.csv")
     callbacks.append(log_callback)
-    
-    metrics=["loss", "acc"] if "classify" in model_params.model_output_type else ["loss"]
+
+    metrics = ["loss", "acc"] if "classify" in model_params.model_output_type else ["loss"]
     metric_callback = MetricsPlotCallback(model_params.model_path, metrics)
     callbacks.append(metric_callback)
 
     save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_params.model_path),
-                                          monitor="val_loss",
-                                          save_best_only=True)
+                                          monitor="val_loss", save_best_only=True)
     callbacks.append(save_model_callback)
 
     if model_params.model_output_type.upper() == "DCGAN":
@@ -70,10 +68,8 @@ def train_model(model_params):
     callbacks = get_model_callbacks(model_params, train_images_to_reconstr, val_generator, val_images_to_reconstr)
     print("Steps per train {} |  Steps per val {} ".format(model_params.nr_train_steps, model_params.nr_val_steps))
 
-    plt.hist([movie for movie in model_params.dataset.stimuli_mean], bins=30,
-             label=[str(i) for i in model_params.movies_to_keep])
-    plt.legend(prop={'size': 10})
-    plt.savefig("{}/movies_brightness_histo.png".format(model_params.model_path), format="png")
+    if model_params.model_output_type == "edges" or model_params.model_output_type == "brightness":
+        model_params.dataset.plot_stimuli_hist(model_params.model_path)
 
     model.fit_generator(train_generator,
                         steps_per_epoch=model_params.nr_train_steps,
