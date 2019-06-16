@@ -8,7 +8,6 @@ from signal_analysis.signal_utils import butter_pass_filter
 
 
 class LFPDataset:
-
     def __init__(self, dataset_path, saved_as_npy=True, normalization=None, cutoff_freq=[2], random_seed=42,
                  white_noise_dev=-1, nr_bins=256):
         self.description_file_path = dataset_path
@@ -48,15 +47,22 @@ class LFPDataset:
         if self.white_noise:
             self._add_noise_to_input()
 
+    # TODO remove
     def _add_noise_to_input(self):
         noise = np.random.normal(0, self.white_noise_dev, self.channels.shape)
         self.channels += noise
 
+    """
+    Filters the input using a band or low pass 
+    """
     def _filter_input(self):
         filter_type = "band" if len(self.cutoff_freq) > 1 else "low"
         for i, channel in enumerate(self.channels):
             self.channels[i] = butter_pass_filter(channel, self.cutoff_freq, 1000, filter_type)
 
+    """
+    Parses the metadata about dataset
+    """
     def _parse_stimulus_data(self, condition_file_path):
         with open(os.path.join(os.path.dirname(self.description_file_path), condition_file_path),
                   'r') as f:
@@ -75,23 +81,35 @@ class LFPDataset:
                     conditions.append(cond)
                 return conditions
 
+    """
+    Parses channels signal data into a single array
+    """
     def _parse_channels_data(self, channels_paths):
         return np.array(
             [np.fromfile(open(os.path.join(os.path.dirname(self.description_file_path), channel_path), 'rb'),
                          np.float32) for channel_path in channels_paths])
 
+    """
+    Parses event codes
+    """
     def _parse_event_codes(self, file_path):
         if file_path is None:
             return None
         return np.fromfile(open(os.path.join(os.path.dirname(self.description_file_path), file_path), 'rb'),
                            np.int32)
 
+    """
+    Parses timestamps for event codes
+    """
     def _parse_event_timestamps(self, file_path):
         if file_path is None:
             return None
         return np.fromfile(open(os.path.join(os.path.dirname(self.description_file_path), file_path), 'rb'),
                            np.int32)
 
+    """
+    Parses stimulus on of from timestamps
+    """
     def _parse_stimulus_on_off(self, lfp_description):
         if self.ldf_file_version == '1.0':
             return lfp_description.get('stimulus_on_at'), lfp_description.get('stimulus_off_at')
@@ -105,20 +123,32 @@ class LFPDataset:
                     stimulus_off_at.append(self.event_timestamps[index])
             return stimulus_on_at, stimulus_off_at
 
+    """
+    Saves dataset as npy
+    """
     def save_as_npy(self, path):
         np.save(path, vars(self))
 
+    """
+    Loads dataset from npy
+    """
     def load_from_npy(self, path):
         lfp_file_data = np.load(path).item()
         for prop, val in lfp_file_data.items():
             setattr(self, prop, val)
 
+    """
+    Parses description of lfp from json
+    """
     @staticmethod
     def _parse_description(description_file_path):
         with open(description_file_path, 'r') as f:
             lfp_description = json.loads(f.read())
         return lfp_description
 
+    """
+    Gets the total length of data in TRAIN, VAL or TEST
+    """
     def get_total_length(self, partition):
         if partition == "TRAIN":
             return self.train.size
@@ -129,11 +159,18 @@ class LFPDataset:
         else:
             raise ValueError("Please pick a valid partition from: TRAIN, VAL and TEST")
 
+    """
+    Computes the range between which signal is
+    """
     def _compute_values_range(self):
         min_val = min(np.min(self.train), np.min(self.validation))
         max_val = max(np.max(self.train), np.max(self.validation))
         self.values_range = min_val, max_val
 
+
+    """
+    Load the dataset and keeps only some channels, conditions, trials
+    """
     def _get_dataset_keep_indexes(self, channels_to_keep, conditions_to_keep, trials_to_keep, noisy_channels):
         if channels_to_keep[0] == -1:
             self.channels_to_keep = np.array(range(self.nr_channels))

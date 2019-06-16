@@ -19,6 +19,13 @@ def replace_at_index(tup, ix, val):
 
 
 def shuffle_indices(indices_nr, split_perc, get_sets):
+    """
+
+    Computes a permutation for indices_nr of indices and
+    split them into two sets(or lists)
+
+    """
+
     shuffled_indices = np.arange(indices_nr)
     np.random.shuffle(shuffled_indices)
     nr_val_indices = round(split_perc * indices_nr)

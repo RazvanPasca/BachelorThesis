@@ -55,8 +55,8 @@ def train_model(model_params):
 
     print(model.summary())
 
-    train_generator = model_params.dataset.train_frame_generator(model_params.frame_size, model_params.batch_size)
-    val_generator = model_params.dataset.validation_frame_generator(model_params.frame_size, model_params.batch_size)
+    train_generator = model_params.dataset.train_sample_generator(model_params.frame_size, model_params.batch_size)
+    val_generator = model_params.dataset.validation_sample_generator(model_params.frame_size, model_params.batch_size)
 
     train_images_to_reconstr = None
     val_images_to_reconstr = None

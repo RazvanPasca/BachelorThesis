@@ -37,12 +37,18 @@ class CatLFP(LFPDataset):
 
         np.random.seed(datetime.datetime.now().microsecond)
 
+    """
+    Decides which sequences are used for plotting
+    """
     def get_sequences_for_plotting(self, nr_of_seqs):
         self.prediction_sequences = {
             'VAL': [self.get_random_sequence_from('VAL') for _ in range(nr_of_seqs)],
             'TRAIN': [self.get_random_sequence_from('TRAIN') for _ in range(nr_of_seqs)]
         }
 
+    """
+    Splits the lfp data into shape (3,20,47,28000)
+    """
     def _split_lfp_data(self):
         self.all_lfp_data = []
         for condition_id in range(0, self.number_of_conditions):
@@ -56,6 +62,9 @@ class CatLFP(LFPDataset):
         self.all_lfp_data = np.array(self.all_lfp_data, dtype=np.float32)
         self.channels = None
 
+    """
+    Computes the bin size and the bins
+    """
     def _pre_compute_bins(self):
         self._compute_values_range()
         self.cached_val_bin = {}
@@ -64,6 +73,9 @@ class CatLFP(LFPDataset):
         self.bins = np.linspace(min_train_seq, max_train_seq, self.nr_bins)
         self.bin_size = self.bins[1] - self.bins[0]
 
+    """
+    Maps value into a discretized bin
+    """
     def _encode_input_to_bin(self, target_val):
         if target_val not in self.cached_val_bin:
             if self.mu_law:
@@ -72,6 +84,9 @@ class CatLFP(LFPDataset):
                 self.cached_val_bin[target_val] = np.digitize(target_val, self.bins, right=False)
         return self.cached_val_bin[target_val]
 
+    """
+    Splits the channels into train, validation and test by trials
+    """
     def _get_train_val_test_split_channel_wise(self, movies_to_keep, channels_to_keep, val_perc, test_perc):
         nr_test_trials = round(test_perc * self.trials_per_condition)
         nr_val_trials = round(val_perc * self.trials_per_condition)
@@ -106,6 +121,11 @@ class CatLFP(LFPDataset):
         if nr_test_trials > 0:
             self.test = interm_data[:, test_indexes, :].reshape(movies_to_keep.size, nr_test_trials, -1, 28000)
 
+    """
+    Generates batch_size examples of frame_size length from data
+    """
+
+    # TODO do not use classifing
     def frame_generator(self, frame_size, batch_size, classifying, data):
         x = []
         y = []
@@ -121,6 +141,10 @@ class CatLFP(LFPDataset):
                 x = []
                 y = []
 
+    """
+    Generators from train, validation and test
+    """
+    # TODO remove test from everywhere
     def train_frame_generator(self, frame_size, batch_size, classifying):
         return self.frame_generator(frame_size, batch_size, classifying, self.train)
 
@@ -130,9 +154,15 @@ class CatLFP(LFPDataset):
     def test_frame_generator(self, frame_size, batch_size, classifying):
         return self.frame_generator(frame_size, batch_size, classifying, self.test)
 
+    """
+    Gets a full channels sequence using movie trial and channels
+    """
     def get_dataset_piece(self, movie, trial, channel):
         return self.all_lfp_data[movie, trial, channel, :]
 
+    """
+    Plots signal ...
+    """
     def plot_signal(self, movie, trial, channel, start=0, stop=None, save_path=None, show=True):
         if stop is None:
             stop = self.trial_length
@@ -148,6 +178,9 @@ class CatLFP(LFPDataset):
             plt.show()
 
     def get_random_sequence_from(self, source='VAL'):
+        """
+        ...
+        """
         if source == 'TRAIN':
             data_source = self.train
         elif source == 'VAL':
@@ -184,6 +217,9 @@ class CatLFP(LFPDataset):
         channel_index = np.random.choice(data_source.shape[2])
         return self.get_sequence(movie_index, trial_index, channel_index, data_source)
 
+    """
+    Gets a full channels sequence using movie trial and channels
+    """
     def get_sequence(self, movie_index, trial_index, channel_index, data_source):
         data_address = {
             'M': movie_index,
