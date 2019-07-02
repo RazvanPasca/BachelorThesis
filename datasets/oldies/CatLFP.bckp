@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from datasets.paths import CAT_DATASET_PATH
-from datasets.LFPDataset import LFPDataset
+from datasets.oldies.LFPDataset import LFPDataset
 
 
 class CatLFP(LFPDataset):
@@ -46,80 +46,6 @@ class CatLFP(LFPDataset):
             'TRAIN': [self.get_random_sequence_from('TRAIN') for _ in range(nr_of_seqs)]
         }
 
-    """
-    Splits the lfp data into shape (3,20,47,28000)
-    """
-    def _split_lfp_data(self):
-        self.all_lfp_data = []
-        for condition_id in range(0, self.number_of_conditions):
-            condition = []
-            for i in range(0, self.channels.shape[1] // self.trial_length):
-                if self.stimulus_conditions[i] == condition_id + 1:
-                    trial = self.channels[:, (i * self.trial_length):((i * self.trial_length) + self.trial_length)]
-                    condition.append(trial)
-            self.all_lfp_data.append(np.array(condition))
-
-        self.all_lfp_data = np.array(self.all_lfp_data, dtype=np.float32)
-        self.channels = None
-
-    """
-    Computes the bin size and the bins
-    """
-    def _pre_compute_bins(self):
-        self._compute_values_range()
-        self.cached_val_bin = {}
-        min_train_seq = np.floor(self.values_range[0])
-        max_train_seq = np.ceil(self.values_range[1])
-        self.bins = np.linspace(min_train_seq, max_train_seq, self.nr_bins)
-        self.bin_size = self.bins[1] - self.bins[0]
-
-    """
-    Maps value into a discretized bin
-    """
-    def _encode_input_to_bin(self, target_val):
-        if target_val not in self.cached_val_bin:
-            if self.mu_law:
-                self.cached_val_bin[target_val] = self.mu_law_encoding(target_val)
-            else:
-                self.cached_val_bin[target_val] = np.digitize(target_val, self.bins, right=False)
-        return self.cached_val_bin[target_val]
-
-    """
-    Splits the channels into train, validation and test by trials
-    """
-    def _get_train_val_test_split_channel_wise(self, movies_to_keep, channels_to_keep, val_perc, test_perc):
-        nr_test_trials = round(test_perc * self.trials_per_condition)
-        nr_val_trials = round(val_perc * self.trials_per_condition)
-        nr_train_trials = self.trials_per_condition - nr_test_trials - nr_val_trials
-
-        trial_indexes_shuffled = np.arange(0, self.trials_per_condition)
-        np.random.shuffle(trial_indexes_shuffled)
-        train_indexes = trial_indexes_shuffled[:nr_train_trials]
-        val_indexes = trial_indexes_shuffled[nr_train_trials:nr_train_trials + nr_val_trials]
-        test_indexes = trial_indexes_shuffled[-nr_test_trials:]
-
-        interm_data = self.all_lfp_data[movies_to_keep, :, channels_to_keep, :]
-
-        self.train = interm_data[:, train_indexes, :].reshape(movies_to_keep.size, nr_train_trials, -1, 28000)
-
-        self.validation = interm_data[:, val_indexes, :].reshape(movies_to_keep.size, nr_val_trials, -1, 28000)
-
-        assert (
-            np.all(self.train[0, 0, 0] == self.all_lfp_data[movies_to_keep[0], train_indexes[0], channels_to_keep[0]]))
-
-        assert (np.all(self.train[movies_to_keep.size - 1, train_indexes.size - 1, channels_to_keep.size - 1] ==
-                       self.all_lfp_data[
-                           movies_to_keep[-1], train_indexes[-1], channels_to_keep[-1]]))
-
-        assert (np.all(self.validation[0, 0, 0] == self.all_lfp_data[
-            movies_to_keep[0], val_indexes[0], channels_to_keep[0]]))
-
-        assert (np.all(self.validation[movies_to_keep.size - 1, val_indexes.size - 1, channels_to_keep.size - 1] ==
-                       self.all_lfp_data[
-                           movies_to_keep[-1], val_indexes[-1], channels_to_keep[-1]]))
-
-        if nr_test_trials > 0:
-            self.test = interm_data[:, test_indexes, :].reshape(movies_to_keep.size, nr_test_trials, -1, 28000)
 
     """
     Generates batch_size examples of frame_size length from data

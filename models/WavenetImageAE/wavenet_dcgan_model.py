@@ -6,20 +6,6 @@ from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense, Resh
 from keras.regularizers import l2
 
 
-class ReflectionPadding2D(Layer):
-    def __init__(self, padding=(1, 1), **kwargs):
-        self.padding = tuple(padding)
-        self.input_spec = [InputSpec(ndim=4)]
-        super(ReflectionPadding2D, self).__init__(**kwargs)
-
-    def compute_output_shape(self, s):
-        """ If you are using "channels_last" configuration"""
-        return s[0], s[1] + 2 * self.padding[0], s[2] + 2 * self.padding[1], s[3]
-
-    def call(self, x, mask=None):
-        w_pad, h_pad = self.padding
-        return tf.pad(x, [[0, 0], [h_pad, h_pad], [w_pad, w_pad], [0, 0]], 'REFLECT')
-
 
 def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef, first=False):
     def f(input_):

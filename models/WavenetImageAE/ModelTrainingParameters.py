@@ -1,7 +1,7 @@
 import datetime
 import os
 
-from datasets.CatLFPStimuli import CatLFPStimuli
+from datasets.LFPDataset import LFPDataset
 from utils.plot_utils import create_dir_if_not_exists
 
 
@@ -10,12 +10,12 @@ class ModelTrainingParameters:
         for k, v in params_dictionary.items():
             setattr(self, k, v)
 
-        self.dataset = CatLFPStimuli(movies_to_keep=self.movies_to_keep,
-                                     cutoff_freq=self.cutoff_freq,
-                                     val_perc=self.train_val_split,
-                                     model_output_type=self.model_output_type,
-                                     split_by=self.split_by,
-                                     slice_length=self.slice_length)
+        self.dataset = LFPDataset(conditions_to_keep=self.movies_to_keep,
+                                  cutoff_freq=self.cutoff_freq,
+                                  val_perc=self.train_val_split,
+                                  model_type=self.model_output_type,
+                                  split_by=self.split_by,
+                                  slice_length=self.slice_length)
         self.nr_train_steps = (self.dataset.train.size // self.batch_size * self.train_coverage_per_epoch) // \
                               self.dataset.number_of_channels
         self.nr_val_steps = (self.dataset.validation.size // self.batch_size * self.val_coverage_per_epoch) // \

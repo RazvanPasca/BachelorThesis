@@ -5,7 +5,7 @@ import numpy as np
 from scipy.signal import spectrogram
 from sklearn.cluster import AgglomerativeClustering
 
-from datasets.CatLFPStimuli import CatLFPStimuli
+from datasets.LFPDataset import LFPDataset
 from signal_analysis.heatmap import heatmap_from
 
 
@@ -14,7 +14,7 @@ def get_spectra(overlap, fourier_window_size, desired_slice_length, movies_to_ke
     nr_channels = 20
     channels = [5]
 
-    dataset = CatLFPStimuli(movies_to_keep=movies_to_keep, cutoff_freq=None, normalization='std')
+    dataset = LFPDataset(conditions_to_keep=movies_to_keep, cutoff_freq=None, normalization='std')
     signals = dataset.signal
 
     spectrums = []

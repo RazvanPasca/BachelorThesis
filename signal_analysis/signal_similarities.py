@@ -2,7 +2,7 @@ import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from datasets.MouseLFP import MouseLFP
+from datasets.oldies.MouseLFP import MouseLFP
 from datasets.paths import MOUSEACH_DATASET_PATH, MOUSE_DATASET_PATH
 
 

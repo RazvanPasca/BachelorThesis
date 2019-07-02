@@ -1,9 +1,9 @@
 from keras.callbacks import ModelCheckpoint, CSVLogger
 
-from WavenetImageAE.ModelTrainingParameters import ModelTrainingParameters
-from WavenetImageAE.ReconstructImageCallback import ReconstructImageCallback
-from WavenetImageAE.model_parameters import model_parameters
-from WavenetImageAE.wavenet_dcgan_model import get_wavenet_dcgan_model
+from models.WavenetImageAE.ModelTrainingParameters import ModelTrainingParameters
+from models.WavenetImageAE.ReconstructImageCallback import ReconstructImageCallback
+from models.WavenetImageAE.model_parameters import model_parameters
+from models.WavenetImageAE.wavenet_dcgan_model import get_wavenet_dcgan_model
 from callbacks.MetricsPlotCallback import MetricsPlotCallback
 from callbacks.TboardCallbackWrapper import TboardCallbackWrapper
 from utils.tf_utils import configure_gpu

@@ -1,8 +1,8 @@
 from keras.callbacks import CSVLogger, ModelCheckpoint
 
-from WavenetGenerator.test_model import test_model
-from WavenetGenerator.ModelTrainingParameters import ModelTrainingParameters
-from WavenetGenerator.wavenet_generator_model import get_wavenet_model
+from models.WavenetGenerator.test_model import test_model
+from models.WavenetGenerator.ModelTrainingParameters import ModelTrainingParameters
+from models.WavenetGenerator.wavenet_generator_model import get_wavenet_model
 from callbacks.GenErrorPlotCallback import GenErrorPlotCallback as PlotCallback
 from callbacks.TboardCallbackWrapper import TboardCallbackWrapper as TensorBoardWrapper
 from utils.plot_utils import create_dir_if_not_exists

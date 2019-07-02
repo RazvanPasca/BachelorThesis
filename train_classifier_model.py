@@ -3,10 +3,10 @@ import collections
 import numpy as np
 from keras.callbacks import CSVLogger, TensorBoard, ModelCheckpoint
 
-from WavenetClassifier import classify_params, callbacks
-from WavenetClassifier.wavenet_classifier_model import get_wavenet_model
+from models.WavenetClassifier import callbacks, classify_params
+from models.WavenetClassifier.wavenet_classifier_model import get_wavenet_model
 from callbacks.MetricsPlotCallback import MetricsPlotCallback
-from datasets.loaders import new_train_test_split, load_cat_tf_record
+from datasets.oldies.loaders import new_train_test_split, load_cat_tf_record
 from datasets.paths import CAT_TFRECORDS_PATH_TOBEFORMATED
 from utils.plot_utils import create_dir_if_not_exists
 from utils.tf_utils import configure_gpu
