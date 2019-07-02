@@ -1,8 +1,7 @@
-from keras import losses, Input, Model, optimizers, metrics
+from keras.backend import tf
 from keras.backend import tf
 from keras.engine import Layer, InputSpec
-from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense, Reshape, Lambda, BatchNormalization, \
-    Conv2D, LeakyReLU, UpSampling2D
+from keras.layers import Dense, Reshape, Conv2D, LeakyReLU, UpSampling2D
 from keras.regularizers import l2
 
 from models import ModelArguments
@@ -33,19 +32,21 @@ def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(1, 1), regul
     return u
 
 
-def get_deconv_decoder(model_arguments: ModelArguments, net):
-    seed_img_size = model_arguments.img_size
+def get_deconv_decoder(model_args: ModelArguments, net, output_image_size):
 
-    generator = Dense(4 * model_arguments.generator_filter_size * seed_img_size * seed_img_size)(net)
-    generator = Reshape((seed_img_size, seed_img_size, generator_filter_size * 4))(generator)
+    seed_img_size = output_image_size // (2 ** len(model_args.deconv_layers))
+
+    generator = Dense(model_args.model_arguments.deconv_layers[0] * seed_img_size * seed_img_size)(net)
+    generator = Reshape((seed_img_size, seed_img_size, -1))(generator)
 
     generator = LeakyReLU()(generator)
 
-    for deconv_layer in model_arguments.deconv_layers:
-        generator = deconv2d(generator, filters=deconv_layer.nr_filters,
-                             regularization_coef=model_arguments.regularization_coef)
+    for deconv_layer_filters in model_args.deconv_layers[1:]:
+        generator = deconv2d(generator,
+                             filters=deconv_layer_filters,
+                             regularization_coef=model_args.regularization_coef)
         generator = LeakyReLU()(generator)
 
-    output = deconv2d(generator, filters=1, regularization_coef=model_arguments.regularization_coef)
+    output = deconv2d(generator, filters=1, regularization_coef=model_args.regularization_coef)
 
     return output
