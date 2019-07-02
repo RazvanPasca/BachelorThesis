@@ -1,4 +1,5 @@
 from datasets.datasets_utils import ModelType
+from models.deconv_decoder import get_deconv_decoder
 from models.wavenet_encoder import get_wavenet_encoder
 
 

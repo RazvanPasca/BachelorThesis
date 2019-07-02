@@ -1,8 +1,11 @@
-from keras.engine import Layer, InputSpec
-from keras.layers import Activation, BatchNormalization, \
-    Conv2D, UpSampling2D
-from keras.regularizers import l2
+from keras import losses, Input, Model, optimizers, metrics
 from keras.backend import tf
+from keras.engine import Layer, InputSpec
+from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense, Reshape, Lambda, BatchNormalization, \
+    Conv2D, LeakyReLU, UpSampling2D
+from keras.regularizers import l2
+
+from models import ModelArguments
 
 
 class ReflectionPadding2D(Layer):
@@ -20,14 +23,29 @@ class ReflectionPadding2D(Layer):
         return tf.pad(x, [[0, 0], [h_pad, h_pad], [w_pad, w_pad], [0, 0]], 'REFLECT')
 
 
-def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(1, 1), regularization_coef=0.0, bn_relu=True):
+def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(1, 1), regularization_coef=0.0):
     """Layers used during upsampling"""
     padding = kernel_size[0] // 2
     u = UpSampling2D((2, 2), interpolation="nearest", data_format="channels_last")(layer_input)
     u = ReflectionPadding2D((padding, padding))(u)
     u = Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding='valid',
                kernel_regularizer=l2(regularization_coef))(u)
-    if bn_relu:
-        u = BatchNormalization(momentum=0.9)(u)
-        u = Activation('relu')(u)
     return u
+
+
+def get_deconv_decoder(model_arguments: ModelArguments, net):
+    seed_img_size = model_arguments.img_size
+
+    generator = Dense(4 * model_arguments.generator_filter_size * seed_img_size * seed_img_size)(net)
+    generator = Reshape((seed_img_size, seed_img_size, generator_filter_size * 4))(generator)
+
+    generator = LeakyReLU()(generator)
+
+    for deconv_layer in model_arguments.deconv_layers:
+        generator = deconv2d(generator, filters=deconv_layer.nr_filters,
+                             regularization_coef=model_arguments.regularization_coef)
+        generator = LeakyReLU()(generator)
+
+    output = deconv2d(generator, filters=1, regularization_coef=model_arguments.regularization_coef)
+
+    return output

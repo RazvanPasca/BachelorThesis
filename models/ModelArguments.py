@@ -1,6 +1,6 @@
 
 
-class ModelArguments():
+class ModelArguments:
     def __init__(self,
                  model_type,
                  input_shape,

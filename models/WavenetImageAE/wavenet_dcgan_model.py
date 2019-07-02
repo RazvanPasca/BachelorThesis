@@ -95,36 +95,4 @@ def get_wavenet_encoder(input_, nr_filters, nr_layers, l2_coef, skip_conn_filter
     return net
 
 
-def get_model_output_stage(clipvalue, generator_filter_size, img_size, input_, loss, lr, output_type, net, nr_classes,
-                           regularization_coef):
-    optimizer = optimizers.adam(lr=lr, clipvalue=clipvalue)
 
-    if output_type.upper() == "RECONSTRUCTION":
-
-        seed_img_size = img_size // 16
-        generator = Dense(4 * generator_filter_size * seed_img_size * seed_img_size)(net)
-        generator = Reshape((seed_img_size, seed_img_size, generator_filter_size * 4))(generator)
-        # generator = BatchNormalization()(generator)
-        generator = LeakyReLU()(generator)
-        generator = deconv2d(generator, filters=generator_filter_size * 4, regularization_coef=regularization_coef,
-                             bn_relu=False)
-        generator = deconv2d(generator, filters=generator_filter_size * 2, regularization_coef=regularization_coef,
-                             bn_relu=False)
-        generator = deconv2d(generator, filters=generator_filter_size, regularization_coef=regularization_coef,
-                             bn_relu=False)
-        output = deconv2d(generator, filters=1, regularization_coef=regularization_coef, bn_relu=False)
-        model = Model(inputs=input_, outputs=output)
-        model.compile(loss=losses.MSE if loss.lower() == "mse" else losses.MAE, optimizer=optimizer)
-
-    elif output_type.upper() == "BRIGHTNESS" or output_type.upper() == "EDGES":
-        output = Dense(1, name="Regression")(net)
-        model = Model(inputs=input_, outputs=output)
-        model.compile(loss=losses.MSE if loss.lower() == "mse" else losses.MAE, optimizer=optimizer)
-
-    elif output_type.upper() == "CLASSIFY_MOVIES":
-        output = Dense(nr_classes, activation="softmax", name="Softmax")(net)
-        model = Model(inputs=input_, outputs=output)
-        model.compile(loss="sparse_categorical_crossentropy", optimizer=optimizer,
-                      metrics=[metrics.sparse_categorical_accuracy])
-
-    return model
