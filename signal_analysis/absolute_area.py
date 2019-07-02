@@ -4,8 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from datasets.paths import MOUSEACH_DATASET_PATH
 from datasets.paths import MOUSE_DATASET_PATH
-from datasets.paths import CAT_DATASET_PATH
-from datasets.LFPDataset import LFPDataset
+from datasets.oldies.LFPDataset import LFPDataset
 
 
 def plot_signal(signal, name, path):

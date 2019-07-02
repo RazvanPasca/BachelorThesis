@@ -5,10 +5,7 @@ from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import linkage
 from scipy.spatial.distance import pdist, squareform
 
-from datasets.LFPDataset import LFPDataset
-from datasets.paths import CAT_DATASET_PATH
-from datasets.paths import MOUSEACH_DATASET_PATH
-from datasets.paths import MOUSE_DATASET_PATH
+from datasets import CatDataset, MouseControlDataset, MouseAChDataset
 
 
 # methods = ["ward", "single", "average", "complete"]
@@ -62,22 +59,6 @@ def compute_serial_matrix(dist_mat, method="ward"):
     return seriated_dist, res_order, res_linkage
 
 
-def load_dataset(path):
-    dataset = LFPDataset(path)
-    mask = np.ones(len(dataset.channels), dtype=bool)
-    if path == MOUSE_DATASET_PATH:
-        mask[[3, 6, 32]] = False
-        dataset.nr_channels -= 3
-    elif path == MOUSEACH_DATASET_PATH:
-        mask[[1, 3, 6, 30, 32]] = False
-        dataset.nr_channels -= 5
-    elif path == CAT_DATASET_PATH:
-        pass
-    dataset.channels = dataset.channels[mask]
-
-    return dataset
-
-
 def heatmap_from(data,
                  distance_metric,
                  save_location,
@@ -94,7 +75,7 @@ def heatmap_from(data,
     # plt.pcolormesh(dist_mat)
     # plt.xlim([0, N])
     # plt.ylim([0, N])
-    # plt.savefig(os.path.join("./heatmaps/{0}-Method:{1}.png".format(plot_title, "unordered")))
+    # plt.savefig(os.path.join("./heatmapss/{0}-Method:{1}.png".format(plot_title, "unordered")))
 
     results = []
     for method in methods:
@@ -103,9 +84,12 @@ def heatmap_from(data,
         plt.pcolormesh(ordered_dist_mat)
         plt.xlim([0, N])
         plt.ylim([0, N])
+        plt.xlabel("Channels")
+        plt.ylabel("Channels")
         plt.colorbar()
         if add_order_labels:
             plt.yticks([x for x in range(len(res_order))], res_order)
+            plt.xticks([x for x in range(len(res_order))], res_order)
         plt.savefig(os.path.join(save_location, "{0}-{1}.png".format(plot_title, method)))
         if show:
             plt.show()
@@ -114,100 +98,35 @@ def heatmap_from(data,
     return results
 
 
-def compute_heatmap_on_dataset(path):
-    output_path = "./heatmaps"
-    plot_title = ""
+def compute_heatmaps_cross_channels(dataset):
+    output_path = "./heatmaps/cross_channels/" + dataset.get_name()
 
-    if path == MOUSE_DATASET_PATH:
-        plot_title = "Mouse LFP Channels"
-    elif path == MOUSEACH_DATASET_PATH:
-        plot_title = "Mouse ACh LFP Channels"
-    elif path == CAT_DATASET_PATH:
-        plot_title = "Cat LFP Channels"
-
-    dataset = load_dataset(path)
-
-    heatmap_from(dataset.channels, 'correlation', output_path, plot_title, add_order_labels=True)
+    for condition in range(dataset.number_of_conditions):
+        for trial in range(dataset.trials_per_condition):
+            trial_signal = dataset.signal[condition, trial]
+            heatmap_from(trial_signal,
+                         'correlation',
+                         output_path,
+                         "Trial {}-Condition number {}".format(
+                             trial,
+                             condition))
 
 
-def compute_heatmaps_on_channels():
-    compute_heatmap_on_dataset(CAT_DATASET_PATH)
-    compute_heatmap_on_dataset(MOUSE_DATASET_PATH)
-    compute_heatmap_on_dataset(MOUSEACH_DATASET_PATH)
-
-
-def heatmaps_cross_channels_on_dataset(path):
-    dataset = load_dataset(path)
-
-    output_path = "./heatmaps/cross_channels"
-    if path == MOUSE_DATASET_PATH:
-        output_path += "/mouse"
-    elif path == MOUSEACH_DATASET_PATH:
-        output_path += "/mouse_ach"
-    elif path == CAT_DATASET_PATH:
-        output_path += "/cat"
-
-    for stimulus_condition in dataset.stimulus_conditions:
-        index = int(stimulus_condition['Trial']) - 1
-        events = [{'timestamp': dataset.event_timestamps[4 * index + i],
-                   'code': dataset.event_codes[4 * index + i]} for i in range(4)]
-        trial = dataset.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
-        heatmap_from(trial,
-                     'correlation',
-                     output_path,
-                     "Trial {}-Condition number{}-{}-{}".format(
-                         stimulus_condition['Trial'],
-                         stimulus_condition['Condition number'],
-                         stimulus_condition['Condition name'],
-                         stimulus_condition['Duration (us)']))
-
-
-def compute_heatmaps_cross_channels():
-    heatmaps_cross_channels_on_dataset(MOUSE_DATASET_PATH)
-    heatmaps_cross_channels_on_dataset(MOUSEACH_DATASET_PATH)
-
-
-def heatmap_cross_trials(path):
-    dataset = load_dataset(path)
-
-    output_path = "./heatmaps/cross_trials"
-    if path == MOUSE_DATASET_PATH:
-        output_path += "/mouse"
-    elif path == MOUSEACH_DATASET_PATH:
-        output_path += "/mouse_ach"
-    elif path == CAT_DATASET_PATH:
-        output_path += "/cat"
-
-    cond_trial_channel = []
-    for condition in range(1, dataset.number_of_conditions + 1):
-        conditions = []
-        for stimulus_condition in dataset.stimulus_conditions:
-            if stimulus_condition['Condition number'] == str(condition):
-                index = int(stimulus_condition['Trial']) - 1
-                events = [{'timestamp': dataset.event_timestamps[4 * index + i],
-                           'code': dataset.event_codes[4 * index + i]} for i in range(4)]
-                # trial = self.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
-                # Right now it cuts only the area where the stimulus is active
-                # In order to keep the whole trial replace with
-                trial = dataset.channels[:, events[0]['timestamp']:(events[0]['timestamp'] + 4175)]
-                conditions.append(trial)
-        cond_trial_channel.append(np.array(conditions))
-    cond_trial_channel = np.array(cond_trial_channel, dtype=np.float32)
+def compute_heatmaps_cross_trials(dataset):
+    output_path = "./heatmaps/cross_trials/" + dataset.get_name()
 
     for condition in range(0, dataset.number_of_conditions):
-        for channel in range(0, dataset.nr_channels):
-            heatmap_from(cond_trial_channel[condition, :, channel, :],
+        for channel in range(0, dataset.number_of_channels):
+            heatmap_from(dataset.signal[condition, :, channel, :],
                          'correlation',
                          output_path,
                          "Condition number{}-Channel{}".format(condition, channel))
 
 
-def compute_heatmaps_cross_trials():
-    heatmap_cross_trials(MOUSE_DATASET_PATH)
-    heatmap_cross_trials(MOUSEACH_DATASET_PATH)
-
-
 if __name__ == '__main__':
-    compute_heatmaps_on_channels()
-    compute_heatmaps_cross_channels()
-    compute_heatmaps_cross_trials()
+    # compute_heatmaps_cross_channels(CatDataset())
+    compute_heatmaps_cross_channels(MouseControlDataset())
+    compute_heatmaps_cross_channels(MouseAChDataset())
+    # compute_heatmaps_cross_trials(CatDataset())
+    compute_heatmaps_cross_trials(MouseControlDataset())
+    compute_heatmaps_cross_trials(MouseAChDataset())

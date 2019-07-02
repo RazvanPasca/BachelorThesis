@@ -8,7 +8,7 @@ LOCAL_CONFIG_PATH = "train_params_cfg.json"
 
 
 class ModelTrainingParameters:
-    def __init__(self, model_path=None, local_config_path="train_params_cfg.json"):
+    def __init__(self, model_path=None, local_config_path="./WavenetGenerator/train_params_cfg.json"):
         self.save_path = None
         self.clip_grad_by_value = None
         self.loss = None
@@ -38,7 +38,7 @@ class ModelTrainingParameters:
 
         self.frame_size = 2 ** self.nr_layers
 
-        klass = getattr(getattr(__import__("datasets"), self.dataset), self.dataset)
+        klass = getattr(getattr(__import__("datasets.oldies"), self.dataset), self.dataset)
         self._prepare_dataset(klass)
 
         self.nr_train_steps = np.ceil(

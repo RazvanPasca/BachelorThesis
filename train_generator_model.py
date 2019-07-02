@@ -1,9 +1,9 @@
 from keras.callbacks import CSVLogger, ModelCheckpoint
 
-from WavenetGenerator.test_model import test_model
-from WavenetGenerator.training_parameters import ModelTrainingParameters
-from WavenetGenerator.wavenet_generator_model import get_wavenet_model
-from callbacks.GeneratedSequencePlotCallback import GeneratedSequencePlotCallback as PlotCallback
+from models.WavenetGenerator.test_model import test_model
+from models.WavenetGenerator.ModelTrainingParameters import ModelTrainingParameters
+from models.WavenetGenerator.wavenet_generator_model import get_wavenet_model
+from callbacks.GenErrorPlotCallback import GenErrorPlotCallback as PlotCallback
 from callbacks.TboardCallbackWrapper import TboardCallbackWrapper as TensorBoardWrapper
 from utils.system_utils import create_dir_if_not_exists
 from utils.tf_utils import configure_gpu
@@ -33,9 +33,9 @@ def train_model(model_params):
     # TODO make activation callback work with multiple output
 
     tensorboard_callback = TensorBoardWrapper(
-        batch_gen=model_params.dataset.validation_frame_generator(model_params.frame_size,
-                                                                  model_params.batch_size,
-                                                                  model_params.get_classifying()),
+        batch_gen=model_params.dataset.validation_sample_generator(model_params.frame_size,
+                                                                   model_params.batch_size,
+                                                                   model_params.get_classifying()),
         nb_steps=10,
         log_dir=model_params.model_path,
         write_graph=True,
@@ -58,14 +58,14 @@ def train_model(model_params):
                                           monitor="val_loss",
                                           save_best_only=True)
 
-    model.fit_generator(model_params.dataset.train_frame_generator(model_params.frame_size,
-                                                                   model_params.batch_size,
-                                                                   model_params.get_classifying()),
+    model.fit_generator(model_params.dataset.train_sample_generator(model_params.frame_size,
+                                                                    model_params.batch_size,
+                                                                    model_params.get_classifying()),
                         steps_per_epoch=model_params.nr_train_steps,
                         epochs=model_params.n_epochs,
-                        validation_data=model_params.dataset.validation_frame_generator(model_params.frame_size,
-                                                                                        model_params.batch_size,
-                                                                                        model_params.get_classifying()),
+                        validation_data=model_params.dataset.validation_sample_generator(model_params.frame_size,
+                                                                                         model_params.batch_size,
+                                                                                         model_params.get_classifying()),
                         validation_steps=model_params.nr_val_steps,
                         verbose=2,
                         callbacks=[tensorboard_callback, plot_generated_signals_callback, log_callback,

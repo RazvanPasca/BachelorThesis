@@ -4,8 +4,12 @@ from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense, Resh
 from keras.regularizers import l2
 
 
-def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef, first=False):
-    def f(input_):
+def create_wavenet_layer(n_filters,
+                         filter_size,
+                         dilation_rate,
+                         regularization_coef,
+                         first=False):
+    def layer(input_):
         if first:
             residual = Lambda(lambda x: x[:, :, 0], output_shape=(1,))(input_)
             residual = Reshape(target_shape=(-1, 1))(residual)
@@ -45,45 +49,61 @@ def wavenet_block(n_filters, filter_size, dilation_rate, regularization_coef, fi
         full_out = Add(name="Block_{}".format(dilation_rate))([out, residual])
         return full_out, skip_out
 
-    return f
+    return layer
 
 
-def get_wavenet_model(nr_filters, input_shape, nr_layers, lr, loss, clipvalue, skip_conn_filters,
-                      regularization_coef, nr_output_classes, multiloss_weights=None):
-    model_loss = get_model_loss(loss, multiloss_weights)
-
-    input_ = Input(shape=input_shape)
-    A, B = wavenet_block(nr_filters, 2, 1, regularization_coef=regularization_coef, first=True)(input_)
-    skip_connections = [B]
+def get_wavenet_model(nr_filters,
+                      input_shape,
+                      nr_layers,
+                      lr,
+                      loss,
+                      clipvalue,
+                      skip_conn_filters,
+                      regularization_coef,
+                      nr_output_classes,
+                      multiloss_weights=None):
+    input = Input(shape=input_shape)
+    wavenet_layer = create_wavenet_layer(
+        n_filters=nr_filters,
+        filter_size=2,
+        dilation_rate=1,
+        regularization_coef=regularization_coef,
+        first=True)
+    prev_layer_output, prev_layer_skip_out = wavenet_layer(input)
+    skip_connections = [prev_layer_skip_out]
 
     for i in range(1, nr_layers):
         dilation_rate = 2 ** i
-        A, B = wavenet_block(nr_filters, 2, dilation_rate, regularization_coef=regularization_coef)(A)
-        skip_connections.append(B)
+        wavenet_layer = create_wavenet_layer(
+            n_filters=nr_filters,
+            filter_size=2,
+            dilation_rate=dilation_rate,
+            regularization_coef=regularization_coef)
+        prev_layer_output, prev_layer_skip_out = wavenet_layer(prev_layer_output)
+        skip_connections.append(prev_layer_skip_out)
 
     net = Add(name="Skip_Merger")(skip_connections)
     net = Activation('relu')(net)
-    net = Conv1D(skip_conn_filters, 1, activation='relu', kernel_regularizer=l2(regularization_coef),
-                 name="Skip_FConv_1")(net)
-    net = Conv1D(skip_conn_filters, 1, kernel_regularizer=l2(regularization_coef), name="Skip_FConv_2")(net)
+    net = Conv1D(
+        filters=skip_conn_filters,
+        kernel_size=1,
+        activation='relu',
+        kernel_regularizer=l2(regularization_coef),
+        name="Skip_FConv_1")(net)
+    net = Conv1D(
+        filters=skip_conn_filters,
+        kernel_size=1,
+        kernel_regularizer=l2(regularization_coef),
+        name="Skip_FConv_2")(net)
     net = Flatten()(net)
 
-    outputs = []
+    output = Dense(nr_output_classes, activation=softmax, name="Sfmax")(net)
 
-    if model_loss is losses.sparse_categorical_crossentropy:
-        outputs.append(Dense(nr_output_classes, activation=softmax, name="Sfmax")(net))
-    elif model_loss is losses.MSE or model_loss is losses.MAE:
-        regr_output = Dense(1, name="Regression", kernel_regularizer=l2(regularization_coef))(net)
-        outputs.append(regr_output)
-    else:
-        regr_output = Dense(1, name="Regression", kernel_regularizer=l2(regularization_coef))(net)
-        outputs.append(regr_output)
-        sfmax_output = Dense(nr_output_classes, activation=softmax, name="Sfmax")
-        outputs.append(sfmax_output(net))
+    model = Model(inputs=input, outputs=output)
 
-    model = Model(inputs=input_, outputs=outputs)
     optimizer = optimizers.adam(lr=lr, clipvalue=clipvalue)
-    model.compile(loss=model_loss, optimizer=optimizer, loss_weights=multiloss_weights)
+
+    model.compile(loss=get_model_loss(loss), optimizer=optimizer, loss_weights=multiloss_weights)
     return model
 
 

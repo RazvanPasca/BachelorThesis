@@ -2,8 +2,8 @@ import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from datasets.CatLFPStimuli import CatLFPStimuli
-from utils.plot_utils import show_and_plot
+from datasets.oldies.MouseLFP import MouseLFP
+from datasets.paths import MOUSEACH_DATASET_PATH, MOUSE_DATASET_PATH
 
 
 def rmse(a, b):

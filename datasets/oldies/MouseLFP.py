@@ -1,15 +1,10 @@
-import datetime
 import os
-
 import matplotlib.pyplot as plt
 import numpy as np
-
-from datasets.LFPDataset import LFPDataset
-from signal_analysis.signal_utils import mu_law_encoding, mu_law_fn, rescale
 from utils.tf_utils import replace_at_index
 
 
-class MouseLFP(LFPDataset):
+class MouseLFP():
     def __init__(self, dataset_path, frame_size=512,
                  channels_to_keep=(-1,),
                  conditions_to_keep=(-1,),
@@ -24,8 +19,12 @@ class MouseLFP(LFPDataset):
                  noisy_channels=(3, 6, 32),
                  gamma_windows_in_trial=None,
                  condition_on_gamma=False):
-        super().__init__(dataset_path, normalization=normalization, cutoff_freq=cutoff_freq, random_seed=random_seed,
-                         white_noise_dev=white_noise_dev, nr_bins=nr_bins)
+        super().__init__(dataset_path,
+                         normalization=normalization,
+                         cutoff_freq=cutoff_freq,
+                         random_seed=random_seed,
+                         white_noise_dev=white_noise_dev,
+                         nr_bins=nr_bins)
 
         np.random.seed(random_seed)
         self.frame_size = frame_size
@@ -41,17 +40,9 @@ class MouseLFP(LFPDataset):
         self.gamma_windows_in_trial = [item for sublist in gamma_windows_in_trial for item in sublist if
                                        item < self.trial_length]
 
-        self._split_lfp_data()
-
         self._get_dataset_keep_indexes(channels_to_keep, conditions_to_keep, trials_to_keep, noisy_channels, )
-        self.get_train_val_split(val_perc)
-
-        self.all_lfp_data = self._normalize_input_per_channel(self.all_lfp_data)
-
-        self._pre_compute_bins()
         self.get_sequences_for_plotting()
 
-        np.random.seed(datetime.datetime.now().microsecond)
 
     def get_sequences_for_plotting(self):
         self.benchmark_sequences = {
@@ -77,26 +68,6 @@ class MouseLFP(LFPDataset):
                     else:
                         break
 
-    def _split_lfp_data(self):
-        self.all_lfp_data = []
-        for condition in range(1, self.number_of_conditions + 1):
-            conditions = []
-            for stimulus_condition in self.stimulus_conditions:
-                if stimulus_condition['Condition number'] == str(condition):
-                    index = int(stimulus_condition['Trial']) - 1
-                    events = [{'timestamp': self.event_timestamps[4 * index + i],
-                               'code': self.event_codes[4 * index + i]} for i in range(4)]
-                    trial = self.channels[:, events[1]['timestamp']:(events[1]['timestamp'] + 2672)]
-
-                    # Right now it cuts only the area where the stimulus is active
-                    # In order to keep the whole trial replace with
-                    # trial = self.channels[:, events[0]['timestamp']:(events[0]['timestamp'] + 4175)]
-
-                    conditions.append(trial)
-            self.all_lfp_data.append(np.array(conditions))
-        self.all_lfp_data = np.array(self.all_lfp_data, dtype=np.float32)
-        self.channels = None
-
     def compute_gamma_labels_for_trial(self, gamma_windows_in_trial):
         trial_gamma_label = np.zeros(self.trial_length)
         if self.condition_on_gamma:
@@ -104,56 +75,6 @@ class MouseLFP(LFPDataset):
             gamma_ranges = [item for sublist in gamma_ranges for item in sublist if item < self.trial_length]
             np.put(trial_gamma_label, gamma_ranges, 1)
         return trial_gamma_label.reshape(-1, 1)
-
-    def _normalize_input_per_channel(self, input_data):
-        self.mu_law = False
-
-        nr_channels = input_data.shape[2]
-
-        if self.normalization == "Zsc":
-            for i in range(nr_channels):
-                mean = np.mean(input_data[:, :, i, :], keepdims=True)
-                std = np.std(input_data[:, :, i, :], keepdims=True)
-                input_data[:, :, i, :] -= mean
-                input_data[:, :, i, :] /= std
-
-        elif self.normalization == "Brute":
-            for i in range(nr_channels):
-                min = np.min(input_data[:, :, i, :], keepdims=True)
-                max = np.max(input_data[:, :, i, :], keepdims=True)
-                input_data[:, :, i, :] -= min
-                input_data[:, :, i, :] /= max
-
-        elif self.normalization == "MuLaw":
-            """The signal is brought to [-1,1] through rescale->[-1,1] mu_law and then encoded using np.digitize"""
-            self.limits = {}
-            self.mu_law = True
-
-            for i in range(nr_channels):
-                np_min = np.min(input_data[:, :, i, :], keepdims=True)
-                np_max = np.max(input_data[:, :, i, :], keepdims=True)
-                self.limits[i] = (np_min, np_max)
-                input_data[:, :, i, :] = mu_law_fn(
-                    rescale(input_data[:, :, i, :], old_max=np_max, old_min=np_min, new_max=1, new_min=-1),
-                    self.nr_bins)
-
-        return input_data
-
-    def _pre_compute_bins(self):
-        self._compute_values_range()
-        self.cached_val_bin = {}
-        min_train_seq = np.floor(self.values_range[0])
-        max_train_seq = np.ceil(self.values_range[1])
-        self.bins = np.linspace(min_train_seq, max_train_seq, self.nr_bins)
-        self.bin_size = self.bins[1] - self.bins[0]
-
-    def _encode_input_to_bin(self, target_val):
-        if target_val not in self.cached_val_bin:
-            if self.mu_law:
-                self.cached_val_bin[target_val] = mu_law_encoding(target_val, self.nr_bins)
-            else:
-                self.cached_val_bin[target_val] = np.digitize(target_val, self.bins, right=False)
-        return self.cached_val_bin[target_val]
 
     def get_train_val_split(self, val_perc):
         nr_val_series = round(val_perc * self.channels_to_keep.size)
@@ -205,29 +126,6 @@ class MouseLFP(LFPDataset):
                 x = []
                 y = []
 
-    def _get_y_value(self, classifying, y):
-        """Classifying codes: 2 is MSE_CE, 1 is CE , -1 is Regression"""
-        if classifying == 2:
-            y = {'Regression': np.array(y),
-                 "Sfmax": np.array([self._encode_input_to_bin(x) for x in y])}
-        elif classifying == 1:
-            y = np.array([self._encode_input_to_bin(x) for x in y])
-        else:
-            y = np.array(y)
-        return y
-
-    def train_frame_generator(self, frame_size, batch_size, classifying):
-        return self.frame_generator(frame_size, batch_size, classifying, self.train)
-
-    def validation_frame_generator(self, frame_size, batch_size, classifying):
-        return self.frame_generator(frame_size, batch_size, classifying, self.validation)
-
-    def test_frame_generator(self, frame_size, batch_size, classifying):
-        return self.frame_generator(frame_size, batch_size, classifying, self.test)
-
-    def get_dataset_piece(self, condition, trial, channel):
-        return self.all_lfp_data[condition, trial, channel, :]
-
     def plot_signal(self, condition, trial, channel, start=0, stop=None, save_path=None, show=True):
         if stop is None:
             stop = self.trial_length
@@ -241,69 +139,6 @@ class MouseLFP(LFPDataset):
             plt.savefig(os.path.join(save_path, "Mouse/Plots/{0}.png".format(str(condition) + plot_title)))
         if show:
             plt.show()
-
-    def get_random_sequence_from(self, source='VAL'):
-        if source == 'TRAIN':
-            data_source = self.train
-        elif source == 'VAL':
-            data_source = self.validation
-        elif source == 'TEST':
-            data_source = self.test
-        else:
-            raise ValueError("Please pick one out of TRAIN, VAL, TEST as data source")
-
-        sequence, sequence_addr = self.get_random_sequence(data_source)
-        sequence_addr['SOURCE'] = source
-        sequence_addr['C'] = self.channels_lookup[source][sequence_addr['C']]
-        return sequence, sequence_addr
-
-    def get_sequence_from(self, condition_index, trial_index, channel_index, source='VAL'):
-        if source == 'TRAIN':
-            data_source = self.train
-        elif source == 'VAL':
-            data_source = self.validation
-        elif source == 'TEST':
-            data_source = self.test
-        else:
-            raise ValueError("Please pick one out of TRAIN, VAL, TEST as data source")
-
-        sequence, sequence_addr = self.get_sequence(condition_index, trial_index, channel_index, data_source)
-        sequence_addr['SOURCE'] = source
-        sequence_addr['C'] = self.channels_lookup[source][sequence_addr['C']]
-        return sequence, sequence_addr
-
-    def get_random_sequence(self, data_source):
-        """Function which receives data source as parameter and chooses randomly and index
-        from each of the first 3 dimensions and returns the corresponding sequence
-        and a dictionary containing the source indexes
-
-        Args:
-            data_source:a 4D numpy array: (movies, trials, channels, nr_samples)
-                A random index is chosen from each of the first
-                3 dimensions to pick the random sequence
-
-        Returns:
-            Random sequence from the datasource
-
-             Dictionary with the format of
-             'M': movie_index,
-             'T': trial_index,
-             'C': channel_index
-        """
-        condition_index = np.random.choice(data_source.shape[0])
-        trial_index = np.random.choice(data_source.shape[1])
-        channel_index = np.random.choice(data_source.shape[2])
-        return self.get_sequence(condition_index, trial_index, channel_index, data_source)
-
-    def get_sequence(self, condition_index, trial_index, channel_index, data_source):
-        data_address = {
-            'Condition': self.conditions_to_keep[condition_index],
-            'T': self.trials_to_keep[trial_index],
-            'C': channel_index
-        }
-        return data_source[condition_index, trial_index, channel_index, :], data_address
-
-    """Not used currently"""
 
     def _get_train_val_test_split_channel_wise(self, channels_to_keep, conditions_to_keep, val_perc, test_perc):
         nr_test_trials = round(test_perc * self.trials_per_condition)

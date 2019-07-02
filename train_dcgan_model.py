@@ -1,8 +1,9 @@
 from keras.callbacks import ModelCheckpoint, CSVLogger
 
-from WavenetImageAE.ModelTrainingParameters import ModelTrainingParameters
-from WavenetImageAE.model_parameters import model_parameters
-from WavenetImageAE.wavenet_dcgan_model import get_full_model
+from models.WavenetImageAE.ModelTrainingParameters import ModelTrainingParameters
+from models.WavenetImageAE.ReconstructImageCallback import ReconstructImageCallback
+from models.WavenetImageAE.model_parameters import model_parameters
+from models.WavenetImageAE.wavenet_dcgan_model import get_wavenet_dcgan_model
 from callbacks.MetricsPlotCallback import MetricsPlotCallback
 from callbacks.ReconstructImageCallback import ReconstructImageCallback
 from callbacks.TboardCallbackWrapper import TboardCallbackWrapper
@@ -54,8 +55,8 @@ def train_model(model_params):
 
     print(model.summary())
 
-    train_generator = model_params.dataset.train_frame_generator(model_params.frame_size, model_params.batch_size)
-    val_generator = model_params.dataset.validation_frame_generator(model_params.frame_size, model_params.batch_size)
+    train_generator = model_params.dataset.train_sample_generator(model_params.frame_size, model_params.batch_size)
+    val_generator = model_params.dataset.validation_sample_generator(model_params.frame_size, model_params.batch_size)
 
     train_images_to_reconstr = None
     val_images_to_reconstr = None

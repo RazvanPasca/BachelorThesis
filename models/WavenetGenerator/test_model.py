@@ -3,10 +3,9 @@ import datetime
 import numpy as np
 from keras.models import load_model
 
-from WavenetGenerator.training_parameters import ModelTrainingParameters
-from utils.output_utils import get_sequence_prediction
-from utils.plot_utils import generate_prediction_name
-from utils.system_utils import create_dir_if_not_exists, prepare_file_for_writing
+from models.WavenetGenerator.ModelTrainingParameters import ModelTrainingParameters
+from utils.plot_utils import get_sequence_prediction, generate_prediction_name, \
+    create_dir_if_not_exists, prepare_file_for_writing
 from utils.tf_utils import configure_gpu
 
 

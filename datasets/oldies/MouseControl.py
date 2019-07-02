@@ -1,5 +1,5 @@
 from datasets.paths import MOUSE_DATASET_PATH
-from datasets.MouseLFP import MouseLFP
+from datasets.oldies.MouseLFP import MouseLFP
 
 
 class MouseControl(MouseLFP):
