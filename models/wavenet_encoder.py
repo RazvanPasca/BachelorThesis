@@ -1,7 +1,7 @@
 from keras.layers import Conv1D, Multiply, Add, Activation, Reshape, Lambda
 from keras.regularizers import l2
 
-from models import ModelArguments
+import TrainingConfiguration
 
 
 def create_wavenet_layer(n_filters,
@@ -55,7 +55,7 @@ def create_wavenet_layer(n_filters,
 
 def get_wavenet_encoder(
         input,
-        model_args: ModelArguments):
+        model_args: TrainingConfiguration):
     wavenet_layer = create_wavenet_layer(
         n_filters=model_args.nr_filters,
         filter_size=2,
@@ -91,4 +91,4 @@ def get_wavenet_encoder(
         kernel_regularizer=l2(model_args.regularization_coef),
         name="Skip_FConv_2")(net)
 
-    return input, output
+    return output
