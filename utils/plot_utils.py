@@ -1,33 +1,10 @@
-import csv
 import itertools
-import os
 
-import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import pyplot as plt
 
-from utils.output_utils import decode_model_output, get_normalized_erros_per_sequence
-
-
-def create_dir_if_not_exists(directory_path):
-    if not os.path.exists(directory_path):
-        os.makedirs(directory_path)
-
-
-def prepare_file_for_writing(file_path, text):
-    with open(file_path, "w") as f:
-        f.write(text)
-
-
-def get_channel_index_from_name(name):
-    index = name.find("C:")
-    index_ = index + 2
-    c = name[index_]
-
-    while c.isdigit():
-        index_ += 1
-        c = name[index_]
-
-    return int(name[index + 2:index_])
+from utils.output_utils import get_normalized_pred_errors, get_sequence_prediction
+from utils.system_utils import create_dir_if_not_exists, log_range_accumulated_errors
 
 
 def generate_prediction_name(seq_addr):
@@ -42,7 +19,7 @@ def generate_prediction_name(seq_addr):
 
 def generate_multi_plot(model, model_params, epoch, starting_point, nr_prediction_steps, all_reset_indices,
                         nr_of_sequences_to_plot, nr_rows):
-    pred_seqs = model_params.dataset.prediction_sequences
+    pred_seqs = model_params.dataset.benchmark_sequences
     all_prediction_losses_norm_mean = {}
 
     for source in pred_seqs:
@@ -68,16 +45,15 @@ def generate_multi_plot(model, model_params, epoch, starting_point, nr_predictio
                 image_prefix = addr["SOURCE"] + "_" + image_prefix
                 image_name = "{}_E:{}".format(image_prefix, epoch)
 
-                losses, predictions, vlines_coords = get_sequence_prediction(model, model_params, sequence,
-                                                                             nr_prediction_steps,
-                                                                             image_name,
-                                                                             starting_point,
-                                                                             reset_indices, plot=False)
+                prediction_errors, predicted_sequences, vlines_coords = get_sequence_prediction(model, model_params,
+                                                                                                sequence,
+                                                                                                nr_prediction_steps,
+                                                                                                starting_point,
+                                                                                                reset_indices)
 
-                normalized_errors_per_sequence = get_normalized_erros_per_sequence(losses[0], reset_indices_)
-                prediction_losses_normalized += normalized_errors_per_sequence
-                prediction_losses.append(losses)
-                sequence_predictions.append(predictions)
+                prediction_losses_normalized += get_normalized_pred_errors(prediction_errors[0], reset_indices_)
+                prediction_losses.append(prediction_errors)
+                sequence_predictions.append(predicted_sequences)
                 sequence_names.append(image_name)
                 original_sequences.append(sequence)
                 vlines_coords_list.append(vlines_coords)
@@ -102,70 +78,6 @@ def get_reset_indices_array(model_params, reset_indices):
     pos_reset_indices = reset_indices_np_sorted > 0
     reset_indices_ = reset_indices_np_sorted[pos_reset_indices]
     return reset_indices_, reset_indices_np_sorted
-
-
-def log_range_accumulated_errors(epoch, prediction_losses, reset_indices, dir_name):
-    csv_name = os.path.join(dir_name, "prediction_losses_means.csv")
-
-    if os.path.exists(csv_name):
-        with open(csv_name, 'a') as f:
-            errors_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            errors_writer.writerow(np.insert(prediction_losses, 0, epoch))
-
-    else:
-        with open(csv_name, 'w') as f:
-            errors_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            errors_writer.writerow(["Epoch"] + list(reset_indices))
-            errors_writer.writerow(np.insert(prediction_losses, 0, epoch))
-
-
-def get_sequence_prediction(model, model_params, original_sequence, nr_predictions, image_name,
-                            starting_point,
-                            reset_indices, plot=True):
-    """
-    Generates prediction given an original sequence as input
-
-     Args:
-            model: instance of the keras model used for predicting
-            model_params: instance of the model_params associated with this training/testing session
-            original_sequence: the original sequence from the dataset used as "seed" for the model
-            nr_predictions: how many values we will predict in total
-            starting_point: the place from which we start seeding the model with model_params.frame_size values
-            reset_indices: when we reset the teacher forcing, starting with another original sequence
-            plot: boolean telling if we should plot or not the results or only return them
-
-    Returns:
-            prediction_losses: the accumulated errors associated with it
-            predicted_sequences: the predicted sequence
-            vlines_coords: a vlines object indicating the reset indices
-    """
-    predicted_sequences = [np.zeros(nr_predictions) for _ in range(model_params.get_classifying())]
-    predictions_losses = [np.zeros(nr_predictions) for _ in range(model_params.get_classifying())]
-    vlines_coords = []
-    input_sequence = []
-
-    for prediction_nr in range(nr_predictions):
-        current_pos = starting_point + prediction_nr
-
-        if current_pos + model_params.frame_size in reset_indices or prediction_nr == 0:
-            seed_sequence = original_sequence[current_pos:current_pos + model_params.frame_size]
-            input_sequence = np.reshape(seed_sequence, (-1, model_params.frame_size, 2))
-            vlines_coords.append(current_pos + model_params.frame_size - 1)
-
-        """I get the predictions here. I might have 2 predictions made if I am using regression and softmax"""
-        predicted_values = decode_model_output(model.predict(input_sequence), model_params)
-        for i, predicted_val in enumerate(predicted_values):
-            predicted_sequences[i][prediction_nr] = predicted_val
-            predicted_val_w_label = np.array(
-                [predicted_val, original_sequence[current_pos + model_params.frame_size, 1]])
-
-            input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted_val_w_label, (-1, 1, 2)), axis=1)
-            actual_value = original_sequence[current_pos + model_params.frame_size][0]
-            curr_loss = np.abs(actual_value - predicted_val)
-            predictions_losses[i][prediction_nr] = curr_loss if current_pos + model_params.frame_size in reset_indices \
-                else predictions_losses[i][prediction_nr - 1] + curr_loss
-
-    return predictions_losses, predicted_sequences, vlines_coords
 
 
 def generate_subplots(original_sequences, sequence_predictions, vlines_coords_list, sequence_names,
@@ -254,6 +166,8 @@ def plot_conf_matrix(cnf_mat, classes, cmap, normalize, save_path):
     plt.close()
 
 
-def plot_pred_losses(pred_losses, name):
-    for source, source_pred_errors in pred_losses.items():
-        pass
+def show_and_plot(plot_save_path, plot_title, show):
+    plt.title(plot_title)
+    plt.savefig(plot_save_path)
+    plt.show() if show else None
+    plt.close()

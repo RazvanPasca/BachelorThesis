@@ -1,10 +1,10 @@
 from keras.callbacks import ModelCheckpoint, CSVLogger
 
 from WavenetImageAE.ModelTrainingParameters import ModelTrainingParameters
-from WavenetImageAE.ReconstructImageCallback import ReconstructImageCallback
 from WavenetImageAE.model_parameters import model_parameters
-from WavenetImageAE.wavenet_dcgan_model import get_wavenet_dcgan_model
+from WavenetImageAE.wavenet_dcgan_model import get_full_model
 from callbacks.MetricsPlotCallback import MetricsPlotCallback
+from callbacks.ReconstructImageCallback import ReconstructImageCallback
 from callbacks.TboardCallbackWrapper import TboardCallbackWrapper
 from utils.tf_utils import configure_gpu
 
@@ -30,28 +30,27 @@ def get_model_callbacks(model_params, train_images_to_reconstr, val_generator, v
                                           monitor="val_loss", save_best_only=True)
     callbacks.append(save_model_callback)
 
-    if model_params.model_output_type.upper() == "DCGAN":
+    if model_params.model_output_type.upper() == "RECONSTRUCTION":
         reconstruct_image_callback = ReconstructImageCallback(train_images_to_reconstr,
                                                               val_images_to_reconstr,
                                                               model_params.logging_period,
-                                                              model_params.nr_rec,
                                                               model_params.model_path)
         callbacks.append(reconstruct_image_callback)
     return callbacks
 
 
 def train_model(model_params):
-    model = get_wavenet_dcgan_model(nr_filters=model_params.nr_filters,
-                                    input_shape=(model_params.input_shape, 47),
-                                    nr_layers=model_params.nr_layers,
-                                    lr=model_params.lr,
-                                    loss=model_params.loss,
-                                    clipvalue=model_params.clip_grad_by_value,
-                                    skip_conn_filters=model_params.skip_conn_filters,
-                                    regularization_coef=model_params.regularization_coef,
-                                    z_dim=model_params.z_dim,
-                                    output_type=model_params.model_output_type,
-                                    nr_classes=model_params.dataset.nr_classes)
+    model = get_full_model(nr_filters=model_params.nr_filters,
+                           input_shape=(model_params.input_shape, 47),
+                           nr_layers=model_params.nr_layers,
+                           lr=model_params.lr,
+                           loss=model_params.loss,
+                           clipvalue=model_params.clip_grad_by_value,
+                           skip_conn_filters=model_params.skip_conn_filters,
+                           regularization_coef=model_params.regularization_coef,
+                           z_dim=model_params.z_dim,
+                           output_type=model_params.model_output_type,
+                           nr_classes=model_params.dataset.nr_classes)
 
     print(model.summary())
 
@@ -61,9 +60,9 @@ def train_model(model_params):
     train_images_to_reconstr = None
     val_images_to_reconstr = None
 
-    if model_params.model_output_type.upper() == "DCGAN":
-        train_images_to_reconstr = next(train_generator)
-        val_images_to_reconstr = next(val_generator)
+    if model_params.model_output_type.upper() == "RECONSTRUCTION":
+        train_images_to_reconstr = next(train_generator)[:model_params.nr_rec]
+        val_images_to_reconstr = next(val_generator)[:model_params.nr_rec]
 
     callbacks = get_model_callbacks(model_params, train_images_to_reconstr, val_generator, val_images_to_reconstr)
     print("Steps per train {} |  Steps per val {} ".format(model_params.nr_train_steps, model_params.nr_val_steps))

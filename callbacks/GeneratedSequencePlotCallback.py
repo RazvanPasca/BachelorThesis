@@ -1,10 +1,11 @@
 import tensorflow as tf
 from keras import callbacks
 
-from utils.plot_utils import create_dir_if_not_exists, generate_multi_plot, plot_pred_losses
+from utils.plot_utils import generate_multi_plot
+from utils.system_utils import create_dir_if_not_exists
 
 
-class GenErrorPlotCallback(callbacks.Callback):
+class GeneratedSequencePlotCallback(callbacks.Callback):
     """Callback used for plotting at certain epochs the generations of the model
 
         If nr_predictions is smaller than 1, the model will predict up to the end of the signal
@@ -12,16 +13,15 @@ class GenErrorPlotCallback(callbacks.Callback):
         If starting point is smaller than 1, the model will start predicting from the beginning of the signal-frame size
     """
 
-    def __init__(self, model_params, plot_period, nr_predictions, starting_point, all_reset_indices,
+    def __init__(self, model_parameters, plot_period, nr_predictions, starting_point, all_reset_indices,
                  nr_plot_rows=3):
         super().__init__()
 
-        self.model_params = model_params
+        self.model_params = model_parameters
         self.epoch = 0
-        self.get_nr_prediction_steps(model_params, nr_predictions, starting_point)
+        self.get_nr_prediction_steps(model_parameters, nr_predictions, starting_point)
         self.plot_period = plot_period
         self.starting_point = starting_point
-        # self.get_all_reset_indices(all_reset_indices, model_params, starting_point)
         self.all_reset_indices = self.get_all_reset_indices(all_reset_indices)
         self.nr_plot_rows = nr_plot_rows
         self.nr_of_sequences_to_plot = self.model_params.dataset.nr_of_seqs // nr_plot_rows * nr_plot_rows
@@ -54,13 +54,13 @@ class GenErrorPlotCallback(callbacks.Callback):
 
             self.write_pred_losses_to_tboard(all_pred_losses_normalized, self.epoch)
             self.update_all_pred_losses(all_pred_losses_normalized)
-            plot_pred_losses(self.all_pred_losses_normalized, self.model_params.model_path + "/pred_error_log")
 
     def on_train_end(self, logs=None):
         all_pred_losses_normalized = generate_multi_plot(self.model, self.model_params, "TrainEnd", self.starting_point,
                                                          nr_prediction_steps=self.nr_prediction_steps,
                                                          all_reset_indices=self.all_reset_indices,
-                                                         nr_of_sequences_to_plot=self.nr_of_sequences_to_plot)
+                                                         nr_of_sequences_to_plot=self.nr_of_sequences_to_plot,
+                                                         nr_rows=2)
         self.update_all_pred_losses(all_pred_losses_normalized)
         self.write_pred_losses_to_tboard(all_pred_losses_normalized, self.epoch)
         self.pred_error_writer.close()
@@ -69,13 +69,6 @@ class GenErrorPlotCallback(callbacks.Callback):
         self.nr_prediction_steps = nr_predictions if nr_predictions > 0 else model_params.dataset.trial_length
         self.nr_prediction_steps = min(self.nr_prediction_steps,
                                        model_params.dataset.trial_length - starting_point - model_params.frame_size - 1)
-
-    def get_all_reset_indices_2(self, all_reset_indices, model_params, starting_point):
-        self.all_reset_indices = all_reset_indices
-        self.limit = model_params.dataset.trial_length - model_params.frame_size - 1 - starting_point
-        if self.all_reset_indices[-1] > self.limit:
-            self.all_reset_indices = self.all_reset_indices[:-1]
-            self.all_reset_indices.append(self.limit)
 
     def write_pred_losses_to_tboard(self, all_pred_losses_normalized, epoch):
         for source, source_errors in all_pred_losses_normalized.items():

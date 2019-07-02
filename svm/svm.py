@@ -4,20 +4,11 @@ import sys
 
 import numpy as np
 from joblib import Parallel, delayed
-from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.svm import LinearSVC
 
 from datasets.loaders import new_train_test_split, load_cat_tf_record
 from datasets.paths import CAT_TFRECORDS_PATH_TOBEFORMATED
-
-
-def compute_confusion_matrix(svc, x, y):
-    y_pred = svc.predict(x)
-    conf_mat = confusion_matrix(y, y_pred)
-    clas_rep = classification_report(y, y_pred)
-    print(conf_mat)
-    print(clas_rep)
-    return conf_mat, clas_rep
+from utils.output_utils import compute_confusion_matrix
 
 
 def main():

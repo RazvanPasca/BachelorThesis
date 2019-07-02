@@ -5,7 +5,7 @@ import numpy as np
 from datasets.paths import CAT_DATASET_SIGNAL_PATH
 from datasets.paths import CAT_DATASET_STIMULI_PATH
 from datasets.paths import CAT_DATASET_STIMULI_PATH_64
-from signal_analysis.signal_utils import get_filter_type, filter_input_sample
+from signal_analysis.signal_utils import filter_input_sequence
 from utils.tf_utils import shuffle_indices
 
 
@@ -15,7 +15,7 @@ class CatLFPStimuli:
                  cutoff_freq=None,
                  val_perc=0.20,
                  random_seed=42,
-                 model_output_type="DCGAN",
+                 model_output_type="RECONSTRUCTION",
                  split_by="trials",
                  slice_length=1000,
                  slicing_strategy="consecutive"):
@@ -128,8 +128,7 @@ class CatLFPStimuli:
 
     def _load_data(self, signal_path, stimuli_path_64_64, stimuli_path_cropped):
         self.signal = np.load(signal_path)[self.movies_to_keep, ...]
-        filter_type = get_filter_type(self.cutoff_freq)
-        self.signal = filter_input_sample(self.signal, self.cutoff_freq, filter_type)
+        self.signal = filter_input_sequence(self.signal, self.cutoff_freq)
         self.stimuli = np.load(stimuli_path_64_64)[self.movies_to_keep, ...]
 
         if self.model_output_type == "EDGES":
@@ -166,7 +165,7 @@ class CatLFPStimuli:
 
     def _get_stimuli_for_sequence(self, movie_index, seq_start):
         image_number = (seq_start - 100) // 40
-        if self.model_output_type == "DCGAN":
+        if self.model_output_type == "RECONSTRUCTION":
             image = self.stimuli[movie_index, image_number, :, :]
             return image[:, :, np.newaxis]
         elif self.model_output_type == "BRIGHTNESS" or self.model_output_type == "EDGES":

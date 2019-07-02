@@ -3,9 +3,9 @@ from keras.callbacks import CSVLogger, ModelCheckpoint
 from WavenetGenerator.test_model import test_model
 from WavenetGenerator.training_parameters import ModelTrainingParameters
 from WavenetGenerator.wavenet_generator_model import get_wavenet_model
-from callbacks.GenErrorPlotCallback import GenErrorPlotCallback as PlotCallback
+from callbacks.GeneratedSequencePlotCallback import GeneratedSequencePlotCallback as PlotCallback
 from callbacks.TboardCallbackWrapper import TboardCallbackWrapper as TensorBoardWrapper
-from utils.plot_utils import create_dir_if_not_exists
+from utils.system_utils import create_dir_if_not_exists
 from utils.tf_utils import configure_gpu
 
 
@@ -49,7 +49,8 @@ def train_model(model_params):
                                                    nr_predictions=-1,
                                                    starting_point=0,
                                                    all_reset_indices=[model_params.dataset.gamma_windows_in_trial,
-                                                                      [model_params.dataset.trial_length - 1]])
+                                                                      [model_params.dataset.trial_length - 1]],
+                                                   nr_plot_rows=3)
 
     path_models_ = model_params.model_path + "/models/"
     create_dir_if_not_exists(path_models_)

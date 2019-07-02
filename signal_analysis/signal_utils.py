@@ -13,19 +13,6 @@ def moving_average_smooth(x, nr_points):
     return x_smooth
 
 
-def butter_pass(cutoff, fs, type, order=5):
-    nyq = 0.5 * fs
-    normal_cutoff = np.array(cutoff) / nyq
-    b, a = butter(order, normal_cutoff, btype=type, analog=False, output="ba")
-    return b, a
-
-
-def butter_pass_filter(data, cutoff, fs, type, order=5):
-    b, a = butter_pass(cutoff, fs, type, order=order)
-    y = filtfilt(b, a, data)
-    return y
-
-
 def mu_law_fn(x, mu=256):
     """Maps [-1,1] to [-1,-1] with a readjusted distribution"""
     val = np.sign(x) * (np.log(1 + (mu - 1) * np.absolute(x)) / np.log(1 + mu - 1))
@@ -55,5 +42,19 @@ def get_filter_type(cuttof_freq):
     return filter_type
 
 
-def filter_input_sample(sample, cuttof_freq, filter_type):
-    return sample if filter_type is None else butter_pass_filter(sample, cuttof_freq, 1000, filter_type)
+def filter_input_sequence(sample, filter_frequency):
+    filter_type = get_filter_type(filter_frequency)
+    return sample if filter_type is None else butter_pass_filter(sample, filter_frequency, 1000, filter_type)
+
+
+def butter_pass_filter(data, cutoff, fs, type, order=5):
+    b, a = butter_pass(cutoff, fs, type, order=order)
+    y = filtfilt(b, a, data)
+    return y
+
+
+def butter_pass(cutoff, fs, type, order=5):
+    nyq = 0.5 * fs
+    normal_cutoff = np.array(cutoff) / nyq
+    b, a = butter(order, normal_cutoff, btype=type, analog=False, output="ba")
+    return b, a

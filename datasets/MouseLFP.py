@@ -54,7 +54,7 @@ class MouseLFP(LFPDataset):
         np.random.seed(datetime.datetime.now().microsecond)
 
     def get_sequences_for_plotting(self):
-        self.prediction_sequences = {
+        self.benchmark_sequences = {
             'VAL': [],
             'TRAIN': []
         }
@@ -67,13 +67,13 @@ class MouseLFP(LFPDataset):
                     channel_nr = channel_nr % self.validation.shape[2]
                     if seq_nr < nr_signals_in_val:
                         seq_nr += 1
-                        for key in self.prediction_sequences.keys():
+                        for key in self.benchmark_sequences.keys():
                             sequence_and_source = self.get_sequence_from(cond_index, trial_index, channel_nr, key)
                             gamma_label = self.gamma_info
                             sequence_w_gamma_labels = np.concatenate(
                                 (sequence_and_source[0].reshape(self.trial_length, 1), gamma_label), axis=1)
                             sequence_and_source = replace_at_index(sequence_and_source, 0, sequence_w_gamma_labels)
-                            self.prediction_sequences[key].append(sequence_and_source)
+                            self.benchmark_sequences[key].append(sequence_and_source)
                     else:
                         break
 
@@ -201,7 +201,7 @@ class MouseLFP(LFPDataset):
             if len(x) == batch_size:
                 y = self._get_y_value(classifying, y)
 
-                yield np.array(x), y
+                yield np.array(x), y.reshape(batch_size, 1)
                 x = []
                 y = []
 

@@ -2,8 +2,8 @@ import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from datasets.MouseLFP import MouseLFP
-from datasets.paths import MOUSEACH_DATASET_PATH, MOUSE_DATASET_PATH
+from datasets.CatLFPStimuli import CatLFPStimuli
+from utils.plot_utils import show_and_plot
 
 
 def rmse(a, b):
@@ -40,13 +40,6 @@ def compute_signals_correlation(ds, name):
     with open("{}:Signals_correlations.txt".format(name), "w+") as f:
         for index in corr_indexes_sorted[::-1]:
             f.write("Channel:{}, Cross correlation: {}\n".format(index, means[index]))
-
-
-def find_samples_over_x(dataset, x):
-    samples = dataset.channels[2]
-    values_over_x = (samples > x).sum() if x > 0 else (samples < x).sum()
-    print(x, values_over_x)
-    return values_over_x
 
 
 def compare_signals(dataset, dir_name):
@@ -121,49 +114,94 @@ def compare_signals(dataset, dir_name):
     print("Finished condition comparison")
 
 
-def signal_histograms():
-    for normalization in ["MuLaw", "Zsc", "Brute"]:
-        dataset = MouseLFP(MOUSEACH_DATASET_PATH, cutoff_freq=-1, channels_to_keep=[-1],
-                           conditions_to_keep=[0], trials_to_keep=[1], normalization=normalization)
-        for cond in range(dataset.number_of_conditions):
-            for trial in range(dataset.trials_per_condition):
-                signals = []
-                for channel in range(33):
-                    if channel in dataset.channels_to_keep:
-                        signal = dataset.get_dataset_piece(cond, trial, channel)
-                        signals.append(signal)
+def get_signal_histograms(dataset, path, nr_of_bins, separated_histograms=False):
+    conditions = 3
+    channels = 10
+    trials = 20
 
-                signals = np.concatenate(signals).ravel()
-                a = plt.hist(signals, 512)
+    for cond in range(conditions):
+        for trial in range(trials):
+            signals = []
 
-                plt.savefig(
-                    "/home/pasca/School/Licenta/Naturix/Histograms/MouseACh/{}/Cond:{}_Trial:{}".format(
-                        normalization,
-                        cond, trial))
-                plt.show()
-                plt.close()
+            if separated_histograms:
+                fig = plt.figure(figsize=(16, 10))
+                ax = fig.add_subplot(111, projection='3d')
 
-    for normalization in ["MuLaw", "Zsc", "Brute"]:
-        dataset = MouseLFP(MOUSE_DATASET_PATH, cutoff_freq=7, channels_to_keep=[-1],
-                           conditions_to_keep=[-1], trials_to_keep=[-1], normalization=normalization)
-        for cond in range(dataset.number_of_conditions):
-            for trial in range(dataset.trials_per_condition):
-                signals = []
-                for channel in range(32):
-                    signal = dataset.get_dataset_piece(cond, trial, channel)
+            for channel in range(channels):
+                signal = dataset.signal[cond, trial, channel]
+                if separated_histograms:
+                    hist_values, bins = np.histogram(signal, nr_of_bins)
+                    xs = (bins[:-1] + bins[1:]) / 2
+                    ax.bar(xs, hist_values, width=bins[1] - bins[0], zs=channel * 5, zdir='y', alpha=0.8)
+                else:
                     signals.append(signal)
 
+            if not separated_histograms:
                 signals = np.concatenate(signals).ravel()
-                a = plt.hist(signals, 512)
+                plt.hist(signals, nr_of_bins)
 
-                plt.savefig(
-                    "/home/pasca/School/Licenta/Naturix/Histograms/MouseControl/{}/Cond:{}_Trial:{}".format(
-                        normalization,
-                        cond, trial))
-                plt.close()
+            plot_title = "Cond:{}_Trial:{}".format(cond, trial)
+            plot_save_path = "{}/Channels_together/Cond:{}_Trial:{}_Multiple:{}".format(path, cond, trial,
+                                                                                        separated_histograms)
+            show_and_plot(plot_save_path, plot_title, show=True)
+
+    for cond in range(conditions):
+        for channel in range(channels):
+            signals = []
+
+            if separated_histograms:
+                fig = plt.figure(figsize=(16, 10))
+                ax = fig.add_subplot(111, projection='3d')
+
+            for trial in range(trials):
+                signal = dataset.signal[cond, trial, channel]
+                if separated_histograms:
+                    hist, bins = np.histogram(signal, nr_of_bins)
+                    xs = (bins[:-1] + bins[1:]) / 2
+                    ax.bar(xs, hist, zs=channel * 3, zdir='y', alpha=0.8)
+                else:
+                    signals.append(signal)
+
+            if not separated_histograms:
+                signals = np.concatenate(signals).ravel()
+                plt.hist(signals, nr_of_bins)
+
+            plot_title = "Cond:{}_Channel:{}".format(cond, channel)
+            plot_save_path = "{}/Trials_together/Cond:{}_Channel:{}_Multiple:{}".format(path, cond, channel,
+                                                                                        separated_histograms)
+            show_and_plot(plot_title, plot_save_path, show=True)
+
+    for trial in range(trials):
+        for channel in range(channels):
+            signals = []
+
+            if separated_histograms:
+                fig = plt.figure(figsize=(16, 10))
+                ax = fig.add_subplot(111, projection='3d')
+
+            for condition in range(conditions):
+                signal = dataset.signal[condition, trial, channel]
+                if separated_histograms:
+                    hist, bins = np.histogram(signal, nr_of_bins)
+                    xs = (bins[:-1] + bins[1:]) / 2
+                    ax.bar(xs, hist, zs=channel * 10, zdir='y', alpha=0.5)
+                else:
+                    signals.append(signal)
+
+            if not separated_histograms:
+                signals = np.concatenate(signals).ravel()
+                plt.hist(signals, nr_of_bins)
+
+            plot_title = "Trial:{}_Channel:{}".format(trial, channel)
+            plot_save_path = "{}/Conditions_together/Trial:{}_Channel:{}_Multiple:{}".format(path, trial, channel,
+                                                                                             separated_histograms)
+            show_and_plot(plot_title, plot_save_path, show=True)
 
 
 if __name__ == '__main__':
-    dataset = MouseLFP(MOUSE_DATASET_PATH, cutoff_freq=[1, 80], channels_to_keep=[-1],
-                       conditions_to_keep=[1], trials_to_keep=[0], normalization="Zsc")
-    compare_signals(dataset, "MouseControl/Bpass")
+    dataset = CatLFPStimuli()
+
+    # dataset = MouseLFP(MOUSE_DATASET_PATH, cutoff_freq=[1, 80], channels_to_keep=[-1],
+    #                    conditions_to_keep=[1], trials_to_keep=[0], normalization="Zsc")
+    get_signal_histograms(dataset, "/home/pasca/School/Licenta/Naturix/Histograms/CatLFP", nr_of_bins=256,
+                          separated_histograms=True)

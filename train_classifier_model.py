@@ -3,12 +3,13 @@ import collections
 import numpy as np
 from keras.callbacks import CSVLogger, TensorBoard, ModelCheckpoint
 
-from WavenetClassifier import classify_params, callbacks
+from WavenetClassifier import classify_params
 from WavenetClassifier.wavenet_classifier_model import get_wavenet_model
+from callbacks import ConfusionMatrixPlotter
 from callbacks.MetricsPlotCallback import MetricsPlotCallback
 from datasets.loaders import new_train_test_split, load_cat_tf_record
 from datasets.paths import CAT_TFRECORDS_PATH_TOBEFORMATED
-from utils.plot_utils import create_dir_if_not_exists
+from utils.system_utils import create_dir_if_not_exists
 from utils.tf_utils import configure_gpu
 
 
@@ -185,12 +186,12 @@ def train_model(model_params, X_train, Y_train, X_test, Y_test, classes, model_p
     tboard_callback = TensorBoard(log_dir=model_path, write_graph=True)
     log_callback = CSVLogger(model_path + "/session_log.csv")
     plot_metric_callback = MetricsPlotCallback(model_path)
-    conf_matrix_callback = callbacks.ConfusionMatrixPlotter(X_train, Y_train,
-                                                            X_test, Y_test,
-                                                            classes,
-                                                            model_path,
-                                                            model_params["logging_period"],
-                                                            normalize=True)
+    conf_matrix_callback = ConfusionMatrixPlotter.ConfusionMatrixPlotter(X_train, Y_train,
+                                                                         X_test, Y_test,
+                                                                         classes,
+                                                                         model_path,
+                                                                         model_params["logging_period"],
+                                                                         normalize=True)
     save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_path),
                                           monitor="val_loss",
                                           save_best_only=True)

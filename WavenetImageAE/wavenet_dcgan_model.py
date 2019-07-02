@@ -77,39 +77,43 @@ def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(1, 1), regul
     return u
 
 
-def get_wavenet_dcgan_model(nr_filters, input_shape, nr_layers, lr, loss, clipvalue, skip_conn_filters,
-                            regularization_coef, z_dim, output_type, img_size=64, generator_filter_size=64,
-                            nr_classes=3):
+def get_full_model(nr_filters, input_shape, nr_layers, lr, loss, clipvalue, skip_conn_filters,
+                   regularization_coef, z_dim, output_type, img_size=64, generator_filter_size=64,
+                   nr_classes=3):
     input_ = Input(shape=input_shape)
-    A, B = wavenet_block(nr_filters, 3, 1, regularization_coef=regularization_coef, first=True)(input_)
-    skip_connections = [B]
-
-    for i in range(1, nr_layers):
-        dilation_rate = 2 ** i
-        A, B = wavenet_block(nr_filters, 3, dilation_rate, regularization_coef=regularization_coef)(A)
-        skip_connections.append(B)
-
-    net = Add(name="Skip_Merger")(skip_connections)
-    net = LeakyReLU()(net)
-    net = Conv1D(skip_conn_filters, 1, kernel_regularizer=l2(regularization_coef), name="Skip_FConv_1")(net)
-    net = LeakyReLU()(net)
-    net = Conv1D(skip_conn_filters, 1, kernel_regularizer=l2(regularization_coef), name="Skip_FConv_2")(net)
+    net = get_wavenet_encoder(input_, nr_filters, nr_layers, regularization_coef, skip_conn_filters)
 
     net = Flatten()(net)
     net = LeakyReLU()(net)
     net = Dense(z_dim)(net)
     net = LeakyReLU()(net)
 
-    model = get_model_w_output_stage(clipvalue, generator_filter_size, img_size, input_, loss, lr, output_type, net,
-                                     nr_classes,
-                                     regularization_coef)
+    model = get_model_output_stage(clipvalue, generator_filter_size, img_size, input_, loss, lr, output_type, net,
+                                   nr_classes,
+                                   regularization_coef)
     return model
 
 
-def get_model_w_output_stage(clipvalue, generator_filter_size, img_size, input_, loss, lr, output_type, net, nr_classes,
-                             regularization_coef):
+def get_wavenet_encoder(input_, nr_filters, nr_layers, l2_coef, skip_conn_filters):
+    A, B = wavenet_block(nr_filters, 3, 1, regularization_coef=l2_coef, first=True)(input_)
+    skip_connections = [B]
+    for i in range(1, nr_layers):
+        dilation_rate = 2 ** i
+        A, B = wavenet_block(nr_filters, 3, dilation_rate, regularization_coef=l2_coef)(A)
+        skip_connections.append(B)
+    net = Add(name="Skip_Merger")(skip_connections)
+    net = LeakyReLU()(net)
+    net = Conv1D(skip_conn_filters, 1, kernel_regularizer=l2(l2_coef), name="Skip_FConv_1")(net)
+    net = LeakyReLU()(net)
+    net = Conv1D(skip_conn_filters, 1, kernel_regularizer=l2(l2_coef), name="Skip_FConv_2")(net)
+    return net
+
+
+def get_model_output_stage(clipvalue, generator_filter_size, img_size, input_, loss, lr, output_type, net, nr_classes,
+                           regularization_coef):
     optimizer = optimizers.adam(lr=lr, clipvalue=clipvalue)
-    if output_type.upper() == "DCGAN":
+
+    if output_type.upper() == "RECONSTRUCTION":
 
         seed_img_size = img_size // 16
         generator = Dense(4 * generator_filter_size * seed_img_size * seed_img_size)(net)

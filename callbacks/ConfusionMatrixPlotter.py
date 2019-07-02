@@ -1,8 +1,9 @@
 from keras.callbacks import Callback
 from matplotlib import pyplot as plt
 
-from utils.output_utils import compute_conf_matrix, log_metrics_to_text
+from utils.output_utils import compute_conf_matrix
 from utils.plot_utils import plot_conf_matrix
+from utils.system_utils import log_metrics_to_text
 
 
 class ConfusionMatrixPlotter(Callback):
