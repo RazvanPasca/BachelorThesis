@@ -1,16 +1,16 @@
-from keras import backend
 from keras.layers import Dense, Flatten, LeakyReLU, Lambda, K
 
-from models import ModelArguments
+import TrainingConfiguration
 
 
-def get_z_layer(model_args: ModelArguments, encoder_output):
+def get_z_layer(model_args: TrainingConfiguration, encoder_output):
+    z_layer = Flatten()(encoder_output)
+
     if model_args.use_vae:
         z_mean = Dense(model_args.z_dim)(encoder_output)
         z_log_sigma = Dense(model_args.z_dim)(encoder_output)
         z_layer = Lambda(sampling, output_shape=(model_args.z_dim,))([z_mean, z_log_sigma])
     else:
-        z_layer = Flatten()(encoder_output)
         z_layer = LeakyReLU()(z_layer)
         z_layer = Dense(model_args.z_dim, name="Z_layer")(z_layer)
         z_layer = LeakyReLU()(z_layer)

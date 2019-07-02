@@ -72,6 +72,7 @@ class LFPDataset:
         self.stimuli = None
         self.signal = None
 
+        self.random_seed = random_seed
         self.signal_path = signal_path
         self.stimuli_path = stimuli_path
         self.use_mu_law = use_mu_law
@@ -121,7 +122,7 @@ class LFPDataset:
         """
 
         sequence, seq_addr = self.get_random_sequence(source)
-        label = self._get_y_value_for_sequence(seq_addr, source)
+        label = self._get_y_value_for_sequence(seq_addr)
 
         return sequence, label
 
@@ -143,8 +144,36 @@ class LFPDataset:
 
         return self._example_generator(batch_size, "VAL")
 
+    def get_training_dataset_size(self):
+        """
+
+        Returns the number of samples in train
+
+        """
+
+        return self._get_dataset_size("TRAIN")
+
+    def get_validation_dataset_size(self):
+        """
+
+        Returns the number of samples in validation
+
+        """
+
+        return self._get_dataset_size("VAL")
+
     def get_name(self):
         return type(self).__name__
+
+    def _get_dataset_size(self, source):
+        dimensions = list(self.prepared_data[source].shape)
+        if self.stack_channels:
+            dimensions[-2] = 1
+        dimensions[-1] -= self.slice_length - 1
+        size = 1
+        for x in dimensions:
+            size *= x
+        return size
 
     def _prepare_data(self):
         self._filter_signal_frequencies()
@@ -202,7 +231,7 @@ class LFPDataset:
 
         Translates the value to the mu law encoding bin
         taking into consideration the mu value
-
+self.cached_bin_of_value[value]
         """
 
         assert (type(self.use_mu_law) is int)
@@ -223,7 +252,7 @@ class LFPDataset:
             if self.use_mu_law:
                 self.cached_bin_of_value[value] = self._mu_law_encoding(value)
             else:
-                self.cached_bin_of_value[value] = np.digitize(value, self.bins, right=False)
+                self.cached_bin_of_value[value] = np.digitize([value], self.bins, right=False)[0]
 
         return self.cached_bin_of_value[value]
 
@@ -307,7 +336,8 @@ class LFPDataset:
                                       self.slice_length)
         else:
             channel = np.random.randint(low=0, high=self.number_of_channels)
-            sequence = random_trial[channel, sequence_start_index:sequence_start_index + self.slice_length]
+            sequence = random_trial[channel,
+                       sequence_start_index:sequence_start_index + self.slice_length][:, np.newaxis]
             address = SequenceAddress(source, condition_index, trial_index, channel, sequence_start_index,
                                       self.slice_length)
 
@@ -330,7 +360,7 @@ class LFPDataset:
 
         random_sequence, (movie_index, trial_index) = self._get_random_trial(source)
         slice_index = np.random.randint(low=0, high=random_sequence.shape[1])
-        signal_sequence = random_sequence[:, slice_index, :]
+        signal_sequence = np.transpose(random_sequence[:, slice_index, :])
 
         timestep = self.slice_indexes[source][slice_index] * self.slice_length
         address = SequenceAddress(source, movie_index, trial_index, ":", timestep, self.slice_length)
@@ -351,9 +381,17 @@ class LFPDataset:
 
         assert (source in self.prepared_data)
 
-        movie_index = np.random.choice(self.prepared_data[source].shape[0])
-        trial_index = np.random.choice(self.prepared_data[source].shape[1])
-        return self.prepared_data[source][movie_index, trial_index], (movie_index, trial_index)
+        number_of_conditions = self.prepared_data[source].shape[0]
+        number_of_trials = self.prepared_data[source].shape[1]
+
+        condition_index = np.random.choice(self.prepared_data[source].shape[0]) if number_of_conditions > 1 else 0
+        trial_index = np.random.choice(self.prepared_data[source].shape[1]) if number_of_trials > 1 else 0
+
+        condition = self.prepared_data[source][condition_index] if number_of_conditions > 1 else self.prepared_data[
+            source]
+        trial = condition[trial_index] if number_of_trials > 1 else condition
+
+        return trial, (condition_index, trial_index)
 
     def _load_data(self):
         """
@@ -367,6 +405,7 @@ class LFPDataset:
         self.number_of_conditions = self.signal.shape[0]
         self.trials_per_condition = self.signal.shape[1]
         self.number_of_channels = self.signal.shape[-2]
+        self.trial_length = self.signal.shape[-1]
 
         if os.path.exists(self.stimuli_path):
             self.stimuli = np.load(self.stimuli_path)
@@ -409,7 +448,7 @@ class LFPDataset:
         self.regression_actual = np.mean(stimuli_w_edges_extracted, axis=(2, 3)) / 255
         self.stimuli_w_edges_extracted = stimuli_w_edges_extracted
 
-    def _get_y_value_for_sequence(self, seq_addr):
+    def _get_y_value_for_sequence(self, seq_addr: SequenceAddress):
         """
 
         Finds the a sequence based on the address
@@ -419,13 +458,13 @@ class LFPDataset:
             return [seq_addr.movie]
 
         elif self.model_type == ModelType.SCENE_CLASSIFICATION:
-            #TODO
+            # TODO
             pass
 
         elif self.model_type == ModelType.NEXT_TIMESTEP:
-            next_timestep = self.prepared_data[seq_addr.source][
+            next_timestep = self.prepared_data[seq_addr.split_location][
                 seq_addr.movie, seq_addr.trial, seq_addr.channel, seq_addr.timestep + self.slice_length]
-            return self._encode_input_to_bin(next_timestep)
+            return [self._encode_input_to_bin(next_timestep)]
 
         else:
             image_number = (seq_addr.timestep - 100) // 40
@@ -437,7 +476,7 @@ class LFPDataset:
 
             raise Exception("Invalid ModelType!")
 
-    def _get_nr_classes(self):
+    def get_nr_classes(self):
         """
 
         Returns the number of classes
@@ -532,6 +571,10 @@ class LFPDataset:
     def _normalize_stimuli(self):
         self.stimuli = self.stimuli / np.max(self.stimuli)
         self.stimuli = self.stimuli - np.min(self.stimuli)
+
+    def get_input_shape(self):
+        x, _ = self.get_random_example("TRAIN")
+        return x.shape
 
 
 def show_edges_computed():

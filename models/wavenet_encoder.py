@@ -1,7 +1,7 @@
 from keras.layers import Conv1D, Multiply, Add, Activation, Reshape, Lambda
 from keras.regularizers import l2
 
-from models import ModelArguments
+import TrainingConfiguration
 
 
 def create_wavenet_layer(n_filters,
@@ -53,42 +53,39 @@ def create_wavenet_layer(n_filters,
     return layer
 
 
-def get_wavenet_encoder(
-        input,
-        model_args: ModelArguments):
-    wavenet_layer = create_wavenet_layer(
-        n_filters=model_args.nr_filters,
-        filter_size=2,
-        dilation_rate=1,
-        padding=model_args.padding,
-        regularization_coef=model_args.regularization_coef,
-        first=True)
+def get_wavenet_encoder(input,
+                        model_args: TrainingConfiguration):
+    wavenet_layer = create_wavenet_layer(n_filters=model_args.nr_filters,
+                                         filter_size=2,
+                                         dilation_rate=1,
+                                         padding=model_args.padding,
+                                         regularization_coef=model_args.regularization_coef,
+                                         first=True)
+
     prev_layer_output, prev_layer_skip_out = wavenet_layer(input)
     skip_connections = [prev_layer_skip_out]
 
     for i in range(1, model_args.nr_layers):
         dilation_rate = 2 ** i
-        wavenet_layer = create_wavenet_layer(
-            n_filters=model_args.nr_filters,
-            filter_size=2,
-            dilation_rate=dilation_rate,
-            padding=model_args.padding,
-            regularization_coef=model_args.regularization_coef)
+        wavenet_layer = create_wavenet_layer(n_filters=model_args.nr_filters,
+                                             filter_size=2,
+                                             dilation_rate=dilation_rate,
+                                             padding=model_args.padding,
+                                             regularization_coef=model_args.regularization_coef)
         prev_layer_output, prev_layer_skip_out = wavenet_layer(prev_layer_output)
         skip_connections.append(prev_layer_skip_out)
 
     net = Add(name="Skip_Merger")(skip_connections)
     net = Activation('relu')(net)
-    net = Conv1D(
-        filters=model_args.skip_conn_filters,
-        kernel_size=1,
-        activation='relu',
-        kernel_regularizer=l2(model_args.regularization_coef),
-        name="Skip_FConv_1")(net)
-    output = Conv1D(
-        filters=model_args.skip_conn_filters,
-        kernel_size=1,
-        kernel_regularizer=l2(model_args.regularization_coef),
-        name="Skip_FConv_2")(net)
 
-    return input, output
+    net = Conv1D(filters=model_args.skip_conn_filters,
+                 kernel_size=1,
+                 activation='relu',
+                 kernel_regularizer=l2(model_args.regularization_coef),
+                 name="Skip_FConv_1")(net)
+    output = Conv1D(filters=model_args.skip_conn_filters,
+                    kernel_size=1,
+                    kernel_regularizer=l2(model_args.regularization_coef),
+                    name="Skip_FConv_2")(net)
+
+    return output

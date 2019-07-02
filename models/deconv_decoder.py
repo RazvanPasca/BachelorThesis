@@ -1,10 +1,9 @@
 from keras.backend import tf
-from keras.backend import tf
 from keras.engine import Layer, InputSpec
 from keras.layers import Dense, Reshape, Conv2D, LeakyReLU, UpSampling2D
 from keras.regularizers import l2
 
-from models import ModelArguments
+import TrainingConfiguration
 
 
 class ReflectionPadding2D(Layer):
@@ -32,8 +31,7 @@ def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(1, 1), regul
     return u
 
 
-def get_deconv_decoder(model_args: ModelArguments, net, output_image_size):
-
+def get_deconv_decoder(model_args: TrainingConfiguration, net, output_image_size):
     seed_img_size = output_image_size // (2 ** len(model_args.deconv_layers))
 
     generator = Dense(model_args.model_arguments.deconv_layers[0] * seed_img_size * seed_img_size)(net)

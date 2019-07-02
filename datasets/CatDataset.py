@@ -20,13 +20,14 @@ class CatDataset(LFPDataset):
                  stack_channels=False,
                  use_mu_law=False,
                  number_of_bins=255):
+        self.movies_to_keep = movies_to_keep
         super().__init__(
             signal_path=CAT_DATASET_SIGNAL_PATH,
             stimuli_path=CAT_DATASET_STIMULI_PATH_64,
             val_percentage=val_percentage,
             split_by=split_by,
             random_seed=random_seed,
-            conditions_to_keep=movies_to_keep,
+            conditions_to_keep=self.movies_to_keep,
             trials_to_keep=trials_to_keep,
             channels_to_keep=channels_to_keep,
             slice_length=slice_length,

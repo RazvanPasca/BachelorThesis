@@ -3,9 +3,10 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-from datasets.paths import CAT_DATASET_PATH
 from datasets.oldies.LFPDataset import LFPDataset
+
+from datasets.paths import CAT_DATASET_PATH_50
+
 
 class CatLFP(LFPDataset):
     def __init__(self, conditions_to_keep=(-1,),
@@ -20,7 +21,7 @@ class CatLFP(LFPDataset):
                  normalization="Zsc",
                  cutoff_freq=50,
                  white_noise_dev=-1):
-        super().__init__(CAT_DATASET_PATH, normalization=normalization, cutoff_freq=cutoff_freq,
+        super().__init__(CAT_DATASET_PATH_50, normalization=normalization, cutoff_freq=cutoff_freq,
                          random_seed=random_seed, white_noise_dev=white_noise_dev, nr_bins=nr_bins)
 
         np.random.seed(random_seed)

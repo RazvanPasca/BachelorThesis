@@ -38,7 +38,6 @@ class ModelTrainingParameters:
 
         self.frame_size = 2 ** self.nr_layers
 
-        klass = getattr(getattr(__import__("datasets.oldies"), self.dataset), self.dataset)
         self._prepare_dataset(klass)
 
         self.nr_train_steps = np.ceil(
@@ -49,6 +48,7 @@ class ModelTrainingParameters:
         self._compute_model_path(model_path)
 
     def _prepare_dataset(self, klass):
+        klass = getattr(getattr(__import__("datasets"), self.dataset), self.dataset)
         self.dataset = klass(conditions_to_keep=self.conditions_to_keep,
                              channels_to_keep=self.channels_to_keep,
                              trials_to_keep=self.trials_to_keep,
