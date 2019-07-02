@@ -31,3 +31,7 @@ def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(1, 1), regul
         u = BatchNormalization(momentum=0.9)(u)
         u = Activation('relu')(u)
     return u
+
+
+def get_deconv_decoder(input, model_args):
+    pass

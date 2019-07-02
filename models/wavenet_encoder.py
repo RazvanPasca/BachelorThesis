@@ -1,7 +1,7 @@
-from keras import Input
-from keras.layers import Conv1D, Multiply, Add, Activation, Flatten, Dense, Reshape, Lambda, BatchNormalization, \
-    Conv2D, LeakyReLU, UpSampling2D
+from keras.layers import Conv1D, Multiply, Add, Activation, Reshape, Lambda
 from keras.regularizers import l2
+
+from models import ModelArguments
 
 
 def create_wavenet_layer(n_filters,
@@ -54,46 +54,41 @@ def create_wavenet_layer(n_filters,
 
 
 def get_wavenet_encoder(
-        nr_filters,
-        input_shape,
-        nr_layers,
-        padding,
-        skip_conn_filters,
-        regularization_coef):
-    input = Input(shape=input_shape)
+        input,
+        model_args: ModelArguments):
     wavenet_layer = create_wavenet_layer(
-        n_filters=nr_filters,
+        n_filters=model_args.nr_filters,
         filter_size=2,
         dilation_rate=1,
-        padding=padding,
-        regularization_coef=regularization_coef,
+        padding=model_args.padding,
+        regularization_coef=model_args.regularization_coef,
         first=True)
     prev_layer_output, prev_layer_skip_out = wavenet_layer(input)
     skip_connections = [prev_layer_skip_out]
 
-    for i in range(1, nr_layers):
+    for i in range(1, model_args.nr_layers):
         dilation_rate = 2 ** i
         wavenet_layer = create_wavenet_layer(
-            n_filters=nr_filters,
+            n_filters=model_args.nr_filters,
             filter_size=2,
             dilation_rate=dilation_rate,
-            padding=padding,
-            regularization_coef=regularization_coef)
+            padding=model_args.padding,
+            regularization_coef=model_args.regularization_coef)
         prev_layer_output, prev_layer_skip_out = wavenet_layer(prev_layer_output)
         skip_connections.append(prev_layer_skip_out)
 
     net = Add(name="Skip_Merger")(skip_connections)
     net = Activation('relu')(net)
     net = Conv1D(
-        filters=skip_conn_filters,
+        filters=model_args.skip_conn_filters,
         kernel_size=1,
         activation='relu',
-        kernel_regularizer=l2(regularization_coef),
+        kernel_regularizer=l2(model_args.regularization_coef),
         name="Skip_FConv_1")(net)
-    net = Conv1D(
-        filters=skip_conn_filters,
+    output = Conv1D(
+        filters=model_args.skip_conn_filters,
         kernel_size=1,
-        kernel_regularizer=l2(regularization_coef),
+        kernel_regularizer=l2(model_args.regularization_coef),
         name="Skip_FConv_2")(net)
 
-    return net
+    return input, output
