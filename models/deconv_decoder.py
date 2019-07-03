@@ -3,8 +3,6 @@ from keras.engine import Layer, InputSpec
 from keras.layers import Dense, Reshape, Conv2D, LeakyReLU, UpSampling2D
 from keras.regularizers import l2
 
-import TrainingConfiguration
-
 
 class ReflectionPadding2D(Layer):
     def __init__(self, padding=(1, 1), **kwargs):
@@ -31,22 +29,26 @@ def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(1, 1), regul
     return u
 
 
-def get_deconv_decoder(model_args: TrainingConfiguration, net, output_image_size):
-    seed_img_size = output_image_size // (2 ** (len(model_args.deconv_layers) - 1))
+class DeconvDecoder(Layer):
+    def __init__(self, model_args, **kwargs):
+        self.model_args = model_args
+        self.seed_img_size = model_args.output_image_size // (2 ** (len(model_args.deconv_layers) - 1))
+        super(DeconvDecoder, self).__init__(**kwargs)
 
-    generator = Dense(model_args.deconv_layers[0] * seed_img_size * seed_img_size)(net)
-    generator = Reshape((seed_img_size, seed_img_size, model_args.deconv_layers[0]))(generator)
+    def call(self, x):
+        generator = Dense(self.model_args.deconv_layers[0] * self.seed_img_size * self.seed_img_size)(x)
+        generator = Reshape((self.seed_img_size, self.seed_img_size, self.model_args.deconv_layers[0]))(generator)
 
-    generator = LeakyReLU()(generator)
-
-    for deconv_layer_filters in model_args.deconv_layers[1:]:
-        generator = deconv2d(generator,
-                             filters=deconv_layer_filters,
-                             regularization_coef=model_args.regularization_coef)
         generator = LeakyReLU()(generator)
 
-    output = Conv2D(filters=1, kernel_size=(5, 5), strides=1, padding='same',
-                    kernel_regularizer=l2(model_args.regularization_coef),
-                    name="Output_Conv")(generator)
+        for deconv_layer_filters in self.model_args.deconv_layers[1:]:
+            generator = deconv2d(generator,
+                                 filters=deconv_layer_filters,
+                                 regularization_coef=self.model_args.regularization_coef)
+            generator = LeakyReLU()(generator)
 
-    return output
+        output = Conv2D(filters=1, kernel_size=(5, 5), strides=1, padding='same',
+                        kernel_regularizer=l2(self.model_args.regularization_coef),
+                        name="Output_Conv")(generator)
+
+        return output

@@ -5,6 +5,7 @@ from callbacks.ConfusionMatrixPlotter import ConfusionMatrixPlotter
 from callbacks.GeneratedSequencePlotCallback import GeneratedSequencePlotCallback
 from callbacks.MetricsPlotCallback import MetricsPlotCallback
 from callbacks.ReconstructImageCallback import ReconstructImageCallback
+from callbacks.VaeCallback import VaeCallback
 from datasets.datasets_utils import ModelType
 
 
@@ -43,6 +44,10 @@ def get_model_callbacks(model_args: TrainingConfiguration):
                                                               model_args.model_path)
         callbacks.append(reconstruct_image_callback)
 
+    if model_args.use_vae:
+        vae_sampling_callback = VaeCallback(model_args)
+        callbacks.append(vae_sampling_callback)
+
     return callbacks
 
 
@@ -52,8 +57,13 @@ def get_common_callbacks(model_args):
     log_callback = CSVLogger(model_args.model_path + "/session_log.csv")
     callbacks.append(log_callback)
 
-    metrics = ["loss", "acc"] if model_args.model_type in [ModelType.CONDITION_CLASSIFICATION,
-                                                           ModelType.SCENE_CLASSIFICATION] else ["loss"]
+    if model_args.model_type in [ModelType.CONDITION_CLASSIFICATION, ModelType.SCENE_CLASSIFICATION]:
+        metrics = ["loss", "acc"]
+    elif model_args.use_vae:
+        metrics = ["loss", "reconstruction_loss"]
+    else:
+        metrics = ["loss"]
+
     metric_callback = MetricsPlotCallback(model_args.model_path, metrics)
     callbacks.append(metric_callback)
 

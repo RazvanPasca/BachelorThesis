@@ -55,7 +55,8 @@ training_parameters = {
     "val_coverage_per_epoch": 0.5,
     "save_path": "./Refactored",
     "nr_rec": 18,
-    "kl_weight": None,
+    "generative_samples": 25,
+    "kl_weight": 0.1,
     "deconv_layers": [512, 256, 128, 64, 32],
     "z_dim": 10,
     "gpu": 0

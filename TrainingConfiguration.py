@@ -89,8 +89,9 @@ class TrainingConfiguration:
 
     def _compute_model_path(self):
         self.model_path = os.path.abspath(os.path.join(
-            self.save_path, "{}/Movies:{}/{}-{}-WinL:{}-/{}/Pid:{}__{}_Seed:{}".format(
+            self.save_path, "{}-{}/Movies:{}/{}-{}-WinL:{}-/{}/Pid:{}__{}_Seed:{}".format(
                 self.model_type,
+                "VAE" if self.use_vae else "AE",
                 str(self.dataset.conditions_to_keep),
                 self.dataset.split_by,
                 self.dataset.slicing_strategy,

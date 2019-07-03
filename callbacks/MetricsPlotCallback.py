@@ -13,14 +13,16 @@ class MetricsPlotCallback(Callback):
 
     """
 
-    def __init__(self, save_path, graphs=['acc', 'loss'], save_fig=True):
-        self.graphs = graphs
-        self.num_subplots = len(graphs)
+    def __init__(self, save_path, metrics=['acc', 'loss'], save_fig=True):
+        self.metrics = metrics
+        self.num_subplots = len(metrics)
         self.save_graph = save_fig
         self.save_path = save_path
 
     def on_train_begin(self, logs={}):
         self.acc = []
+        self.rec_loss = []
+        self.val_rec_loss = []
         self.val_acc = []
         self.loss = []
         self.val_loss = []
@@ -30,14 +32,18 @@ class MetricsPlotCallback(Callback):
         self.epoch_count += 1
         self.val_acc.append(logs.get('val_sparse_categorical_accuracy'))
         self.acc.append(logs.get('sparse_categorical_accuracy'))
+
         self.loss.append(logs.get('loss'))
         self.val_loss.append(logs.get('val_loss'))
+
+        self.rec_loss.append(logs.get("reconstruction_loss"))
+        self.val_rec_loss.append(logs.get("val_reconstruction_loss"))
         epochs = [x for x in range(self.epoch_count)]
 
         count_subplots = 0
         plt.figure(figsize=(16, 12))
 
-        if 'acc' in self.graphs:
+        if 'acc' in self.metrics:
             count_subplots += 1
             plt.subplot(self.num_subplots, 1, count_subplots)
             plt.title('Accuracy')
@@ -51,7 +57,7 @@ class MetricsPlotCallback(Callback):
 
             plt.legend(handles=[red_patch, blue_patch], loc=4)
 
-        if 'loss' in self.graphs:
+        if 'loss' in self.metrics:
             count_subplots += 1
             plt.subplot(self.num_subplots, 1, count_subplots)
             plt.title('Loss')
@@ -65,7 +71,20 @@ class MetricsPlotCallback(Callback):
 
             plt.legend(handles=[red_patch, blue_patch], loc=4)
 
+        if "reconstruction_loss" in self.metrics:
+            count_subplots += 1
+            plt.subplot(self.num_subplots, 1, count_subplots)
+            plt.title('Reconstruction_loss')
+            # plt.axis([0,100,0,5])
+            plt.plot(epochs, self.val_rec_loss, color='r')
+            plt.plot(epochs, self.rec_loss, color='b')
+            plt.ylabel('loss')
+
+            red_patch = mpatches.Patch(color='red', label='Test')
+            blue_patch = mpatches.Patch(color='blue', label='Train')
+
+            plt.legend(handles=[red_patch, blue_patch], loc=4)
+
         if self.save_graph:
             plt.savefig(self.save_path + '/training_acc_loss.png')
         plt.close()
-
