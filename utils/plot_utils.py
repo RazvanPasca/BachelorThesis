@@ -160,3 +160,18 @@ def show_and_plot(plot_save_path, plot_title, show):
     plt.savefig(plot_save_path)
     plt.show() if show else None
     plt.close()
+
+
+def plot_samples(generated_images, save_path, name, epoch):
+    nr_cols = np.int(np.sqrt(generated_images.shape[0]))
+    nr_rows = generated_images.shape[0] // nr_cols
+
+    fig, subplots = plt.subplots(nr_rows, nr_cols, sharex=True, figsize=(20, 20), num=name)
+    for i, subplot in enumerate(subplots.flatten()):
+        subplot.imshow(generated_images[i, :, :], cmap="gray")
+        subplot.axis("off")
+
+    plt.tight_layout()
+    plt.subplots_adjust(wspace=0, hspace=0)
+    plt.savefig("{}/{}-Epoch:{}.png".format(save_path, name, epoch), format="png")
+    plt.close()

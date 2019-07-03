@@ -1,4 +1,4 @@
-from keras.callbacks import CSVLogger, ModelCheckpoint
+from keras.callbacks import CSVLogger, ModelCheckpoint, TensorBoard
 
 import TrainingConfiguration
 from callbacks.ConfusionMatrixPlotter import ConfusionMatrixPlotter
@@ -70,5 +70,9 @@ def get_common_callbacks(model_args):
     save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_args.model_path),
                                           monitor="val_loss", save_best_only=True)
     callbacks.append(save_model_callback)
+
+    tensorboard_callback = TensorBoard(model_args.model_path,
+                                       update_freq=3)
+    callbacks.append(tensorboard_callback)
 
     return callbacks

@@ -56,7 +56,7 @@ training_parameters = {
     "save_path": "./Refactored",
     "nr_rec": 18,
     "generative_samples": 25,
-    "kl_weight": 0.1,
+    "kl_weight": None,
     "deconv_layers": [512, 256, 128, 64, 32],
     "z_dim": 10,
     "gpu": 0

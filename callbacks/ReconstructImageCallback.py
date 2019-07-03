@@ -13,7 +13,7 @@ def plot_images_reconstructions(images_reconstr, original_images, save_path, nam
 
     nr_cols = 6
     nr_rows = images_reconstr.shape[0] // 6 * 2
-    fig, subplots = plt.subplots(nr_rows, nr_cols, sharex=True, figsize=(25, 15), num=name)
+    fig, subplots = plt.subplots(nr_rows, nr_cols, sharex=True, figsize=(20, 20), num=name)
     for i, subplot_row in enumerate(subplots):
         for j, subplot in enumerate(subplot_row):
             subplot.imshow(

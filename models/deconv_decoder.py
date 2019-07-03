@@ -32,11 +32,13 @@ def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(1, 1), regul
 class DeconvDecoder(Layer):
     def __init__(self, model_args, **kwargs):
         self.model_args = model_args
+        self.name = "Deconvolutional_Decoder"
         self.seed_img_size = model_args.output_image_size // (2 ** (len(model_args.deconv_layers) - 1))
         super(DeconvDecoder, self).__init__(**kwargs)
 
     def call(self, x):
-        generator = Dense(self.model_args.deconv_layers[0] * self.seed_img_size * self.seed_img_size)(x)
+        generator = Dense(self.model_args.deconv_layers[0] * self.seed_img_size * self.seed_img_size,
+                          name="Dense_before_deconv")(x)
         generator = Reshape((self.seed_img_size, self.seed_img_size, self.model_args.deconv_layers[0]))(generator)
 
         generator = LeakyReLU()(generator)
@@ -52,3 +54,6 @@ class DeconvDecoder(Layer):
                         name="Output_Conv")(generator)
 
         return output
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], self.model_args.output_image_size, self.model_args.output_image_size, 1)

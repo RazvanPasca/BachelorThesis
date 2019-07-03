@@ -11,8 +11,8 @@ def log_training_session(model_params: TrainingConfiguration, model):
     print('Total training steps:', model_params.nr_train_steps)
     print('Total validation steps:', model_params.nr_val_steps)
     print(model.summary())
-    print(model_params.nr_train_steps)
-    print(model_params.nr_val_steps)
+    print('Train steps per epoch:', model_params.nr_train_steps)
+    print('Val steps per epoch:', model_params.nr_val_steps)
 
 
 def train_model(model_params: TrainingConfiguration):
