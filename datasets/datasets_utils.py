@@ -23,7 +23,7 @@ def shuffle_indices(indices_nr, split_perc, get_sets):
     return (set(train_indices), set(val_indices)) if get_sets else (train_indices, val_indices)
 
 
-class SequenceAddress():
+class SequenceAddress:
     def __init__(self, split_location, movie, trial, channel, timestep, length):
         self.split_location = split_location
         self.movie = movie

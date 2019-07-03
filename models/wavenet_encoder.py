@@ -1,4 +1,4 @@
-from keras.layers import Conv1D, Multiply, Add, Activation, Reshape, Lambda
+from keras.layers import Conv1D, Multiply, Add, Activation, Reshape, Lambda, K
 from keras.regularizers import l2
 
 import TrainingConfiguration
@@ -11,7 +11,7 @@ def create_wavenet_layer(n_filters,
                          regularization_coef,
                          first=False):
     def layer(input_):
-        if first:
+        if first and K.int_shape(input_)[2] > 1:
             residual = Lambda(lambda x: x[:, :, 0], output_shape=(1,))(input_)
             residual = Reshape(target_shape=(-1, 1))(residual)
         else:

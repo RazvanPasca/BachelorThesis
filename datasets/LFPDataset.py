@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from datasets.datasets_utils import rescale, shuffle_indices, SequenceAddress, ModelType, SplitStrategy, SlicingStrategy
-from signal_analysis.signal_utils import get_filter_type, butter_pass_filter, mu_law_fn
+from signal_analysis.signal_utils import mu_law_fn, filter_input_sequence
 from utils.tf_utils import _split_dataset_into_slices
 
 """
@@ -234,8 +234,6 @@ class LFPDataset:
 self.cached_bin_of_value[value]
         """
 
-        assert (type(self.use_mu_law) is int)
-
         return np.rint(rescale(value, 1, -1, self.use_mu_law - 1, 0))
 
     def _encode_input_to_bin(self, value):
@@ -244,9 +242,6 @@ self.cached_bin_of_value[value]
         Maps value into a discretized bin
 
         """
-
-        assert (type(self.cached_bin_of_value) is dict)
-        assert (type(self.bins) is np.ndarray)
 
         if value not in self.cached_bin_of_value:
             if self.use_mu_law:
@@ -303,8 +298,6 @@ self.cached_bin_of_value[value]
 
         """
 
-        assert (source in self.prepared_data)
-
         x = []
         y = []
         while 1:
@@ -324,7 +317,6 @@ self.cached_bin_of_value[value]
         with size of slice_length and the ground truth stimuli
 
         """
-        assert (source in self.prepared_data)
 
         random_trial, (condition_index, trial_index) = self._get_random_trial(source)
         sequence_start_index = np.random.randint(low=0, high=random_trial.shape[1] - self.slice_length)
@@ -338,7 +330,11 @@ self.cached_bin_of_value[value]
             channel = np.random.randint(low=0, high=self.number_of_channels)
             sequence = random_trial[channel,
                        sequence_start_index:sequence_start_index + self.slice_length][:, np.newaxis]
-            address = SequenceAddress(source, condition_index, trial_index, channel, sequence_start_index,
+            address = SequenceAddress(source,
+                                      condition_index,
+                                      trial_index,
+                                      channel,
+                                      sequence_start_index,
                                       self.slice_length)
 
         result = [sequence]
@@ -356,14 +352,18 @@ self.cached_bin_of_value[value]
 
         """
 
-        assert (source in self.prepared_data)
-
         random_sequence, (movie_index, trial_index) = self._get_random_trial(source)
         slice_index = np.random.randint(low=0, high=random_sequence.shape[1])
-        signal_sequence = np.transpose(random_sequence[:, slice_index, :])
-
         timestep = self.slice_indexes[source][slice_index] * self.slice_length
-        address = SequenceAddress(source, movie_index, trial_index, ":", timestep, self.slice_length)
+
+        if self.stack_channels:
+            signal_sequence = np.transpose(random_sequence[:, slice_index, :])
+            address = SequenceAddress(source, movie_index, trial_index, ":", timestep, self.slice_length)
+
+        else:
+            channel = np.random.randint(low=0, high=self.number_of_channels)
+            signal_sequence = random_sequence[channel, slice_index, :][:, np.newaxis]
+            address = SequenceAddress(source, movie_index, trial_index, channel, timestep, self.slice_length)
 
         result = [signal_sequence]
 
@@ -378,8 +378,6 @@ self.cached_bin_of_value[value]
         Gets a random trial from data_source
 
         """
-
-        assert (source in self.prepared_data)
 
         number_of_conditions = self.prepared_data[source].shape[0]
         number_of_trials = self.prepared_data[source].shape[1]
@@ -502,7 +500,7 @@ self.cached_bin_of_value[value]
         assert os.path.exists(self.signal_path)
 
         if self.model_type == ModelType.NEXT_TIMESTEP:
-            assert (self.stack_channels == False)
+            assert (self.stack_channels is False)
 
         if self.slicing_strategy == SlicingStrategy.RANDOM:
             assert (self.split_by == SplitStrategy.TRIALS)
@@ -524,9 +522,7 @@ self.cached_bin_of_value[value]
             self.number_of_channels = self.signal.shape[-2]
 
     def _filter_signal_frequencies(self):
-        filter_type = get_filter_type(self.cutoff_freq)
-        if filter_type is not None:
-            self.signal = butter_pass_filter(self.signal, self.cutoff_freq, 1000, filter_type)
+        self.signal = filter_input_sequence(self.signal, self.cutoff_freq)
 
     def _normalize_data(self):
         """

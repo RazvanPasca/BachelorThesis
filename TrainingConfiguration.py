@@ -51,10 +51,8 @@ class TrainingConfiguration:
         self.nr_output_classes = self.dataset.get_nr_classes()
         self.input_shape = self.dataset.get_input_shape()
 
-        self.nr_train_steps = (
-                self.dataset.get_training_dataset_size() // self.batch_size * self.train_coverage_per_epoch)
-        self.nr_val_steps = (
-                self.dataset.get_validation_dataset_size() // self.batch_size * self.val_coverage_per_epoch)
+        self.nr_train_steps = self.dataset.get_training_dataset_size() // self.batch_size * self.train_coverage_per_epoch
+        self.nr_val_steps = self.dataset.get_validation_dataset_size() // self.batch_size * self.val_coverage_per_epoch
 
         self._compute_model_path()
 
@@ -79,7 +77,7 @@ class TrainingConfiguration:
 
     def _compute_model_path(self):
         self.model_path = os.path.abspath(os.path.join(
-            self.save_path, "{}/Movies:{}/SplitBy:{}-Strategy:{}-WinL:{}-/{}/Pid:{}__{}_Seed:{}".format(
+            self.save_path, "{}/Movies:{}/{}-{}-WinL:{}-/{}/Pid:{}__{}_Seed:{}".format(
                 self.model_type,
                 str(self.dataset.movies_to_keep),
                 self.dataset.split_by,

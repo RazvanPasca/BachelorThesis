@@ -6,21 +6,19 @@ training_parameters = {
     "dataset_args": {
         "random_seed": 42,
         "slice_length": 100,
-        "slicing_strategy": SlicingStrategy.CONSECUTIVE,
+        "model_type": ModelType.EDGES,
+        "slicing_strategy": SlicingStrategy.RANDOM,
+        "split_by": SplitStrategy.TRIALS,
         "stack_channels": False,
         "use_mu_law": False,
-        "model_type": ModelType.BRIGHTNESS,
         "number_of_bins": 255,
         "val_percentage": 0.2,
-        "split_by": SplitStrategy.TRIALS,
         "channels_to_keep": None,
         "movies_to_keep": [
             0, 1, 2
         ],
         "trials_to_keep": None,
-        "cutoff_freq": [
-            1, 80
-        ],
+        "cutoff_freq": None,
         # "condition_on_gamma": False,
         # "gamma_windows_in_trial": [
         #     [
@@ -53,7 +51,7 @@ training_parameters = {
     "logging_period": 3,
     "train_coverage_per_epoch": 0.005,
     "val_coverage_per_epoch": 0.25,
-    "save_path": "./LFP_models",
+    "save_path": "./Refactored",
     "nr_rec": 18,
     "kl_weight": None,
     "deconv_layers": [],
