@@ -1,43 +1,45 @@
-from datasets import CatDataset
+from datasets import MouseControlDataset
 from datasets.datasets_utils import SplitStrategy, SlicingStrategy, ModelType
 
 training_parameters = {
-    "dataset_class": CatDataset,
+    "dataset_class": MouseControlDataset,
     "dataset_args": {
         "random_seed": 42,
         "slice_length": 100,
-        "model_type": ModelType.EDGES,
+        "model_type": ModelType.NEXT_TIMESTEP,
         "slicing_strategy": SlicingStrategy.RANDOM,
         "split_by": SplitStrategy.TRIALS,
         "stack_channels": False,
         "use_mu_law": False,
         "number_of_bins": 255,
         "val_percentage": 0.2,
-        "channels_to_keep": None,
-        "movies_to_keep": [
-            0, 1, 2
-        ],
+        "channels_to_keep": [0, 1, 2, 3, ],
+        # "conditions_to_keep": [
+        #     0,
+        # ],
+        "orientations_to_keep": [0, 1],
+        "contrasts_to_keep": [0, 1],
         "trials_to_keep": None,
         "cutoff_freq": None,
-        # "condition_on_gamma": False,
-        # "gamma_windows_in_trial": [
-        #     [
-        #         400,
-        #         700
-        #     ],
-        #     [
-        #         1000,
-        #         1350
-        #     ],
-        #     [
-        #         1700,
-        #         2040
-        #     ],
-        #     [
-        #         2350,
-        #         2700
-        #     ]
-        # ]
+        "condition_on_gamma": False,
+        "gamma_windows_in_trial": [
+            [
+                400,
+                700
+            ],
+            [
+                1000,
+                1350
+            ],
+            [
+                1700,
+                2040
+            ],
+            [
+                2350,
+                2700
+            ]
+        ]
     },
     "n_epochs": 400,
     "batch_size": 32,
@@ -49,10 +51,10 @@ training_parameters = {
     "clip_value": 5,
     "regularization_coef": 0.001,
     "logging_period": 3,
-    "train_coverage_per_epoch": 0.005,
-    "val_coverage_per_epoch": 0.25,
+    "train_coverage_per_epoch": 0.002,
+    "val_coverage_per_epoch": 0.05,
     "save_path": "./Refactored",
-    "nr_rec": 18,
+    "nr_rec": 6,
     "kl_weight": None,
     "deconv_layers": [],
     "z_dim": 10,

@@ -3,12 +3,7 @@ from sklearn.metrics import confusion_matrix, classification_report
 
 
 def decode_model_output(model_logits, model_params):
-    if model_params.get_classifying() == 2:
-        return get_bin_output(model_logits[1], model_params), model_logits[0][0]
-    elif model_params.get_classifying() == 1:
-        return get_bin_output(model_logits, model_params),
-    else:
-        return model_logits,
+    return get_bin_output(model_logits, model_params)
 
 
 def get_bin_output(model_logits, model_params):
@@ -63,6 +58,7 @@ def compute_confusion_matrix(svc, x, y):
 def get_sequence_prediction(model, model_params, original_sequence, nr_predictions,
                             starting_point,
                             reset_indices):
+
     """
     Generates prediction given an original sequence as input
 
@@ -71,7 +67,7 @@ def get_sequence_prediction(model, model_params, original_sequence, nr_predictio
             model_params: instance of the model_params associated with this training/testing session
             original_sequence: the original sequence from the dataset used as "seed" for the model
             nr_predictions: how many values we will predict in total
-            starting_point: the place from which we start seeding the model with model_params.frame_size values
+            starting_point: the place from which we start seeding the model with model_params.slice_length values
             reset_indices: when we reset the teacher forcing, starting with another original sequence seed
 
     Returns:
@@ -79,30 +75,31 @@ def get_sequence_prediction(model, model_params, original_sequence, nr_predictio
             predicted_sequences: the predicted sequence
             vlines_coords: a vlines object indicating the reset indices
     """
-    predicted_sequences = [np.zeros(nr_predictions) for _ in range(model_params.get_classifying())]
-    predictions_errors = [np.zeros(nr_predictions) for _ in range(model_params.get_classifying())]
+
+    predicted_sequences = np.zeros(nr_predictions)
+    predictions_errors = np.zeros(nr_predictions)
     vlines_coords = []
     input_sequence = []
 
     for prediction_nr in range(nr_predictions):
         current_pos = starting_point + prediction_nr
 
-        if current_pos + model_params.frame_size in reset_indices or prediction_nr == 0:
-            seed_sequence = original_sequence[current_pos:current_pos + model_params.frame_size]
-            input_sequence = np.reshape(seed_sequence, (-1, model_params.frame_size, 2))
-            vlines_coords.append(current_pos + model_params.frame_size - 1)
+        if current_pos + model_params.slice_length in reset_indices or prediction_nr == 0:
+            seed_sequence = original_sequence[current_pos:current_pos + model_params.slice_length]
+            input_sequence = np.reshape(seed_sequence, (-1, model_params.slice_length, 1))
+            vlines_coords.append(current_pos + model_params.slice_length - 1)
 
-        """I get the predictions here. I might have 2 predictions made if I am using regression and softmax"""
-        predicted_values = decode_model_output(model.predict(input_sequence), model_params)
-        for i, predicted_val in enumerate(predicted_values):
-            predicted_sequences[i][prediction_nr] = predicted_val
-            predicted_val_w_label = np.array(
-                [predicted_val, original_sequence[current_pos + model_params.frame_size, 1]])
+        predicted_value = decode_model_output(model.predict(input_sequence), model_params)
 
-            input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted_val_w_label, (-1, 1, 2)), axis=1)
-            actual_value = original_sequence[current_pos + model_params.frame_size][0]
-            curr_loss = np.abs(actual_value - predicted_val)
-            predictions_errors[i][prediction_nr] = curr_loss if current_pos + model_params.frame_size in reset_indices \
-                else predictions_errors[i][prediction_nr - 1] + curr_loss
+        predicted_sequences[prediction_nr] = predicted_value
+        # predicted_val_w_label = np.array(
+        #     [predicted_value, original_sequence[current_pos + model_params.slice_length]])
+
+        input_sequence = np.append(input_sequence[:, 1:, :], np.reshape(predicted_value, (-1, 1, 1)), axis=1)
+        actual_value = original_sequence[current_pos + model_params.slice_length]
+
+        curr_loss = np.abs(actual_value - predicted_value)
+        predictions_errors[prediction_nr] = curr_loss if current_pos + model_params.slice_length in reset_indices \
+            else predictions_errors[prediction_nr - 1] + curr_loss
 
     return predictions_errors, predicted_sequences, vlines_coords

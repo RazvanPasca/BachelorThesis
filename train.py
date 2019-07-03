@@ -2,7 +2,6 @@ from TrainingConfiguration import TrainingConfiguration
 from callbacks.callback_factory import get_model_callbacks
 from models.model_factory import get_model
 from training_parameters import training_parameters
-from utils.plot_utils import create_dir_if_not_exists
 from utils.tf_utils import configure_gpu
 
 
@@ -15,8 +14,6 @@ def log_training_session(model_params: TrainingConfiguration, model):
 
 
 def train_model(model_params: TrainingConfiguration):
-    path_models_ = model_params.model_path + "/models/"
-    create_dir_if_not_exists(path_models_)
 
     model = get_model(model_params)
 
@@ -30,7 +27,7 @@ def train_model(model_params: TrainingConfiguration):
                         validation_steps=model_params.nr_val_steps,
                         verbose=1,
                         callbacks=callbacks,
-                        use_multiprocessing=True)
+                        use_multiprocessing=False)
 
     print('Saving model and results...')
     model.save(model_params.model_path + "/" + "final_model.h5")

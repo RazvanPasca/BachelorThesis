@@ -24,13 +24,16 @@ def shuffle_indices(indices_nr, split_perc, get_sets):
 
 
 class SequenceAddress:
-    def __init__(self, split_location, movie, trial, channel, timestep, length):
-        self.split_location = split_location
+    def __init__(self, movie, trial, channel, timestep, length, source):
         self.movie = movie
         self.trial = trial
         self.channel = channel
         self.timestep = timestep
         self.length = length
+        self.source = source
+
+    def __str__(self):
+        return 'Cond:{}_Trial:{}_Channel:{}_Source:{}'.format(self.movie, self.trial, self.channel, self.source)
 
 
 class ModelType(Enum):

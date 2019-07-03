@@ -7,73 +7,63 @@ from utils.output_utils import get_normalized_pred_errors, get_sequence_predicti
 from utils.system_utils import create_dir_if_not_exists, log_range_accumulated_errors
 
 
-def generate_prediction_name(seq_addr):
-    name = ''
-    for key in seq_addr:
-        if key == "SOURCE":
-            pass
-        else:
-            name += '{}:{}_'.format(key, str(seq_addr[key]))
-    return name
-
-
 def generate_multi_plot(model, model_params, epoch, starting_point, nr_prediction_steps, all_reset_indices,
-                        nr_of_sequences_to_plot, nr_rows):
-    pred_seqs = model_params.dataset.benchmark_sequences
-    all_prediction_losses_norm_mean = {}
+                        nr_sequences_to_plot, nr_rows, source="TRAIN"):
+    if source == "TRAIN":
+        examples_batch, seq_addresses = model_params.dataset.get_train_plot_examples(nr_sequences_to_plot)
+    elif source == "VAL":
+        examples_batch, seq_addresses = model_params.dataset.get_val_plot_examples(nr_sequences_to_plot)
 
-    for source in pred_seqs:
-        dir_name_root = "{}/{}".format(model_params.model_path, source)
-        all_prediction_losses_norm_mean[source] = []
+    all_prediction_losses_norm_mean = {source: []}
 
-        for reset_indices in all_reset_indices:
-            reset_indices_, reset_indices_np_sorted = get_reset_indices_array(model_params, reset_indices)
+    dir_name_root = "{}/{}".format(model_params.model_path, seq_addresses[0].source)
 
-            dir_name = "{}/WinSize:{}".format(dir_name_root, reset_indices_[:10])
-            create_dir_if_not_exists(dir_name)
-            plt_path = "{}/E:{}_Conditioning:{}".format(dir_name, epoch, model_params.condition_on_gamma)
+    for reset_indices in all_reset_indices:
+        reset_indices_, reset_indices_np_sorted = get_reset_indices_array(model_params, reset_indices)
 
-            sequence_predictions = []
-            sequence_names = []
-            original_sequences = []
-            vlines_coords_list = []
-            prediction_losses_normalized = np.zeros(reset_indices_.size)
-            prediction_losses = []
+        dir_name = "{}/WinSize:{}".format(dir_name_root, reset_indices_[:10])
+        create_dir_if_not_exists(dir_name)
+        plt_path = "{}/E:{}_Conditioning:{}".format(dir_name, epoch, model_params.condition_on_gamma)
 
-            for sequence, addr in pred_seqs[source][:nr_of_sequences_to_plot]:
-                image_prefix = generate_prediction_name(addr)
-                image_prefix = addr["SOURCE"] + "_" + image_prefix
-                image_name = "{}_E:{}".format(image_prefix, epoch)
+        sequence_predictions = []
+        sequence_names = []
+        original_sequences = []
+        vlines_coords_list = []
+        prediction_losses_normalized = np.zeros(reset_indices_.size)
+        prediction_losses = []
 
-                prediction_errors, predicted_sequences, vlines_coords = get_sequence_prediction(model, model_params,
-                                                                                                sequence,
-                                                                                                nr_prediction_steps,
-                                                                                                starting_point,
-                                                                                                reset_indices)
+        for i in range(nr_sequences_to_plot):
+            image_name = "{}_E:{}".format(str(seq_addresses[i]), epoch)
 
-                prediction_losses_normalized += get_normalized_pred_errors(prediction_errors[0], reset_indices_)
-                prediction_losses.append(prediction_errors)
-                sequence_predictions.append(predicted_sequences)
-                sequence_names.append(image_name)
-                original_sequences.append(sequence)
-                vlines_coords_list.append(vlines_coords)
+            prediction_errors, predicted_sequences, vlines_coords = get_sequence_prediction(model, model_params,
+                                                                                            examples_batch[i],
+                                                                                            nr_prediction_steps,
+                                                                                            starting_point,
+                                                                                            reset_indices)
 
-            generate_subplots(original_sequences, sequence_predictions, vlines_coords_list, sequence_names,
-                              starting_point + model_params.frame_size, plt_path,
-                              model_params.gamma_windows_in_trial, nr_rows)
-            generate_errors_subplots(prediction_losses, vlines_coords_list, sequence_names,
-                                     starting_point + model_params.frame_size, plt_path,
-                                     model_params.gamma_windows_in_trial, nr_rows)
+            prediction_losses_normalized += get_normalized_pred_errors(prediction_errors, reset_indices_)
+            prediction_losses.append(prediction_errors)
+            sequence_predictions.append(predicted_sequences)
+            sequence_names.append(image_name)
+            original_sequences.append(examples_batch[i])
+            vlines_coords_list.append(vlines_coords)
 
-            prediction_losses_normalized_seq_avg = prediction_losses_normalized / nr_of_sequences_to_plot
-            log_range_accumulated_errors(epoch, prediction_losses_normalized_seq_avg, reset_indices_, dir_name)
-            all_prediction_losses_norm_mean[source].append(np.mean(prediction_losses_normalized_seq_avg))
+        generate_subplots(original_sequences, sequence_predictions, vlines_coords_list, sequence_names,
+                          starting_point + model_params.slice_length, plt_path,
+                          model_params.gamma_windows_in_trial, nr_rows)
+        generate_errors_subplots(prediction_losses, vlines_coords_list, sequence_names,
+                                 starting_point + model_params.slice_length, plt_path,
+                                 model_params.gamma_windows_in_trial, nr_rows)
+
+        prediction_losses_normalized_seq_avg = prediction_losses_normalized / nr_sequences_to_plot
+        log_range_accumulated_errors(epoch, prediction_losses_normalized_seq_avg, reset_indices_, dir_name)
+        all_prediction_losses_norm_mean[source].append(np.mean(prediction_losses_normalized_seq_avg))
 
     return all_prediction_losses_norm_mean
 
 
 def get_reset_indices_array(model_params, reset_indices):
-    reset_indices_np_sorted = (np.array(list(reset_indices)) - model_params.frame_size)
+    reset_indices_np_sorted = (np.array(list(reset_indices)) - model_params.slice_length)
     reset_indices_np_sorted.sort()
     pos_reset_indices = reset_indices_np_sorted > 0
     reset_indices_ = reset_indices_np_sorted[pos_reset_indices]
@@ -83,8 +73,7 @@ def get_reset_indices_array(model_params, reset_indices):
 def generate_subplots(original_sequences, sequence_predictions, vlines_coords_list, sequence_names,
                       prediction_starting_point, save_path, gamma_windows, nr_rows):
     nr_cols = len(sequence_predictions) // nr_rows
-    colors = ["red", "green"]
-    prediction_length = len(sequence_predictions[0][0])
+    prediction_length = sequence_predictions[0].size
     fig, subplots = plt.subplots(nr_rows, nr_cols, sharex=True, figsize=(25, 15))
     predictions_x_indices = range(prediction_starting_point, prediction_starting_point + prediction_length)
     original_sequences_x_indices = range(len(original_sequences[0]))
@@ -99,9 +88,9 @@ def generate_subplots(original_sequences, sequence_predictions, vlines_coords_li
         for gamma_range in gamma_windows:
             subplot.axvspan(gamma_range[0], gamma_range[1], alpha=0.5)
 
-        for j, sequence_prediction in enumerate(sequence_predictions[i]):
-            subplot.plot(predictions_x_indices, sequence_prediction, label="Predicted sequence {}".format(j),
-                         color=colors[j], linewidth=1)
+        subplot.plot(predictions_x_indices, sequence_predictions[i], label="Predicted sequence", color="red",
+                     linewidth=1)
+
         if show_vlines:
             lim = max(np.max(sequence_predictions), np.max(sequence_values))
             lim1 = min(np.min(sequence_predictions), np.min(sequence_values))
@@ -126,7 +115,7 @@ def generate_errors_subplots(prediction_losses, vlines_coords_list, sequence_nam
         lim1 = np.min(prediction_losses[:nr_cols * nr_rows])
 
     for i, subplot in enumerate(subplots.flatten()):
-        subplot.plot(prediction_losses[i][0], linewidth=1, label="Prediction accumulated errors", color="blue")
+        subplot.plot(prediction_losses[i], linewidth=1, label="Prediction accumulated errors", color="blue")
         for gamma_range in gamma_windows:
             subplot.axvspan(gamma_range[0] - prediction_starting_point + 1,
                             gamma_range[1] - prediction_starting_point + 1,

@@ -35,26 +35,35 @@ class TrainingConfiguration:
         self.frame_size = 2 ** self.nr_layers
         self.model_type = self.dataset_args["model_type"]
 
-        if self.model_type == ModelType.NEXT_TIMESTEP:
-            self.padding = 'causal'
-        else:
-            self.padding = 'same'
-
-        if self.kl_weight is None:
-            self.use_vae = False
-        else:
-            self.use_vae = True
+        self.set_padding_type()
+        self.set_use_vae_flag()
+        self.set_classes_names()
 
         self._prepare_dataset()
         assert (self.dataset.slice_length > self.frame_size)
 
         self.nr_output_classes = self.dataset.get_nr_classes()
         self.input_shape = self.dataset.get_input_shape()
+        self.condition_on_gamma = self.dataset.condition_on_gamma
+        self.slice_length = self.dataset.slice_length
+        self.gamma_windows_in_trial = self.dataset_args["gamma_windows_in_trial"]
 
-        self.nr_train_steps = self.dataset.get_training_dataset_size() // self.batch_size * self.train_coverage_per_epoch
-        self.nr_val_steps = self.dataset.get_validation_dataset_size() // self.batch_size * self.val_coverage_per_epoch
+        self.nr_train_steps = self.dataset.get_training_dataset_size() * self.train_coverage_per_epoch // self.batch_size
+        self.nr_val_steps = self.dataset.get_validation_dataset_size() * self.val_coverage_per_epoch // self.batch_size
 
         self._compute_model_path()
+
+    def set_padding_type(self):
+        if self.model_type == ModelType.NEXT_TIMESTEP:
+            self.padding = 'causal'
+        else:
+            self.padding = 'same'
+
+    def set_use_vae_flag(self):
+        if self.kl_weight is None:
+            self.use_vae = False
+        else:
+            self.use_vae = True
 
     def _prepare_dataset(self):
         self.dataset = self.dataset_class(**self.dataset_args)
@@ -79,7 +88,7 @@ class TrainingConfiguration:
         self.model_path = os.path.abspath(os.path.join(
             self.save_path, "{}/Movies:{}/{}-{}-WinL:{}-/{}/Pid:{}__{}_Seed:{}".format(
                 self.model_type,
-                str(self.dataset.movies_to_keep),
+                str(self.dataset.conditions_to_keep),
                 self.dataset.split_by,
                 self.dataset.slicing_strategy,
                 self.dataset.slice_length,
@@ -88,3 +97,10 @@ class TrainingConfiguration:
                 datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
                 self.dataset.random_seed)))
         create_dir_if_not_exists(self.model_path)
+
+    def set_classes_names(self):
+        if self.model_type == ModelType.CONDITION_CLASSIFICATION:
+            self.classes = ["Movie_0", "Movie_1", "Movie_2"]
+        elif self.model_type == ModelType.SCENE_CLASSIFICATION:
+            pass
+            # TODO

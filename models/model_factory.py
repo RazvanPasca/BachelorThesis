@@ -47,6 +47,7 @@ def get_model(model_args: TrainingConfiguration):
 
     elif model_args.model_type == ModelType.NEXT_TIMESTEP:
         net = Flatten()(encoder_output)
+        model_metrics = [metrics.sparse_categorical_accuracy]
         output = Dense(model_args.dataset.nr_bins, activation='softmax', name="Softmax")(net)
 
     loss = get_model_loss(model_args.loss)

@@ -18,7 +18,9 @@ class MouseAChDataset(LFPDataset):
                  cutoff_freq=None,
                  stack_channels=False,
                  use_mu_law=False,
-                 number_of_bins=255):
+                 number_of_bins=255,
+                 condition_on_gamma=False,
+                 gamma_windows_in_trial=None):
 
         if orientations_to_keep is None:
             orientations_to_keep = list(range(8))
@@ -26,7 +28,7 @@ class MouseAChDataset(LFPDataset):
         if contrasts_to_keep is None:
             contrasts_to_keep = list(range(3))
 
-        conditions_to_keep = [o*c for o in orientations_to_keep for c in contrasts_to_keep]
+        conditions_to_keep = [o * c for o in orientations_to_keep for c in contrasts_to_keep]
 
         super().__init__(
             signal_path=MOUSE_ACH_DATASET_SIGNAL_PATH,
@@ -43,7 +45,9 @@ class MouseAChDataset(LFPDataset):
             cutoff_freq=cutoff_freq,
             stack_channels=stack_channels,
             use_mu_law=use_mu_law,
-            number_of_bins=number_of_bins)
+            number_of_bins=number_of_bins,
+            condition_on_gamma=condition_on_gamma,
+            gamma_windows_in_trial=gamma_windows_in_trial)
 
         self.orientations_to_keep = orientations_to_keep
         self.contrasts_to_keep = contrasts_to_keep

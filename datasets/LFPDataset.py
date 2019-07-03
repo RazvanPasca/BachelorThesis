@@ -60,7 +60,9 @@ class LFPDataset:
                  cutoff_freq,
                  stack_channels,
                  use_mu_law,
-                 number_of_bins):
+                 number_of_bins,
+                 condition_on_gamma,
+                 gamma_windows_in_trial):
         np.random.seed(random_seed)
 
         self.slice_indexes = {}
@@ -84,6 +86,8 @@ class LFPDataset:
         self.slicing_strategy = slicing_strategy
         self.split_by = split_by
         self.slice_length = slice_length
+        self.condition_on_gamma = condition_on_gamma
+
         self.conditions_to_keep = np.array(conditions_to_keep) if type(conditions_to_keep) is list else None
         self.trials_to_keep = np.array(trials_to_keep) if type(trials_to_keep) is list else None
         self.channels_to_keep = np.array(channels_to_keep) if type(channels_to_keep) is list else None
@@ -95,6 +99,9 @@ class LFPDataset:
         self._filter_data()
 
         self._prepare_data()
+
+        self.gamma_windows_in_trial = [item for sublist in gamma_windows_in_trial for item in sublist if
+                                       item < self.trial_length]
 
     def get_random_sequence(self, source):
         """
@@ -124,25 +131,27 @@ class LFPDataset:
         sequence, seq_addr = self.get_random_sequence(source)
         label = self._get_y_value_for_sequence(seq_addr)
 
-        return sequence, label
+        return sequence, seq_addr, label
 
-    def train_sample_generator(self, batch_size):
+    def train_sample_generator(self, batch_size, return_address=False):
         """
 
         Returns the train generator of samples
+        :param return_address: whether a list with the addresses for each sample should be returned or not
 
         """
 
-        return self._example_generator(batch_size, "TRAIN")
+        return self._example_generator(batch_size, "TRAIN", return_address)
 
-    def validation_sample_generator(self, batch_size):
+    def validation_sample_generator(self, batch_size, return_address=False):
         """
 
         Returns the validation generator of samples
+        :param return_address: whether a list with the addresses for each sample should be returned or not
 
         """
 
-        return self._example_generator(batch_size, "VAL")
+        return self._example_generator(batch_size, "VAL", return_address)
 
     def get_training_dataset_size(self):
         """
@@ -289,24 +298,30 @@ self.cached_bin_of_value[value]
                 self.prepared_data["VAL"] = self.signal[:, self.val_indexes, ...]
                 self.prepared_data["TRAIN"] = self.signal[:, self.train_indexes, ...]
 
-    def _example_generator(self, batch_size, source):
+    def _example_generator(self, batch_size, source, return_address=False):
         """
 
         It is a generator that retrieves the input signal and the actual value.
 
         Signal base on the slicing strategy and actual value based on the model_output_type
+        :param return_address:
 
         """
 
         x = []
         y = []
+        adresses = []
         while 1:
-            sequence, actual = self.get_random_example(source)
+            sequence, seq_address, actual = self.get_random_example(source)
 
             x.append(sequence)
             y.append(actual)
+            adresses.append(seq_address)
             if len(x) == batch_size:
-                yield np.array(x), np.array(y)
+                if return_address:
+                    yield np.array(x), np.array(y), adresses
+                else:
+                    yield np.array(x), np.array(y)
                 x = []
                 y = []
 
@@ -323,19 +338,14 @@ self.cached_bin_of_value[value]
 
         if self.stack_channels:
             sequence = random_trial[:, sequence_start_index:sequence_start_index + self.slice_length]
-            address = SequenceAddress(source, condition_index, trial_index, np.arange(random_trial.shape[0]),
-                                      sequence_start_index,
-                                      self.slice_length)
+            address = SequenceAddress(condition_index, trial_index, np.arange(random_trial.shape[0]),
+                                      sequence_start_index, self.slice_length, source)
         else:
             channel = np.random.randint(low=0, high=self.number_of_channels)
             sequence = random_trial[channel,
                        sequence_start_index:sequence_start_index + self.slice_length][:, np.newaxis]
-            address = SequenceAddress(source,
-                                      condition_index,
-                                      trial_index,
-                                      channel,
-                                      sequence_start_index,
-                                      self.slice_length)
+            address = SequenceAddress(condition_index, trial_index, channel, sequence_start_index, self.slice_length,
+                                      source)
 
         result = [sequence]
 
@@ -358,12 +368,12 @@ self.cached_bin_of_value[value]
 
         if self.stack_channels:
             signal_sequence = np.transpose(random_sequence[:, slice_index, :])
-            address = SequenceAddress(source, movie_index, trial_index, ":", timestep, self.slice_length)
+            address = SequenceAddress(movie_index, trial_index, ":", timestep, self.slice_length, source)
 
         else:
             channel = np.random.randint(low=0, high=self.number_of_channels)
             signal_sequence = random_sequence[channel, slice_index, :][:, np.newaxis]
-            address = SequenceAddress(source, movie_index, trial_index, channel, timestep, self.slice_length)
+            address = SequenceAddress(movie_index, trial_index, channel, timestep, self.slice_length, source)
 
         result = [signal_sequence]
 
@@ -379,15 +389,11 @@ self.cached_bin_of_value[value]
 
         """
 
-        number_of_conditions = self.prepared_data[source].shape[0]
-        number_of_trials = self.prepared_data[source].shape[1]
+        condition_index = np.random.choice(self.prepared_data[source].shape[0])
+        trial_index = np.random.choice(self.prepared_data[source].shape[1])
 
-        condition_index = np.random.choice(self.prepared_data[source].shape[0]) if number_of_conditions > 1 else 0
-        trial_index = np.random.choice(self.prepared_data[source].shape[1]) if number_of_trials > 1 else 0
-
-        condition = self.prepared_data[source][condition_index] if number_of_conditions > 1 else self.prepared_data[
-            source]
-        trial = condition[trial_index] if number_of_trials > 1 else condition
+        condition = self.prepared_data[source][condition_index]
+        trial = condition[trial_index, ...]
 
         return trial, (condition_index, trial_index)
 
@@ -460,8 +466,8 @@ self.cached_bin_of_value[value]
             pass
 
         elif self.model_type == ModelType.NEXT_TIMESTEP:
-            next_timestep = self.prepared_data[seq_addr.split_location][
-                seq_addr.movie, seq_addr.trial, seq_addr.channel, seq_addr.timestep + self.slice_length]
+            next_timestep = self.prepared_data[seq_addr.source] \
+                [seq_addr.movie, seq_addr.trial, seq_addr.channel, seq_addr.timestep + self.slice_length]
             return [self._encode_input_to_bin(next_timestep)]
 
         else:
@@ -518,7 +524,7 @@ self.cached_bin_of_value[value]
             self.signal = self.signal[:, self.trials_to_keep, ...]
             self.trials_per_condition = self.signal.shape[-3]
         if self.channels_to_keep is not None:
-            self.signal = self.signal[:, :, self.conditions_to_keep, ...]
+            self.signal = self.signal[:, :, self.channels_to_keep, ...]
             self.number_of_channels = self.signal.shape[-2]
 
     def _filter_signal_frequencies(self):
@@ -569,8 +575,43 @@ self.cached_bin_of_value[value]
         self.stimuli = self.stimuli - np.min(self.stimuli)
 
     def get_input_shape(self):
-        x, _ = self.get_random_example("TRAIN")
+        x, _, _ = self.get_random_example("TRAIN")
         return x.shape
+
+    def get_train_plot_examples(self, nr_examples):
+        if self.model_type != ModelType.NEXT_TIMESTEP:
+            generator = self.train_sample_generator(nr_examples, True)
+            self.train_examples = next(generator)
+            generator.close()
+        else:
+            self.train_examples = self._get_next_timestep_examples(nr_examples, "TRAIN")
+        return self.train_examples
+
+    def get_val_plot_examples(self, nr_examples):
+        if self.model_type != ModelType.NEXT_TIMESTEP:
+            generator = self.validation_sample_generator(nr_examples, True)
+            self.val_examples = next(generator)
+            generator.close()
+        else:
+            self.val_examples = self._get_next_timestep_examples(nr_examples, "VAL")
+
+        return self.val_examples
+
+    def _get_next_timestep_examples(self, nr_examples, source):
+
+        sequences = [None] * nr_examples
+        addresses = [None] * nr_examples
+        channels = np.random.randint(low=0, high=self.number_of_channels, size=nr_examples)
+
+        for i, index in enumerate(channels):
+            random_trial, (condition_index, trial_index) = self._get_random_trial(source)
+
+            sequence = random_trial[index][:, np.newaxis]
+            sequences[i] = sequence
+            address = SequenceAddress(condition_index, trial_index, index, 0, self.trial_length, source)
+            addresses[i] = address
+
+        return sequences, addresses
 
 
 def show_edges_computed():
