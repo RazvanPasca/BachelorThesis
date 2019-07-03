@@ -1,24 +1,24 @@
-from datasets import MouseControlDataset
+from datasets import CatDataset
 from datasets.datasets_utils import SplitStrategy, SlicingStrategy, ModelType
 
 training_parameters = {
-    "dataset_class": MouseControlDataset,
+    "dataset_class": CatDataset,
     "dataset_args": {
         "random_seed": 42,
         "slice_length": 100,
-        "model_type": ModelType.NEXT_TIMESTEP,
-        "slicing_strategy": SlicingStrategy.RANDOM,
+        "model_type": ModelType.IMAGE_REC,
+        "slicing_strategy": SlicingStrategy.CONSECUTIVE,
         "split_by": SplitStrategy.TRIALS,
         "stack_channels": False,
         "use_mu_law": False,
         "number_of_bins": 255,
         "val_percentage": 0.2,
         "channels_to_keep": [0, 1, 2, 3, ],
-        # "conditions_to_keep": [
-        #     0,
-        # ],
-        "orientations_to_keep": [0, 1],
-        "contrasts_to_keep": [0, 1],
+        "conditions_to_keep": [
+            0, 1, 2
+        ],
+        # "orientations_to_keep": [0, 1],
+        # "contrasts_to_keep": [0, 1],
         "trials_to_keep": None,
         "cutoff_freq": None,
         "condition_on_gamma": False,
@@ -47,16 +47,16 @@ training_parameters = {
     "nr_filters": 16,
     "skip_conn_filters": 16,
     "lr": 1e-05,
-    "loss": "CE",
+    "loss": "MAE",
     "clip_value": 5,
     "regularization_coef": 0.001,
     "logging_period": 3,
-    "train_coverage_per_epoch": 0.002,
-    "val_coverage_per_epoch": 0.05,
+    "train_coverage_per_epoch": 0.01,
+    "val_coverage_per_epoch": 0.5,
     "save_path": "./Refactored",
-    "nr_rec": 6,
+    "nr_rec": 18,
     "kl_weight": None,
-    "deconv_layers": [],
+    "deconv_layers": [512, 256, 128, 64, 32],
     "z_dim": 10,
     "gpu": 0
 }

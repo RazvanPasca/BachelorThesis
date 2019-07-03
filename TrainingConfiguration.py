@@ -47,6 +47,9 @@ class TrainingConfiguration:
         self.condition_on_gamma = self.dataset.condition_on_gamma
         self.slice_length = self.dataset.slice_length
         self.gamma_windows_in_trial = self.dataset_args["gamma_windows_in_trial"]
+        self.output_image_size = self.dataset.stimuli_width
+
+        self.check_model_loss_type()
 
         self.nr_train_steps = self.dataset.get_training_dataset_size() * self.train_coverage_per_epoch // self.batch_size
         self.nr_val_steps = self.dataset.get_validation_dataset_size() * self.val_coverage_per_epoch // self.batch_size
@@ -104,3 +107,9 @@ class TrainingConfiguration:
         elif self.model_type == ModelType.SCENE_CLASSIFICATION:
             pass
             # TODO
+
+    def check_model_loss_type(self):
+        if self.model_type == ModelType.CONDITION_CLASSIFICATION or self.model_type == ModelType.SCENE_CLASSIFICATION or self.model_type == ModelType.NEXT_TIMESTEP:
+            assert (self.loss == "CE")
+        if self.model_type == ModelType.BRIGHTNESS or self.model_type == ModelType.IMAGE_REC or self.model_type == ModelType.EDGES:
+            assert (self.loss == "MAE" or self.loss == "MSE")

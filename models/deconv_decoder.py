@@ -32,10 +32,10 @@ def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(1, 1), regul
 
 
 def get_deconv_decoder(model_args: TrainingConfiguration, net, output_image_size):
-    seed_img_size = output_image_size // (2 ** len(model_args.deconv_layers))
+    seed_img_size = output_image_size // (2 ** (len(model_args.deconv_layers) - 1))
 
-    generator = Dense(model_args.model_arguments.deconv_layers[0] * seed_img_size * seed_img_size)(net)
-    generator = Reshape((seed_img_size, seed_img_size, -1))(generator)
+    generator = Dense(model_args.deconv_layers[0] * seed_img_size * seed_img_size)(net)
+    generator = Reshape((seed_img_size, seed_img_size, model_args.deconv_layers[0]))(generator)
 
     generator = LeakyReLU()(generator)
 
@@ -45,6 +45,8 @@ def get_deconv_decoder(model_args: TrainingConfiguration, net, output_image_size
                              regularization_coef=model_args.regularization_coef)
         generator = LeakyReLU()(generator)
 
-    output = deconv2d(generator, filters=1, regularization_coef=model_args.regularization_coef)
+    output = Conv2D(filters=1, kernel_size=(5, 5), strides=1, padding='same',
+                    kernel_regularizer=l2(model_args.regularization_coef),
+                    name="Output_Conv")(generator)
 
     return output

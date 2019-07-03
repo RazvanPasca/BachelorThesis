@@ -413,8 +413,9 @@ self.cached_bin_of_value[value]
 
         if os.path.exists(self.stimuli_path):
             self.stimuli = np.load(self.stimuli_path)
-            self.stimuli_width = self.signal.shape[0]
-            self.stimuli_height = self.signal.shape[1]
+            self.stimuli_width = self.stimuli.shape[2]
+            self.stimuli_height = self.stimuli.shape[3]
+            self.stimuli_depth = 1
 
     def _compute_brightness_dataset(self):
         """
@@ -518,6 +519,7 @@ self.cached_bin_of_value[value]
 
     def _filter_data(self):
         if self.conditions_to_keep is not None:
+            assert (self.model_type != ModelType.CONDITION_CLASSIFICATION)
             self.signal = self.signal[self.conditions_to_keep, ...]
             self.number_of_conditions = self.signal.shape[0]
         if self.trials_to_keep is not None:

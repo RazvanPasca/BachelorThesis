@@ -22,8 +22,8 @@ class ConfusionMatrixPlotter(Callback):
     def __init__(self, train_batch, val_batch, classes, save_path, logging_period, normalize=False,
                  cmap=plt.cm.Blues,
                  title='Confusion Matrix', ):
-        self.X_train, self.Y_train = train_batch
-        self.X_val, self.Y_val = val_batch
+        self.X_train, self.Y_train, self.train_addresses = train_batch
+        self.X_val, self.Y_val, self.val_addresses = val_batch
         self.title = title
         self.classes = classes
         self.normalize = normalize
