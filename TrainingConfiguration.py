@@ -40,7 +40,7 @@ class TrainingConfiguration:
         self.set_classes_names()
 
         self._prepare_dataset()
-        assert (self.dataset.slice_length > self.frame_size)
+        assert (self.dataset.slice_length < self.frame_size)
 
         self.nr_output_classes = self.dataset.get_nr_classes()
         self.input_shape = self.dataset.get_input_shape()
@@ -48,6 +48,7 @@ class TrainingConfiguration:
         self.slice_length = self.dataset.slice_length
         self.gamma_windows_in_trial = self.dataset_args["gamma_windows_in_trial"]
         self.output_image_size = self.dataset.stimuli_width
+        self.stack_channels = self.dataset_args["stack_channels"]
 
         self.check_model_loss_type()
 
@@ -72,7 +73,7 @@ class TrainingConfiguration:
         self.dataset = self.dataset_class(**self.dataset_args)
 
     def get_model_name(self):
-        return "EncL:{}_Ep:{}_StpEp:{}_Perc:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_ZDim:{}_L2:{}_Norm:Brute_Loss:{}_GradClip:{}_LPass:{}".format(
+        return "EncL:{}_Ep:{}_StpEp:{}_Perc:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_ZDim:{}_L2:{}_Loss:{}_GradClip:{}_LPass:{}_DecL:{}_Kl:{}".format(
             self.nr_layers,
             self.n_epochs,
             self.nr_train_steps,
@@ -85,17 +86,20 @@ class TrainingConfiguration:
             self.regularization_coef,
             self.loss,
             self.clip_grad_by_value,
-            self.cutoff_freq)
+            self.cutoff_freq,
+	    self.deconv_layers,
+	    self.kl_weight)
 
     def _compute_model_path(self):
         self.model_path = os.path.abspath(os.path.join(
-            self.save_path, "{}-{}/Movies:{}/{}-{}-WinL:{}-/{}/Pid:{}__{}_Seed:{}".format(
+            self.save_path, "{}-{}/Movies:{}/{}-{}-WinL:{}-Stacked:{}/{}/Pid:{}__{}_Seed:{}".format(
                 self.model_type,
                 "VAE" if self.use_vae else "AE",
                 str(self.dataset.conditions_to_keep),
                 self.dataset.split_by,
                 self.dataset.slicing_strategy,
                 self.dataset.slice_length,
+		self.stack_channels,
                 self.get_model_name(),
                 os.getpid(),
                 datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),

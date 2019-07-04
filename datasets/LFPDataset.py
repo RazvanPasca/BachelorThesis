@@ -175,13 +175,9 @@ class LFPDataset:
         return type(self).__name__
 
     def _get_dataset_size(self, source):
-        dimensions = list(self.prepared_data[source].shape)
+        size = self.prepared_data[source].size
         if self.stack_channels:
-            dimensions[-2] = 1
-        dimensions[-1] -= self.slice_length - 1
-        size = 1
-        for x in dimensions:
-            size *= x
+            size = size // self.number_of_channels
         return size
 
     def _prepare_data(self):
