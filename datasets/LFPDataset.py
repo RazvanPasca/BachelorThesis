@@ -180,6 +180,7 @@ class LFPDataset:
             size = size // self.number_of_channels
         return size
 
+
     def _prepare_data(self):
         self._filter_signal_frequencies()
         self._normalize_data()

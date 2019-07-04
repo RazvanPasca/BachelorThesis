@@ -1,7 +1,9 @@
 from keras.backend import tf
 from keras.engine import Layer, InputSpec
-from keras.layers import Dense, Reshape, Conv2D, LeakyReLU, UpSampling2D
+from keras.layers import Dense, Reshape, Conv2D, LeakyReLU, UpSampling2D, Conv2DTranspose
 from keras.regularizers import l2
+
+import TrainingConfiguration
 
 
 class ReflectionPadding2D(Layer):
@@ -29,6 +31,33 @@ def deconv2d(layer_input, filters=256, kernel_size=(5, 5), strides=(1, 1), regul
     return u
 
 
+def deconv_decoder(model_args: TrainingConfiguration, net):
+    seed_img_size = model_args.output_image_size // (2 ** (len(model_args.deconv_layers) - 1))
+
+    layers = []
+
+    layers.append(Dense(model_args.deconv_layers[0] * seed_img_size * seed_img_size, name="Dense_before_deconv"))
+    layers.append(Reshape((seed_img_size, seed_img_size, model_args.deconv_layers[0])))
+    layers.append(LeakyReLU())
+
+    for nr_deconv_filters in model_args.deconv_layers[1:]:
+        conv2d = Conv2DTranspose(nr_deconv_filters, (5, 5), padding='same', strides=2,
+                                 kernel_regularizer=l2(model_args.regularization_coef))
+        leaky = LeakyReLU()
+        layers.append(conv2d)
+        layers.append(leaky)
+
+    layers.append(Conv2D(filters=1, kernel_size=(5, 5), strides=1, padding='same',
+                         kernel_regularizer=l2(model_args.regularization_coef),
+                         name="Output_Conv"))
+
+    decoder_output = layers[0](net)
+    for layer in layers[1:]:
+        decoder_output = layer(decoder_output)
+
+    return decoder_output, layers
+
+
 class DeconvDecoder(Layer):
     def __init__(self, model_args, **kwargs):
         self.model_args = model_args
@@ -36,22 +65,46 @@ class DeconvDecoder(Layer):
         self.seed_img_size = model_args.output_image_size // (2 ** (len(model_args.deconv_layers) - 1))
         super(DeconvDecoder, self).__init__(**kwargs)
 
+    def build(self, input_shape):
+        self.dense = Dense(self.model_args.deconv_layers[0] * self.seed_img_size * self.seed_img_size,
+                           name="Dense_before_deconv")
+        # self.add_weight(self.dense.get_weights())
+
+        self.reshape = Reshape((self.seed_img_size, self.seed_img_size, self.model_args.deconv_layers[0]))
+        # self.add_weight(self.reshape.get_weights())
+
+        self.leaky_1 = LeakyReLU()
+        # self.add_weight(self.leaky_1.get_weights())
+
+        self.deconv_layers = [(Conv2DTranspose(nr_deconv_filters, (5, 5), padding='same', strides=2,
+                                               kernel_regularizer=l2(self.model_args.regularization_coef)),
+                               LeakyReLU())
+                              for nr_deconv_filters in self.model_args.deconv_layers[1:]]
+
+        # for deconv,leaky in self.deconv_layers:
+        # self.add_weight(deconv.get_weights())
+        # self.add_weight(leaky.get_weights())
+
+        self.output_layer = Conv2D(filters=1, kernel_size=(5, 5), strides=1, padding='same',
+                                   kernel_regularizer=l2(self.model_args.regularization_coef),
+                                   name="Output_Conv")
+
+        # self.add_weight(self.output_layer.get_weights())
+
+        assert len(input_shape) == 2
+        super(DeconvDecoder, self).build(input_shape)
+
     def call(self, x):
-        generator = Dense(self.model_args.deconv_layers[0] * self.seed_img_size * self.seed_img_size,
-                          name="Dense_before_deconv")(x)
-        generator = Reshape((self.seed_img_size, self.seed_img_size, self.model_args.deconv_layers[0]))(generator)
+        generator = self.dense(x)
+        generator = self.reshape(generator)
 
-        generator = LeakyReLU()(generator)
+        generator = self.leaky_1(generator)
 
-        for deconv_layer_filters in self.model_args.deconv_layers[1:]:
-            generator = deconv2d(generator,
-                                 filters=deconv_layer_filters,
-                                 regularization_coef=self.model_args.regularization_coef)
-            generator = LeakyReLU()(generator)
+        for deconv_layer, activation in self.deconv_layers:
+            generator = deconv_layer(generator)
+            generator = activation(generator)
 
-        output = Conv2D(filters=1, kernel_size=(5, 5), strides=1, padding='same',
-                        kernel_regularizer=l2(self.model_args.regularization_coef),
-                        name="Output_Conv")(generator)
+        output = self.output_layer(generator)
 
         return output
 

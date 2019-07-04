@@ -87,8 +87,8 @@ class TrainingConfiguration:
             self.loss,
             self.clip_grad_by_value,
             self.cutoff_freq,
-	    self.deconv_layers,
-	    self.kl_weight)
+            self.deconv_layers,
+            self.kl_weight)
 
     def _compute_model_path(self):
         self.model_path = os.path.abspath(os.path.join(
@@ -99,7 +99,7 @@ class TrainingConfiguration:
                 self.dataset.split_by,
                 self.dataset.slicing_strategy,
                 self.dataset.slice_length,
-		self.stack_channels,
+                self.stack_channels,
                 self.get_model_name(),
                 os.getpid(),
                 datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),

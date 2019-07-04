@@ -27,7 +27,7 @@ def train_model(model_params: TrainingConfiguration):
                         epochs=model_params.n_epochs,
                         validation_data=model_params.dataset.validation_sample_generator(model_params.batch_size),
                         validation_steps=model_params.nr_val_steps,
-                        verbose=2,
+                        verbose=1,
                         callbacks=callbacks,
                         use_multiprocessing=False)
 

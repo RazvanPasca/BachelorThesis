@@ -4,7 +4,7 @@ from keras.losses import mse
 
 import TrainingConfiguration
 from datasets.datasets_utils import ModelType
-from models.deconv_decoder import DeconvDecoder
+from models.deconv_decoder import deconv_decoder
 from models.wavenet_encoder import get_wavenet_encoder
 from models.z_layer import get_z_layer
 
@@ -50,12 +50,15 @@ def get_model(model_args: TrainingConfiguration):
 
     elif model_args.model_type == ModelType.IMAGE_REC:
         z_layer = get_z_layer(model_args, encoder_output)
-        deconv_decoder = DeconvDecoder(model_args)
-        output = deconv_decoder(z_layer)
+        output, layers = deconv_decoder(model_args, z_layer)
 
         if model_args.use_vae:
             decoder_input = Input(shape=(model_args.z_dim,))
-            generator_output = deconv_decoder(decoder_input)
+
+            generator_output = layers[0](decoder_input)
+            for layer in layers[1:]:
+                generator_output = layer(generator_output)
+
             generator = Model(decoder_input, generator_output)
             setattr(model_args, "generator", generator)
 

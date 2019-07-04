@@ -12,6 +12,7 @@ class VaeCallback(Callback):
         self.epoch = 0
         self.logging_period = model_args.logging_period
         self.generator = model_args.generator
+        print(self.generator.summary())
         self.z_dim = model_args.z_dim
         self.save_path = "{}/Samples".format(model_args.model_path)
         create_dir_if_not_exists(self.save_path)
