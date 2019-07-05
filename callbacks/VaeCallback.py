@@ -36,7 +36,7 @@ class VaeCallback(Callback):
         self.interpolations_seed = sampler * first_point + (self.nr_interpolation_samples - sampler) * second_point
 
     def get_samples_seed(self):
-        self.samples_seed = np.random.normal(0, 2, (self.nr_samples, self.z_dim)).reshape((self.nr_samples, self.z_dim))
+        self.samples_seed = np.random.normal(0, 1, (self.nr_samples, self.z_dim)).reshape((self.nr_samples, self.z_dim))
 
     def samples_interpolation(self):
         generated_images = self.generator.predict(self.interpolations_seed)

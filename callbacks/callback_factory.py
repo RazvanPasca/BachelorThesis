@@ -60,7 +60,7 @@ def get_common_callbacks(model_args):
     if model_args.model_type in [ModelType.CONDITION_CLASSIFICATION, ModelType.SCENE_CLASSIFICATION]:
         metrics = ["loss", "acc"]
     elif model_args.use_vae:
-        metrics = ["loss", "reconstruction_loss"]
+        metrics = ["loss", "reconstruction_loss", "kl_loss"]
     else:
         metrics = ["loss"]
 

@@ -1,3 +1,4 @@
+import numpy as np
 from keras.callbacks import Callback
 from matplotlib import pyplot as plt, patches as mpatches
 
@@ -45,46 +46,35 @@ class MetricsPlotCallback(Callback):
 
         if 'acc' in self.metrics:
             count_subplots += 1
-            plt.subplot(self.num_subplots, 1, count_subplots)
-            plt.title('Accuracy')
-            # plt.axis([0,100,0,1])
-            plt.plot(epochs, self.val_acc, color='r')
-            plt.plot(epochs, self.acc, color='b')
-            plt.ylabel('accuracy')
-
-            red_patch = mpatches.Patch(color='red', label='Test')
-            blue_patch = mpatches.Patch(color='blue', label='Train')
-
-            plt.legend(handles=[red_patch, blue_patch], loc=4)
+            self.plot_test_val_loss("Accuracy", self.acc, self.val_acc, count_subplots, epochs)
 
         if 'loss' in self.metrics:
             count_subplots += 1
-            plt.subplot(self.num_subplots, 1, count_subplots)
-            plt.title('Loss')
-            # plt.axis([0,100,0,5])
-            plt.plot(epochs, self.val_loss, color='r')
-            plt.plot(epochs, self.loss, color='b')
-            plt.ylabel('loss')
-
-            red_patch = mpatches.Patch(color='red', label='Test')
-            blue_patch = mpatches.Patch(color='blue', label='Train')
-
-            plt.legend(handles=[red_patch, blue_patch], loc=4)
+            self.plot_test_val_loss("Loss", self.loss, self.val_loss, count_subplots, epochs)
 
         if "reconstruction_loss" in self.metrics:
             count_subplots += 1
-            plt.subplot(self.num_subplots, 1, count_subplots)
-            plt.title('Reconstruction_loss')
-            # plt.axis([0,100,0,5])
-            plt.plot(epochs, self.val_rec_loss, color='r')
-            plt.plot(epochs, self.rec_loss, color='b')
-            plt.ylabel('loss')
+            self.plot_test_val_loss("Reconstruction_loss", self.rec_loss, self.val_loss, count_subplots, epochs)
 
-            red_patch = mpatches.Patch(color='red', label='Test')
-            blue_patch = mpatches.Patch(color='blue', label='Train')
+        if "kl_loss" in self.metrics:
+            count_subplots += 1
+            kl_val_loss = np.array(self.val_loss) - np.array(self.val_rec_loss)
+            kl_loss = np.array(self.loss) - np.array(self.rec_loss)
 
-            plt.legend(handles=[red_patch, blue_patch], loc=4)
+            self.plot_test_val_loss("KL_loss", kl_loss, kl_val_loss, count_subplots, epochs)
 
         if self.save_graph:
             plt.savefig(self.save_path + '/training_acc_loss.png')
         plt.close()
+
+    def plot_test_val_loss(self, title, train_metric, val_metric, count_subplots, epochs):
+        plt.subplot(self.num_subplots, 1, count_subplots)
+        plt.title(title)
+        plt.plot(epochs, val_metric, color='r')
+        plt.plot(epochs, train_metric, color='b')
+        plt.ylabel(title)
+        plt.xlabel("epochs")
+        plt.tight_layout()
+        red_patch = mpatches.Patch(color='red', label='Test')
+        blue_patch = mpatches.Patch(color='blue', label='Train')
+        plt.legend(handles=[red_patch, blue_patch], loc=1)
