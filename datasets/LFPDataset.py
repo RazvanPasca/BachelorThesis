@@ -4,7 +4,9 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 import numpy as np
 
+import training_parameters
 from datasets.datasets_utils import rescale, shuffle_indices, SequenceAddress, ModelType, SplitStrategy, SlicingStrategy
+from datasets.paths import CAT_DATASET_STIMULI_PATH_64, CAT_DATASET_SIGNAL_PATH
 from signal_analysis.signal_utils import mu_law_fn, filter_input_sequence
 from utils.tf_utils import _split_dataset_into_slices
 
@@ -179,7 +181,6 @@ class LFPDataset:
         if self.stack_channels:
             size = size // self.number_of_channels
         return size
-
 
     def _prepare_data(self):
         self._filter_signal_frequencies()
@@ -497,8 +498,8 @@ self.cached_bin_of_value[value]
 
         """
 
-        self.regression_target_mean = np.mean(self.regression_actual)
-        self.regression_target_std = np.std(self.regression_actual)
+        self.regression_target_mean = [np.mean(self.regression_actual), np.mean(self.regression_actual, axis=(1))]
+        self.regression_target_std = [np.std(self.regression_actual), np.std(self.regression_actual, axis=(1))]
 
     def _validate_setup(self):
         assert os.path.exists(self.signal_path)
@@ -613,10 +614,9 @@ self.cached_bin_of_value[value]
         return sequences, addresses
 
 
-def show_edges_computed():
+def show_edges_computed(dataset):
     movies_keep = [0, 1, 2]
-    dataset = LFPDataset(val_percentage=0.15, model_type="EDGES", conditions_to_keep=movies_keep,
-                         split_by=SplitStrategy.SLICES)
+
     np.random.seed(42)
     for mov in movies_keep:
         for j in np.random.choice(700, 10):
@@ -631,4 +631,7 @@ def show_edges_computed():
 
 
 if __name__ == '__main__':
-    show_edges_computed()
+    dataset_args = training_parameters.training_parameters["dataset_args"]
+    dataset = LFPDataset(signal_path=CAT_DATASET_SIGNAL_PATH, stimuli_path=CAT_DATASET_STIMULI_PATH_64, **dataset_args)
+    print("MEAN: ", dataset.regression_target_mean)
+    print("STD: ", dataset.regression_target_std)
