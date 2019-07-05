@@ -86,7 +86,7 @@ class TrainingConfiguration:
             self.regularization_coef,
             self.loss,
             self.clip_grad_by_value,
-            self.cutoff_freq,
+            self.dataset.cutoff_freq,
             self.deconv_layers,
             self.kl_weight)
 

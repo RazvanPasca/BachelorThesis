@@ -14,7 +14,7 @@ def get_model_callbacks(model_args: TrainingConfiguration):
 
     if model_args.model_type == ModelType.CONDITION_CLASSIFICATION:
         train_batch = model_args.dataset.get_train_plot_examples(model_args.nr_train_steps)
-        val_batch = model_args.dataset.get_train_plot_examples(model_args.nr_val_steps)
+        val_batch = model_args.dataset.get_val_plot_examples(model_args.nr_val_steps)
         conf_matrix_callback = ConfusionMatrixPlotter(train_batch,
                                                       val_batch,
                                                       model_args.classes,
@@ -36,7 +36,7 @@ def get_model_callbacks(model_args: TrainingConfiguration):
 
     if model_args.model_type == ModelType.IMAGE_REC:
         train_batch = model_args.dataset.get_train_plot_examples(model_args.nr_rec)
-        val_batch = model_args.dataset.get_train_plot_examples(model_args.nr_rec)
+        val_batch = model_args.dataset.get_val_plot_examples(model_args.nr_rec)
 
         reconstruct_image_callback = ReconstructImageCallback(train_batch,
                                                               val_batch,
@@ -76,3 +76,4 @@ def get_common_callbacks(model_args):
     callbacks.append(tensorboard_callback)
 
     return callbacks
+

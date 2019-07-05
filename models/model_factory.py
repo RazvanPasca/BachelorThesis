@@ -39,7 +39,7 @@ def get_model(model_args: TrainingConfiguration):
     model_metrics = None
 
     if model_args.model_type == ModelType.SCENE_CLASSIFICATION:
-        z_layer, _ = get_z_layer(model_args, encoder_output)
+        z_layer = get_z_layer(model_args, encoder_output)
         output = Dense(model_args.nr_output_classes, activation='softmax', name="Sfmax")(z_layer)
         model_metrics = [metrics.sparse_categorical_accuracy]
 
@@ -63,7 +63,7 @@ def get_model(model_args: TrainingConfiguration):
             setattr(model_args, "generator", generator)
 
     elif model_args.model_type == ModelType.BRIGHTNESS or model_args.model_type == ModelType.EDGES:
-        z_layer, _ = get_z_layer(model_args, encoder_output)
+        z_layer= get_z_layer(model_args, encoder_output)
         output = Dense(1, name="Regression")(z_layer)
 
     elif model_args.model_type == ModelType.NEXT_TIMESTEP:

@@ -15,7 +15,7 @@ training_parameters = {
         "val_percentage": 0.2,
         "channels_to_keep": None,
         "conditions_to_keep": [
-            0, 1, 2
+            0,1,2
         ],
         # "orientations_to_keep": [0, 1],
         # "contrasts_to_keep": [0, 1],
@@ -44,20 +44,20 @@ training_parameters = {
     "n_epochs": 400,
     "batch_size": 64,
     "nr_layers": 7,
-    "nr_filters": 16,
-    "skip_conn_filters": 16,
+    "nr_filters": 128,
+    "skip_conn_filters": 256,
     "lr": 1e-05,
     "loss": "MAE",
     "clip_value": 5,
     "regularization_coef": 0.00,
     "logging_period": 3,
-    "train_coverage_per_epoch": 0.001,
-    "val_coverage_per_epoch": 0.005,
-    "save_path": "./Results_after_refactor",
+    "train_coverage_per_epoch": 0.1,
+    "val_coverage_per_epoch": 0.5,
+    "save_path": "/data2/razpa/Results_after_refactor/new_vae",
     "nr_rec": 18,
-    "generative_samples": 25,
-    "kl_weight": 0.1,
+    "generative_samples": 36,
+    "kl_weight": 0.001,
     "deconv_layers": [512, 256, 128, 64, 32],
-    "z_dim": 10,
-    "gpu": 0
+    "z_dim": 100,
+    "gpu": 1
 }
