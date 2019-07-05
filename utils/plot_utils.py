@@ -156,7 +156,7 @@ def plot_conf_matrix(cnf_mat, classes, cmap, normalize, save_path):
 
 
 def show_and_plot(plot_save_path, plot_title, show):
-    plt.title(plot_title)
+    plt.title(plot_title, fontsize=20)
     plt.savefig(plot_save_path)
     plt.show() if show else None
     plt.close()

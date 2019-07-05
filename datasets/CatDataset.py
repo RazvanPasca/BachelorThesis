@@ -21,7 +21,8 @@ class CatDataset(LFPDataset):
                  use_mu_law=False,
                  number_of_bins=255,
                  condition_on_gamma=False,
-                 gamma_windows_in_trial=None):
+                 gamma_windows_in_trial=None,
+                 blur_images=False):
         self.conditions_to_keep = conditions_to_keep
         super().__init__(
             signal_path=CAT_DATASET_SIGNAL_PATH,
@@ -40,13 +41,12 @@ class CatDataset(LFPDataset):
             use_mu_law=use_mu_law,
             number_of_bins=number_of_bins,
             condition_on_gamma=condition_on_gamma,
-            gamma_windows_in_trial=gamma_windows_in_trial)
+            gamma_windows_in_trial=gamma_windows_in_trial,
+            blur_images=blur_images)
 
     def plot_stimuli_hist(self, path):
         """
-
         Plots stimuli histogram.
-
         """
 
         plt.figure(figsize=(16, 12))

@@ -43,7 +43,6 @@ class ModelType(Enum):
     BRIGHTNESS = 4
     EDGES = 5
     IMAGE_REC = 6
-    VAE_IMAGE_REC = 7
 
 
 class SplitStrategy(Enum):

@@ -1,24 +1,26 @@
 from datasets import CatDataset
+
 from datasets.datasets_utils import SplitStrategy, SlicingStrategy, ModelType
 
 training_parameters = {
-    "dataset_class": CatDataset,
+    "dataset_class": CatDataset,  # CatDataset/MouseControlDataset/MouseAChDataset
     "dataset_args": {
         "random_seed": 42,
         "slice_length": 100,
-        "model_type": ModelType.BRIGHTNESS,
-        "slicing_strategy": SlicingStrategy.CONSECUTIVE,
-        "split_by": SplitStrategy.TRIALS,
+        "model_type": ModelType.IMAGE_REC,  # BRIGHTNESS/IMAGE_REC/EDGES/CONDITION_CLASSIFICATION/SCENE_CLASSIFICATION
+        "slicing_strategy": SlicingStrategy.CONSECUTIVE,  # CONSECUTIVE or RANDOM
+        "split_by": SplitStrategy.TRIALS,  # TRIALS or SLICES
         "stack_channels": True,
         "use_mu_law": False,
         "number_of_bins": 255,
         "val_percentage": 0.2,
         "channels_to_keep": None,
         "conditions_to_keep": [
-            0,1,2
+            0, 1, 2
         ],
         # "orientations_to_keep": [0, 1],
         # "contrasts_to_keep": [0, 1],
+        "blur_images": True,
         "trials_to_keep": None,
         "cutoff_freq": None,
         "condition_on_gamma": False,

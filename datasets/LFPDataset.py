@@ -4,7 +4,6 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 import numpy as np
 
-import training_parameters
 from datasets.datasets_utils import rescale, shuffle_indices, SequenceAddress, ModelType, SplitStrategy, SlicingStrategy
 from datasets.paths import CAT_DATASET_STIMULI_PATH_64, CAT_DATASET_SIGNAL_PATH
 from signal_analysis.signal_utils import mu_law_fn, filter_input_sequence
@@ -64,7 +63,8 @@ class LFPDataset:
                  use_mu_law,
                  number_of_bins,
                  condition_on_gamma,
-                 gamma_windows_in_trial):
+                 gamma_windows_in_trial,
+                 blur_images):
         np.random.seed(random_seed)
 
         self.slice_indexes = {}
@@ -89,6 +89,7 @@ class LFPDataset:
         self.split_by = split_by
         self.slice_length = slice_length
         self.condition_on_gamma = condition_on_gamma
+        self.blur_images = blur_images
 
         self.conditions_to_keep = np.array(conditions_to_keep) if type(conditions_to_keep) is list else None
         self.trials_to_keep = np.array(trials_to_keep) if type(trials_to_keep) is list else None
@@ -186,6 +187,9 @@ class LFPDataset:
         self._filter_signal_frequencies()
         self._normalize_data()
         self._compute_values_range()
+
+        if self.blur_images:
+            self._blur_stimuli()
 
         if self.model_type == ModelType.EDGES:
             self._compute_stimuli_edges()
@@ -613,6 +617,15 @@ self.cached_bin_of_value[value]
 
         return sequences, addresses
 
+    def _blur_stimuli(self):
+        size = 15
+        sigma = 3
+        kernel = np.fromfunction(lambda x, y: (1 / (2 * np.math.pi * sigma ** 2)) * np.math.e ** (
+                (-1 * ((x - (size - 1) / 2) ** 2 + (y - (size - 1) / 2) ** 2)) / (2 * sigma ** 2)), (size, size))
+        for i, movie in enumerate(self.stimuli):
+            for j, image in enumerate(movie):
+                new_image = cv.filter2D(image, -1, kernel)
+                self.stimuli[i, j, :, :] = new_image
 
 def show_edges_computed(dataset):
     movies_keep = [0, 1, 2]
@@ -631,7 +644,9 @@ def show_edges_computed(dataset):
 
 
 if __name__ == '__main__':
-    dataset_args = training_parameters.training_parameters["dataset_args"]
+    from training_parameters import training_parameters
+
+    dataset_args = training_parameters["dataset_args"]
     dataset = LFPDataset(signal_path=CAT_DATASET_SIGNAL_PATH, stimuli_path=CAT_DATASET_STIMULI_PATH_64, **dataset_args)
     print("MEAN: ", dataset.regression_target_mean)
     print("STD: ", dataset.regression_target_std)

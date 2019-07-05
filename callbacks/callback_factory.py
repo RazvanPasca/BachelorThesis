@@ -5,7 +5,7 @@ from callbacks.ConfusionMatrixPlotter import ConfusionMatrixPlotter
 from callbacks.GeneratedSequencePlotCallback import GeneratedSequencePlotCallback
 from callbacks.MetricsPlotCallback import MetricsPlotCallback
 from callbacks.ReconstructImageCallback import ReconstructImageCallback
-from callbacks.VaeCallback import VaeCallback
+from callbacks.VaePlotCallback import VaeCallback
 from datasets.datasets_utils import ModelType
 
 

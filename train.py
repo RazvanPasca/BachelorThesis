@@ -16,7 +16,6 @@ def log_training_session(model_params: TrainingConfiguration, model):
 
 
 def train_model(model_params: TrainingConfiguration):
-
     model = get_model(model_params)
 
     callbacks = get_model_callbacks(model_params)

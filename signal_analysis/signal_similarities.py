@@ -2,8 +2,10 @@ import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from datasets.oldies.MouseLFP import MouseLFP
-from datasets.paths import MOUSEACH_DATASET_PATH, MOUSE_DATASET_PATH
+import training_parameters
+from datasets.LFPDataset import LFPDataset
+from datasets.paths import CAT_DATASET_STIMULI_PATH_64, CAT_DATASET_SIGNAL_PATH
+from utils.plot_utils import show_and_plot
 
 
 def rmse(a, b):
@@ -133,12 +135,17 @@ def get_signal_histograms(dataset, path, nr_of_bins, separated_histograms=False)
                     hist_values, bins = np.histogram(signal, nr_of_bins)
                     xs = (bins[:-1] + bins[1:]) / 2
                     ax.bar(xs, hist_values, width=bins[1] - bins[0], zs=channel * 5, zdir='y', alpha=0.8)
+                    ax.set_ylabel("Offset between histograms", fontsize=20)
+                    ax.set_xlabel("Point value after normalization", fontsize=20)
+                    ax.set_zlabel("Number of points", fontsize=20)
                 else:
                     signals.append(signal)
 
             if not separated_histograms:
                 signals = np.concatenate(signals).ravel()
                 plt.hist(signals, nr_of_bins)
+                plt.xlabel("Point value after normalization")
+                plt.ylabel("Number of points")
 
             plot_title = "Cond:{}_Trial:{}".format(cond, trial)
             plot_save_path = "{}/Channels_together/Cond:{}_Trial:{}_Multiple:{}".format(path, cond, trial,
@@ -199,9 +206,21 @@ def get_signal_histograms(dataset, path, nr_of_bins, separated_histograms=False)
 
 
 if __name__ == '__main__':
-    dataset = CatLFPStimuli()
+    dataset = LFPDataset(signal_path=CAT_DATASET_SIGNAL_PATH, stimuli_path=CAT_DATASET_STIMULI_PATH_64,
+                         **training_parameters.training_parameters["dataset_args"])
 
-    # dataset = MouseLFP(MOUSE_DATASET_PATH, cutoff_freq=[1, 80], channels_to_keep=[-1],
-    #                    conditions_to_keep=[1], trials_to_keep=[0], normalization="Zsc")
+    # nr_time_steps = 2000
+    # for channel in range(16):
+    #     plt.plot(np.arange(nr_time_steps), dataset.signal[0, 0, channel, :nr_time_steps])
+    # for channel in range(16, 32):
+    #     plt.plot(np.arange(nr_time_steps), 10 + dataset.signal[0, 0, channel, :nr_time_steps])
+    # for channel in range(32, 47):
+    #     plt.plot(np.arange(nr_time_steps), 20 + dataset.signal[0, 0, channel, :nr_time_steps])
+    # plt.xlabel("Time [ms]")
+    # plt.ylabel("Signal amplitude")
+    # plt.title("Visualization of the three channel clusters")
+    # plt.show()
+    # plt.imshow()
+
     get_signal_histograms(dataset, "/home/pasca/School/Licenta/Naturix/Histograms/CatLFP", nr_of_bins=256,
                           separated_histograms=True)
