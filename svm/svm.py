@@ -1,11 +1,12 @@
-import multiprocessing
 import sys
-import numpy as np
 
+import numpy as np
 from joblib import Parallel, delayed
 from sklearn.metrics import confusion_matrix, classification_report
-from sklearn.svm import LinearSVC
-from datasets.paths import CAT_TFRECORDS_PATH_TOBEFORMATED
+from sklearn.svm import LinearSVR
+
+from datasets import CatDataset
+from datasets.datasets_utils import SequenceAddress
 from utils.output_utils import compute_confusion_matrix
 
 
@@ -16,12 +17,14 @@ class SVMTrainConfiguration:
                  file_redirect_output,
                  kernel,
                  labels_to_index,
+                 split_by,
                  window_size,
                  x_train,
                  x_test,
                  y_train,
-                 y_test,
-                 split_by):
+                 y_test):
+        self.split_by = split_by
+        self.window_size = window_size
         self.C = c
         self.X_test = x_test
         self.X_train = x_train
@@ -29,10 +32,8 @@ class SVMTrainConfiguration:
         self.kernel = kernel
         self.labels_to_index = labels_to_index
         self.max_iterations = max_iterations
-        self.window_size = window_size
         self.y_test = y_test
         self.y_train = y_train
-        self.split_by = split_by
 
 
 def compute_confusion_matrix(y_pred, y):
@@ -72,10 +73,9 @@ def train_svm_with_configuration(config):
 
     print_configuration(config)
 
-    svc = LinearSVC(C=config.C,
+    svc = LinearSVR(C=config.C,
                     max_iter=config.max_iterations,
                     dual=False,
-                    class_weight='balanced',
                     verbose=0)
     svc.fit(config.X_train, config.y_train)
 
@@ -87,58 +87,59 @@ def train_svm_with_configuration(config):
         sys.stdout.close()
 
 
-def main():
-    num_cores = multiprocessing.cpu_count() // 2
-
-    val_perc = 0.2
-    max_iterations = 1
+def main(dataset, max_iter, nr_cores, training_parameters):
     file_redirect_output = True
-    window_size = 1000
-    cutoff_freq = [10, 100]
-    movies_to_keep = [1, 2, 3]
-    avsw = False
-    split_by_list = ["trials", "random_time_crop", "scramble"]
 
-    data_dict, labels_to_index = load_cat_tf_record(
-        CAT_TFRECORDS_PATH_TOBEFORMATED.format(window_size), cutoff_freq)
+    X_train = []
+    Y_train = []
+    X_test = []
+    Y_test = []
 
-    datasets = []
+    train_set = dataset.prepared_data["TRAIN"]
+    test_set = dataset.prepared_data["VAL"]
 
-    for split_by in split_by_list:
-        x_train, x_val, y_train, y_val, new_labels_to_index = new_train_test_split(
-            data_dict,
-            movies_to_keep,
-            val_perc,
-            avsw,
-            labels_to_index,
-            False,
-            42,
-            split_by,
-            window_size)
+    for i, condition in enumerate(train_set):
+        for j, trial in enumerate(condition):
+            for k, channel in enumerate(trial):
+                for l, slice in enumerate(channel):
+                    seq_addr = SequenceAddress(i, trial, channel,
+                                               dataset.slice_indexes["TRAIN"][l] * dataset.slice_length,
+                                               dataset.slice_length,
+                                               "TRAIN")
+                    X_train.append(slice)
+                    Y_train.append(dataset._get_y_value_for_sequence(seq_addr))
 
-        datasets.append(
-            [np.squeeze(x_train),
-             np.squeeze(x_val),
-             np.squeeze(y_train),
-             np.squeeze(y_val),
-             split_by])
+    for i, condition in enumerate(test_set):
+        for j, trial in enumerate(condition):
+            for k, channel in enumerate(trial):
+                for l, slice in enumerate(channel):
+                    seq_addr = SequenceAddress(i, trial, channel,
+                                               dataset.slice_indexes["VAL"][l] * dataset.slice_length,
+                                               dataset.slice_length,
+                                               "VAL")
+                    X_test.append(slice)
+                    Y_test.append(dataset._get_y_value_for_sequence(seq_addr))
 
-    configurations = [SVMTrainConfiguration(
-        max_iterations,
-        22,
-        file_redirect_output,
-        "linear",
-        labels_to_index,
-        window_size,
-        X_train,
-        X_val,
-        Y_train,
-        Y_val,
-        split_by)
-        for X_train, X_val, Y_train, Y_val, split_by in datasets]
+    configurations = [SVMTrainConfiguration(max_iter,
+                                            C,
+                                            file_redirect_output,
+                                            "linear",
+                                            None,
+                                            training_parameters["dataset_args"]["split_by"],
+                                            training_parameters["dataset_args"]["slice_length"],
+                                            X_train,
+                                            X_test,
+                                            Y_train,
+                                            Y_test) for C in [0, 3, 10, 30, 100, 1000]]
 
-    Parallel(n_jobs=num_cores)(delayed(train_svm_with_configuration)(cfg) for cfg in configurations)
+    Parallel(n_jobs=nr_cores)(delayed(train_svm_with_configuration)(cfg) for cfg in configurations)
 
 
 if __name__ == '__main__':
-    main()
+    from training_parameters import training_parameters
+
+    nr_cores = 1
+
+    dataset = CatDataset(**training_parameters["dataset_args"])
+    max_iter = 100
+    main(dataset, max_iter, nr_cores, training_parameters)

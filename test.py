@@ -18,7 +18,6 @@ def load_model_from_folder(model_folder):
 
 def test_model(nr_samples, model_folder):
     model, params = load_model_from_folder(model_folder)
-    colors = ["r", 'g', 'b']
     labels = ["Condition 0", "Condition 1", "Condition 2"]
 
     gen = params.dataset.validation_sample_generator(nr_samples, return_address=True)
@@ -34,12 +33,14 @@ def test_model(nr_samples, model_folder):
                 Y_val_list.append(Y_val[i])
                 Y_pred_list.append(Y_pred[i])
 
-        plt.scatter(Y_val_list, Y_pred_list, c=colors[condition], label=labels[condition])
+        plt.scatter(Y_val_list, Y_pred_list, label=labels[condition])
 
     plt.legend()
-    plt.title("Test prediction MAE:{:.4}, prediction error std:{:.4}".format(np.mean(abs_dif), np.std(abs_dif)))
-    plt.xlabel("Actual values")
-    plt.ylabel("Predicted values")
+    fontsize = 15
+    plt.title("Test prediction MAE:{:.4}, prediction error std:{:.4}".format(np.mean(abs_dif), np.std(abs_dif)),
+              fontsize=fontsize)
+    plt.xlabel("Actual values", fontsize=15)
+    plt.ylabel("Predicted values", fontsize=15)
     plt.show()
 
     gen = params.dataset.train_sample_generator(nr_samples, return_address=True)
@@ -55,15 +56,16 @@ def test_model(nr_samples, model_folder):
                 Y_val_list.append(Y_val[i])
                 Y_pred_list.append(Y_pred[i])
 
-        plt.scatter(Y_val_list, Y_pred_list, c=colors[condition], label=labels[condition])
+        plt.scatter(Y_val_list, Y_pred_list, label=labels[condition])
 
     plt.legend()
-    plt.title("Train prediction MAE:{:.4}, prediction error std:{:.4}".format(np.mean(abs_dif), np.std(abs_dif)))
-    plt.xlabel("Actual values")
-    plt.ylabel("Predicted values")
+    plt.title("Train prediction MAE:{:.4}, prediction error std:{:.4}".format(np.mean(abs_dif), np.std(abs_dif)),
+              fontsize=fontsize)
+    plt.xlabel("Actual values", fontsize=15)
+    plt.ylabel("Predicted values", fontsize=15)
     plt.show()
 
 
 if __name__ == "__main__":
-    nr_samples = 2048
+    nr_samples = 3000
     test_model(nr_samples, MY_MODEL_PATH)

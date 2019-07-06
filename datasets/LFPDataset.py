@@ -537,6 +537,7 @@ self.cached_bin_of_value[value]
     def _filter_data(self):
         if self.conditions_to_keep is not None:
             self.signal = self.signal[self.conditions_to_keep, ...]
+            self.stimuli = self.stimuli[self.conditions_to_keep, ...]
             self.number_of_conditions = self.signal.shape[0]
         else:
             self.conditions_to_keep = np.arange(self.signal.shape[0])
