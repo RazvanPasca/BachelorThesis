@@ -509,8 +509,16 @@ self.cached_bin_of_value[value]
 
         """
 
-        self.regression_target_mean = [np.mean(self.regression_actual), np.mean(self.regression_actual, axis=(1))]
-        self.regression_target_std = [np.std(self.regression_actual), np.std(self.regression_actual, axis=(1))]
+        self.regression_target_mean = [np.mean(self.regression_actual)]
+
+        condition_means = np.mean(self.regression_actual, axis=1).flatten()
+        for x in condition_means:
+            self.regression_target_mean.append(x)
+
+        condition_std = np.std(self.regression_actual, axis=1).flatten()
+        self.regression_target_std = [np.std(self.regression_actual)]
+        for x in condition_std:
+            self.regression_target_std.append(x)
 
     def _validate_setup(self):
         assert os.path.exists(self.signal_path)
@@ -650,11 +658,28 @@ def show_edges_computed(dataset):
             plt.show()
 
 
+def stimuli_histogram(dataset):
+    plt.figure(figsize=(16, 12))
+    plt.hist([movie for movie in dataset.regression_actual], bins=25,
+             label=["Condition:{0:.0f}-Mean:{1:.4f}-Std:{2:.4f}".format(i, dataset.regression_target_mean[i + 1],
+                                                                        dataset.regression_target_std[i + 1]) for i in
+                    dataset.conditions_to_keep])
+    plt.legend(fontsize=20)
+    plt.title(
+        "Overall-Mean:{0:.4f} Overall-Std:{1:.4f}".format(dataset.regression_target_mean[0],
+                                                          dataset.regression_target_std[0]),
+        fontsize=25)
+    plt.xlabel("Stiumulus brightness value", fontsize=20)
+    plt.ylabel("Nr stimuli", fontsize=20)
+    plt.show()
+
+
 if __name__ == '__main__':
     from training_parameters import training_parameters
 
     dataset_args = training_parameters["dataset_args"]
     dataset = LFPDataset(signal_path=CAT_DATASET_SIGNAL_PATH, stimuli_path=CAT_DATASET_STIMULI_PATH_64, **dataset_args)
-    show_edges_computed(dataset)
+    stimuli_histogram(dataset)
+    # show_edges_computed(dataset)
     print("MEAN: ", dataset.regression_target_mean)
     print("STD: ", dataset.regression_target_std)

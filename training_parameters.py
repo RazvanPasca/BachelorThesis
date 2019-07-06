@@ -7,7 +7,7 @@ training_parameters = {
     "dataset_args": {
         "random_seed": 42,
         "slice_length": 100,
-        "model_type": ModelType.EDGES,
+        "model_type": ModelType.BRIGHTNESS,
         # BRIGHTNESS/IMAGE_REC/EDGES/CONDITION_CLASSIFICATION/SCENE_CLASSIFICATION
         "slicing_strategy": SlicingStrategy.CONSECUTIVE,  # CONSECUTIVE or RANDOM
         "split_by": SplitStrategy.TRIALS,  # TRIALS or SLICES
