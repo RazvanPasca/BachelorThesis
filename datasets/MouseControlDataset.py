@@ -29,7 +29,7 @@ class MouseControlDataset(LFPDataset):
         if contrasts_to_keep is None:
             contrasts_to_keep = list(range(3))
 
-        conditions_to_keep = [o * c for o in orientations_to_keep for c in contrasts_to_keep]
+        conditions_to_keep = [o * 3 + c for o in orientations_to_keep for c in contrasts_to_keep]
 
         super().__init__(
             signal_path=MOUSE_CONTROL_DATASET_SIGNAL_PATH,

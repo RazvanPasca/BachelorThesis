@@ -37,7 +37,6 @@ class TrainingConfiguration:
 
         self.set_padding_type()
         self.set_use_vae_flag()
-        self.set_classes_names()
 
         self._prepare_dataset()
         assert (self.dataset.slice_length < self.frame_size)
@@ -55,6 +54,7 @@ class TrainingConfiguration:
         self.nr_train_steps = self.dataset.get_training_dataset_size() * self.train_coverage_per_epoch // self.batch_size
         self.nr_val_steps = self.dataset.get_validation_dataset_size() * self.val_coverage_per_epoch // self.batch_size
 
+        self.set_classes_names()
         self._compute_model_path()
 
     def set_padding_type(self):
@@ -64,7 +64,7 @@ class TrainingConfiguration:
             self.padding = 'same'
 
     def set_use_vae_flag(self):
-        if self.kl_weight is None:
+        if self.kl_weight is None or self.model_type != ModelType.IMAGE_REC:
             self.use_vae = False
         else:
             self.use_vae = True
@@ -107,11 +107,7 @@ class TrainingConfiguration:
         create_dir_if_not_exists(self.model_path)
 
     def set_classes_names(self):
-        if self.model_type == ModelType.CONDITION_CLASSIFICATION:
-            self.classes = ["Movie_0", "Movie_1", "Movie_2"]
-        elif self.model_type == ModelType.SCENE_CLASSIFICATION:
-            pass
-            # TODO
+        self.classes = ["Condition {}".format(i) for i in self.dataset.conditions_to_keep]
 
     def check_model_loss_type(self):
         if self.model_type == ModelType.CONDITION_CLASSIFICATION or self.model_type == ModelType.SCENE_CLASSIFICATION or self.model_type == ModelType.NEXT_TIMESTEP:

@@ -188,7 +188,7 @@ class LFPDataset:
         self._normalize_data()
         self._compute_values_range()
 
-        if self.blur_images:
+        if self.blur_images and self.model_type in [ModelType.IMAGE_REC, ModelType.EDGES]:
             self._blur_stimuli()
 
         if self.model_type == ModelType.EDGES:
@@ -204,6 +204,11 @@ class LFPDataset:
 
         elif self.model_type == ModelType.CONDITION_CLASSIFICATION:
             self.nr_classes = len(self.conditions_to_keep)
+            class_counter = 0
+            self.classes_label = {}
+            for key in self.conditions_to_keep:
+                self.classes_label[key] = class_counter
+                class_counter += 1
 
         elif self.model_type == ModelType.SCENE_CLASSIFICATION:
             self.nr_classes = -1
@@ -437,12 +442,9 @@ self.cached_bin_of_value[value]
 
         stimuli_w_edges_extracted = np.zeros(self.stimuli.shape)
         smoothed_stimuli = np.zeros(self.stimuli.shape)
-        kernel = np.ones((1, 1), np.uint8)
-        morph_kernel = np.ones((3, 3), np.float32) / 9
 
         for i, movie in enumerate(self.stimuli):
             for j, image in enumerate(movie):
-                # image = cv.filter2D(image, -1, kernel)
                 highThreshold = np.max(image) * 0.7
                 lowThreshold = highThreshold * 0.7
                 edges = cv.Canny((image * 255).astype(np.uint8), lowThreshold, highThreshold, L2gradient=True)
@@ -521,9 +523,10 @@ self.cached_bin_of_value[value]
 
     def _filter_data(self):
         if self.conditions_to_keep is not None:
-            assert (self.model_type != ModelType.CONDITION_CLASSIFICATION)
             self.signal = self.signal[self.conditions_to_keep, ...]
             self.number_of_conditions = self.signal.shape[0]
+        else:
+            self.conditions_to_keep = np.arange(self.signal.shape[0])
         if self.trials_to_keep is not None:
             self.signal = self.signal[:, self.trials_to_keep, ...]
             self.trials_per_condition = self.signal.shape[-3]
