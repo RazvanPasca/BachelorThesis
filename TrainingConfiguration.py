@@ -53,8 +53,9 @@ class TrainingConfiguration:
 
         self.nr_train_steps = self.dataset.get_training_dataset_size() * self.train_coverage_per_epoch // self.batch_size
         self.nr_val_steps = self.dataset.get_validation_dataset_size() * self.val_coverage_per_epoch // self.batch_size
-
-        self.set_classes_names()
+        
+        if self.model_type == ModelType.CONDITION_CLASSIFICATION:
+            self.set_classes_names()
         self._compute_model_path()
 
     def set_padding_type(self):
