@@ -107,7 +107,7 @@ class TrainingConfiguration:
         create_dir_if_not_exists(self.model_path)
 
     def set_classes_names(self):
-        self.classes = ["Condition {}".format(i) for i in self.dataset.conditions_to_keep]
+        self.classes = ["Condition {}".format(i) for i in range(self.dataset.get_nr_classes())]
 
     def check_model_loss_type(self):
         if self.model_type == ModelType.CONDITION_CLASSIFICATION or self.model_type == ModelType.SCENE_CLASSIFICATION or self.model_type == ModelType.NEXT_TIMESTEP:

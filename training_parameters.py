@@ -20,7 +20,7 @@ training_parameters = {
         #     0, 1, 2
         # ],
         "orientations_to_keep": None,
-        "contrasts_to_keep": [1],  # 0 is 25%, 1 is 100%, 2 is 50%
+        "contrasts_to_keep": None,  # 0 is 25%, 1 is 100%, 2 is 50%
         "blur_images": True,
         "trials_to_keep": None,
         "cutoff_freq": None,

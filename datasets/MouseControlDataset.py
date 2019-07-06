@@ -53,3 +53,6 @@ class MouseControlDataset(LFPDataset):
 
         self.orientations_to_keep = orientations_to_keep
         self.contrasts_to_keep = contrasts_to_keep
+
+    def _get_condition(self, seq_addr):
+        return seq_addr.condition // 3

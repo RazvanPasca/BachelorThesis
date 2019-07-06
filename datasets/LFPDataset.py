@@ -464,7 +464,7 @@ self.cached_bin_of_value[value]
 
         """
         if self.model_type == ModelType.CONDITION_CLASSIFICATION:
-            return [seq_addr.movie]
+            return self._get_condition(seq_addr)
 
         elif self.model_type == ModelType.SCENE_CLASSIFICATION:
             # TODO
@@ -472,18 +472,21 @@ self.cached_bin_of_value[value]
 
         elif self.model_type == ModelType.NEXT_TIMESTEP:
             next_timestep = self.prepared_data[seq_addr.source] \
-                [seq_addr.movie, seq_addr.trial, seq_addr.channel, seq_addr.timestep + self.slice_length]
+                [seq_addr.condition, seq_addr.trial, seq_addr.channel, seq_addr.timestep + self.slice_length]
             return [self._encode_input_to_bin(next_timestep)]
 
         else:
             image_number = (seq_addr.timestep - 100) // 40
             if self.model_type == ModelType.IMAGE_REC:
-                image = self.stimuli[seq_addr.movie, image_number, :, :]
+                image = self.stimuli[seq_addr.condition, image_number, :, :]
                 return image[:, :, np.newaxis]
             elif self.model_type == ModelType.BRIGHTNESS or self.model_type == ModelType.EDGES:
-                return [self.regression_actual[seq_addr.movie, image_number]]
+                return [self.regression_actual[seq_addr.condition, image_number]]
 
             raise Exception("Invalid ModelType!")
+
+    def _get_condition(self, seq_addr):
+        return [seq_addr.movie]
 
     def get_nr_classes(self):
         """
@@ -493,7 +496,7 @@ self.cached_bin_of_value[value]
         """
 
         if self.model_type == ModelType.CONDITION_CLASSIFICATION:
-            return self.number_of_conditions
+            return 8  # self.number_of_conditions
         elif self.model_type == ModelType.SCENE_CLASSIFICATION:
             raise Exception("Not implemented!")
 
