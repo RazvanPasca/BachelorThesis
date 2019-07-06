@@ -1,9 +1,9 @@
 import os
 from shutil import copyfile
 
-from train.TrainingConfiguration import TrainingConfiguration
 from callbacks.callback_factory import get_model_callbacks
 from models.model_factory import get_model
+from train.TrainingConfiguration import TrainingConfiguration
 from utils.system_utils import create_dir_if_not_exists
 from utils.tf_utils import configure_gpu
 

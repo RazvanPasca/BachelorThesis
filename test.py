@@ -4,14 +4,16 @@ import sys
 from keras.engine.saving import load_model
 from matplotlib import pyplot as plt
 
+from models.model_factory import get_model
 from train.TrainingConfiguration import TrainingConfiguration
 
 
 def load_model_from_folder(model_folder):
-    config_path = os.path.join(model_folder, "config.py")
+    config_path = os.path.join(model_folder, "config_file.py")
     model_parameters = TrainingConfiguration(config_path)
-    model_path = os.path.join(model_folder, "model.")
-    return load_model(model_path), model_parameters
+    model = get_model(model_parameters)
+    model.load_weights(os.path.join(model_folder, "best_model.h5"))
+    return model, model_parameters
 
 
 def test_model(model_folder):
@@ -24,4 +26,4 @@ def test_model(model_folder):
 
 
 if __name__ == "__main__":
-    test_model(sys.argv[0])
+    test_model(sys.argv[1])
