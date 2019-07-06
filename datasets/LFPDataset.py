@@ -440,19 +440,20 @@ self.cached_bin_of_value[value]
 
         """
 
+        # cannyDetector = CannyEdgeDetector.CannyEdgeDetector([])
+
         stimuli_w_edges_extracted = np.zeros(self.stimuli.shape)
-        smoothed_stimuli = np.zeros(self.stimuli.shape)
 
         for i, movie in enumerate(self.stimuli):
             for j, image in enumerate(movie):
-                highThreshold = np.max(image) * 0.7
-                lowThreshold = highThreshold * 0.7
-                edges = cv.Canny((image * 255).astype(np.uint8), lowThreshold, highThreshold, L2gradient=True)
-                # edges = cv.morphologyEx(edges, cv.MORPH_OPEN, morph_kernel)
-                # kernel = np.ones((1, 2), np.uint8)
-                # edges = cv.morphologyEx(edges, cv.MORPH_ERODE, kernel)
-                stimuli_w_edges_extracted[i, j, :, :] = edges
-                smoothed_stimuli[i, j, :, :] = image
+                int_image = image * 255
+                int_image = np.uint8(int_image)
+                int_image = cv.bilateralFilter(int_image, 3, 50, 50)
+                # edge_image = cannyDetector.detect(image)
+                highThreshold = np.max(int_image) * 0.6
+                lowThreshold = highThreshold * 0.6
+                edge_image = cv.Canny(np.uint8(int_image), lowThreshold, highThreshold, L2gradient=True)
+                stimuli_w_edges_extracted[i, j, :, :] = edge_image
 
         self.regression_actual = np.mean(stimuli_w_edges_extracted, axis=(2, 3)) / 255
         self.stimuli_w_edges_extracted = stimuli_w_edges_extracted
@@ -633,6 +634,7 @@ self.cached_bin_of_value[value]
                 new_image = cv.filter2D(image, -1, kernel)
                 self.stimuli[i, j, :, :] = new_image
 
+
 def show_edges_computed(dataset):
     movies_keep = [0, 1, 2]
 
@@ -643,9 +645,6 @@ def show_edges_computed(dataset):
             plt.title('Original Image'), plt.xticks([]), plt.yticks([])
             plt.subplot(122), plt.imshow(dataset.stimuli_w_edges_extracted[mov, j], cmap='gray')
             plt.title('Edge Image'), plt.xticks([]), plt.yticks([])
-            # plt.subplot(133),
-            # plt.imshow(dataset.smoothed_stimuli[movie, j], cmap='gray')
-            # plt.title('Smoothed Image'), plt.xticks([]), plt.yticks([])
             plt.show()
 
 
@@ -654,5 +653,6 @@ if __name__ == '__main__':
 
     dataset_args = training_parameters["dataset_args"]
     dataset = LFPDataset(signal_path=CAT_DATASET_SIGNAL_PATH, stimuli_path=CAT_DATASET_STIMULI_PATH_64, **dataset_args)
+    show_edges_computed(dataset)
     print("MEAN: ", dataset.regression_target_mean)
     print("STD: ", dataset.regression_target_std)

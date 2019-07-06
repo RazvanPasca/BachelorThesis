@@ -7,7 +7,7 @@ training_parameters = {
     "dataset_args": {
         "random_seed": 42,
         "slice_length": 100,
-        "model_type": ModelType.CONDITION_CLASSIFICATION,
+        "model_type": ModelType.EDGES,
         # BRIGHTNESS/IMAGE_REC/EDGES/CONDITION_CLASSIFICATION/SCENE_CLASSIFICATION
         "slicing_strategy": SlicingStrategy.CONSECUTIVE,  # CONSECUTIVE or RANDOM
         "split_by": SplitStrategy.TRIALS,  # TRIALS or SLICES
@@ -16,12 +16,12 @@ training_parameters = {
         "number_of_bins": 255,
         "val_percentage": 0.2,
         "channels_to_keep": None,
-        # "conditions_to_keep": [
-        #     0, 1, 2
-        # ],
-        "orientations_to_keep": None,
-        "contrasts_to_keep": None,  # 0 is 25%, 1 is 100%, 2 is 50%
-        "blur_images": True,
+        "conditions_to_keep": [
+            0, 1, 2
+        ],
+        # "orientations_to_keep": None,
+        # "contrasts_to_keep": None,  # 0 is 25%, 1 is 100%, 2 is 50%
+        "blur_images": False,
         "trials_to_keep": None,
         "cutoff_freq": None,
         "condition_on_gamma": False,
