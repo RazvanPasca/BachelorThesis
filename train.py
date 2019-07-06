@@ -17,6 +17,7 @@ def log_training_session(model_params: TrainingConfiguration, model):
     print('Train steps per epoch:', model_params.nr_train_steps)
     print('Val steps per epoch:', model_params.nr_val_steps)
 
+
 def save_model(model, model_params):
     print('Saving model and results...')
     model.save(model_params.model_path + "/" + "final_model.h5")
@@ -26,6 +27,7 @@ def save_model(model, model_params):
 def prepare_logging_folder(model_parameters):
     create_dir_if_not_exists(model_parameters.model_path)
     copyfile(model_parameters.original_config_file_path, os.path.join(model_parameters.model_path, "config_file.py"))
+
 
 def train_model(model_params: TrainingConfiguration):
     model = get_model(model_params)
@@ -51,3 +53,7 @@ def start_training():
     prepare_logging_folder(model_parameters)
     model = train_model(model_parameters)
     save_model(model, model_parameters)
+
+
+if __name__ == "__main__":
+    start_training()
