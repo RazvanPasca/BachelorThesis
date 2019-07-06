@@ -1,7 +1,7 @@
 from keras.layers import Conv1D, Multiply, Add, Activation, Reshape, Lambda, K
 from keras.regularizers import l2
 
-import TrainingConfiguration
+from train import TrainingConfiguration
 
 
 def create_wavenet_layer(n_filters,

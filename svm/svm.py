@@ -3,8 +3,8 @@ import sys
 import numpy as np
 
 from joblib import Parallel, delayed
+from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.svm import LinearSVC
-from datasets.oldies.loaders import new_train_test_split, load_cat_tf_record
 from datasets.paths import CAT_TFRECORDS_PATH_TOBEFORMATED
 from utils.output_utils import compute_confusion_matrix
 

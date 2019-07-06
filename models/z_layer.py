@@ -1,7 +1,7 @@
 from keras.engine import Layer
 from keras.layers import Dense, Flatten, LeakyReLU, Lambda, K, ReLU
 
-import TrainingConfiguration
+from train import TrainingConfiguration
 
 
 class KLDivergenceLayer(Layer):

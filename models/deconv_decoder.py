@@ -2,8 +2,7 @@ from keras.backend import tf
 from keras.engine import Layer, InputSpec
 from keras.layers import Dense, Reshape, Conv2D, LeakyReLU, UpSampling2D, Conv2DTranspose
 from keras.regularizers import l2
-
-import TrainingConfiguration
+from train.TrainingConfiguration import TrainingConfiguration
 
 
 class ReflectionPadding2D(Layer):

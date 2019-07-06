@@ -1,7 +1,7 @@
 import tensorflow as tf
 from keras import callbacks
 
-import TrainingConfiguration
+from train import TrainingConfiguration
 from utils.plot_utils import generate_multi_plot
 
 

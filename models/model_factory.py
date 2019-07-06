@@ -2,7 +2,7 @@ from keras import Model, Input, optimizers, losses, metrics
 from keras.layers import Dense, Flatten, K
 from keras.losses import mse
 
-import TrainingConfiguration
+from train import TrainingConfiguration
 from datasets.datasets_utils import ModelType
 from models.deconv_decoder import deconv_decoder
 from models.wavenet_encoder import get_wavenet_encoder

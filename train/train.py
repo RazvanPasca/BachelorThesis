@@ -1,7 +1,10 @@
-from TrainingConfiguration import TrainingConfiguration
+import os
+from shutil import copyfile
+
+from train.TrainingConfiguration import TrainingConfiguration
 from callbacks.callback_factory import get_model_callbacks
 from models.model_factory import get_model
-from training_parameters import training_parameters
+from utils.system_utils import create_dir_if_not_exists
 from utils.tf_utils import configure_gpu
 
 
@@ -14,6 +17,15 @@ def log_training_session(model_params: TrainingConfiguration, model):
     print('Train steps per epoch:', model_params.nr_train_steps)
     print('Val steps per epoch:', model_params.nr_val_steps)
 
+def save_model(model, model_params):
+    print('Saving model and results...')
+    model.save(model_params.model_path + "/" + "final_model.h5")
+    print('\nDone!')
+
+
+def prepare_logging_folder(model_parameters):
+    create_dir_if_not_exists(model_parameters.model_path)
+    copyfile(model_parameters.original_config_file_path, os.path.join(model_parameters.model_path, "config_file.py"))
 
 def train_model(model_params: TrainingConfiguration):
     model = get_model(model_params)
@@ -30,12 +42,12 @@ def train_model(model_params: TrainingConfiguration):
                         callbacks=callbacks,
                         use_multiprocessing=False)
 
-    print('Saving model and results...')
-    model.save(model_params.model_path + "/" + "final_model.h5")
-    print('\nDone!')
+    return model
 
 
-if __name__ == '__main__':
-    model_parameters = TrainingConfiguration(training_parameters)
+def start_training():
+    model_parameters = TrainingConfiguration("training_parameters.py")
     configure_gpu(model_parameters.gpu)
-    train_model(model_parameters)
+    prepare_logging_folder(model_parameters)
+    model = train_model(model_parameters)
+    save_model(model, model_parameters)

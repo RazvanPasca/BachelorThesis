@@ -1,4 +1,5 @@
 import datetime
+import importlib.util
 import os
 
 from datasets.datasets_utils import ModelType
@@ -6,7 +7,9 @@ from utils.plot_utils import create_dir_if_not_exists
 
 
 class TrainingConfiguration:
-    def __init__(self, params_dictionary):
+    def __init__(self, params_path):
+        self.original_config_file_path = params_path
+        params_dictionary = self.get_training_parameters(params_path)
         self.dataset_args = None
         self.save_path = None
         self.cutoff_freq = None
@@ -69,6 +72,12 @@ class TrainingConfiguration:
             self.use_vae = False
         else:
             self.use_vae = True
+
+    def get_training_parameters(self, params_path):
+        spec = importlib.util.spec_from_file_location("training_parameters", params_path)
+        train_params_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(train_params_module)
+        return train_params_module.training_parameters
 
     def _prepare_dataset(self):
         self.dataset = self.dataset_class(**self.dataset_args)

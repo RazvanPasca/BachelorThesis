@@ -308,7 +308,7 @@ self.cached_bin_of_value[value]
     def _example_generator(self, batch_size, source, return_address=False):
         """
 
-        It is a generator that retrieves the input signal and the actual value.
+        It is a generator that retrieves the input signal and the y value.
 
         Signal base on the slicing strategy and actual value based on the model_output_type
         :param return_address:
@@ -335,7 +335,7 @@ self.cached_bin_of_value[value]
     def _get_random_sequence(self, source, return_address=False):
         """
 
-        Gets an random slice from a random trial found in data
+        Gets an random slice from a random trial found in source
         with size of slice_length and the ground truth stimuli
 
         """
@@ -464,6 +464,7 @@ self.cached_bin_of_value[value]
         Finds the a sequence based on the address
 
         """
+
         if self.model_type == ModelType.CONDITION_CLASSIFICATION:
             return self._get_condition(seq_addr)
 
@@ -587,6 +588,7 @@ self.cached_bin_of_value[value]
 
     def get_input_shape(self):
         x, _, _ = self.get_random_example("TRAIN")
+
         return x.shape
 
     def get_train_plot_examples(self, nr_examples):

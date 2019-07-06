@@ -1,6 +1,6 @@
 from keras.callbacks import CSVLogger, ModelCheckpoint, TensorBoard
 
-import TrainingConfiguration
+from train import TrainingConfiguration
 from callbacks.ConfusionMatrixPlotter import ConfusionMatrixPlotter
 from callbacks.GeneratedSequencePlotCallback import GeneratedSequencePlotCallback
 from callbacks.MetricsPlotCallback import MetricsPlotCallback
