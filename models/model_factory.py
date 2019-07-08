@@ -2,11 +2,11 @@ from keras import Model, Input, optimizers, losses, metrics
 from keras.layers import Dense, Flatten, K
 from keras.losses import mse
 
-from train import TrainingConfiguration
 from datasets.datasets_utils import ModelType
-from models.deconv_decoder import deconv_decoder
+from models.deconv_decoder import get_deconv_decoder
 from models.wavenet_encoder import get_wavenet_encoder
 from models.z_layer import get_z_layer
+from train import TrainingConfiguration
 
 
 def get_simple_model_loss(model_args: TrainingConfiguration):
@@ -24,11 +24,6 @@ def get_simple_model_loss(model_args: TrainingConfiguration):
 def reconstruction_loss(y_true, y_pred):
     rec_loss = mse(K.flatten(y_true), K.flatten(y_pred))
     return rec_loss
-
-
-def get_vae_kl_loss(y_true, y_pred):
-    kl_loss = K.mean(- 0.5 * K.sum(1 + y_pred - K.square(y_true) - K.exp(y_pred), axis=-1))
-    return kl_loss
 
 
 def get_model(model_args: TrainingConfiguration):
@@ -50,7 +45,7 @@ def get_model(model_args: TrainingConfiguration):
 
     elif model_args.model_type == ModelType.IMAGE_REC:
         z_layer = get_z_layer(model_args, encoder_output)
-        output, layers = deconv_decoder(model_args, z_layer)
+        output, layers = get_deconv_decoder(model_args, z_layer)
 
         if model_args.use_vae:
             decoder_input = Input(shape=(model_args.z_dim,))
@@ -63,7 +58,7 @@ def get_model(model_args: TrainingConfiguration):
             setattr(model_args, "generator", generator)
 
     elif model_args.model_type == ModelType.BRIGHTNESS or model_args.model_type == ModelType.EDGES:
-        z_layer= get_z_layer(model_args, encoder_output)
+        z_layer = get_z_layer(model_args, encoder_output)
         output = Dense(1, name="Regression")(z_layer)
 
     elif model_args.model_type == ModelType.NEXT_TIMESTEP:

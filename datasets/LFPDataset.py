@@ -680,7 +680,8 @@ if __name__ == '__main__':
 
     dataset_args = training_parameters["dataset_args"]
     dataset = LFPDataset(signal_path=CAT_DATASET_SIGNAL_PATH, stimuli_path=CAT_DATASET_STIMULI_PATH_64, **dataset_args)
-    stimuli_histogram(dataset)
+    # stimuli_histogram(dataset)
     # show_edges_computed(dataset)
+
     print("MEAN: ", dataset.regression_target_mean)
     print("STD: ", dataset.regression_target_std)

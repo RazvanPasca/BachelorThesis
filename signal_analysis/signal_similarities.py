@@ -147,7 +147,7 @@ def get_signal_histograms(dataset, path, nr_of_bins, separated_histograms=False)
                 plt.xlabel("Point value after normalization")
                 plt.ylabel("Number of points")
 
-            plot_title = "Cond:{}_Trial:{}".format(cond, trial)
+            plot_title = "Channel similarity for Condition:{} Trial:{}".format(cond, trial)
             plot_save_path = "{}/Channels_together/Cond:{}_Trial:{}_Multiple:{}".format(path, cond, trial,
                                                                                         separated_histograms)
             show_and_plot(plot_save_path, plot_title, show=True)
@@ -209,18 +209,18 @@ if __name__ == '__main__':
     dataset = LFPDataset(signal_path=CAT_DATASET_SIGNAL_PATH, stimuli_path=CAT_DATASET_STIMULI_PATH_64,
                          **training_parameters.training_parameters["dataset_args"])
 
-    # nr_time_steps = 2000
-    # for channel in range(16):
-    #     plt.plot(np.arange(nr_time_steps), dataset.signal[0, 0, channel, :nr_time_steps])
-    # for channel in range(16, 32):
-    #     plt.plot(np.arange(nr_time_steps), 10 + dataset.signal[0, 0, channel, :nr_time_steps])
-    # for channel in range(32, 47):
-    #     plt.plot(np.arange(nr_time_steps), 20 + dataset.signal[0, 0, channel, :nr_time_steps])
+    # nr_time_steps = 4000
+    # for trial in range(5):
+    #     plt.plot(np.arange(nr_time_steps), dataset.signal[0, trial, 0, :nr_time_steps], label="Trial {}".format(trial))
+    # # for trial in range(16, 32):
+    # #     plt.plot(np.arange(nr_time_steps), 10 + dataset.signal[0, 0, trial, :nr_time_steps])
+    # # for trial in range(32, 47):
+    # #     plt.plot(np.arange(nr_time_steps), 20 + dataset.signal[0, 0, trial, :nr_time_steps])
     # plt.xlabel("Time [ms]")
     # plt.ylabel("Signal amplitude")
-    # plt.title("Visualization of the three channel clusters")
+    # plt.title("Trial variability for Channel 0, Condition 0")
+    # plt.legend()
     # plt.show()
-    # plt.imshow()
 
     get_signal_histograms(dataset, "/home/pasca/School/Licenta/Naturix/Histograms/CatLFP", nr_of_bins=256,
                           separated_histograms=True)

@@ -27,8 +27,8 @@ class SVMTrainConfiguration:
         self.split_by = split_by
         self.window_size = window_size
         self.C = c
-        self.X_test = x_test
-        self.X_train = x_train
+        self.x_test = x_test
+        self.x_train = x_train
         self.file_redirect_output = file_redirect_output
         self.kernel = kernel
         self.labels_to_index = labels_to_index
@@ -74,17 +74,16 @@ def train_svm_with_configuration(config):
 
     print_configuration(config)
 
-    svc = LinearSVR(C=config.C,
+    svr = LinearSVR(C=config.C,
                     max_iter=config.max_iterations,
-                    dual=False,
                     verbose=0)
-    svc.fit(config.X_train, config.y_train)
+    svr.fit(config.x_train, config.y_train)
 
-    conf_mat_test, conf_mat_train = compute_confusion_mats(config, svc)
+    pred_y = svr.predict(config.x_test)
+
+    print(np.mean(np.abs(pred_y, config.y_test)))
 
     if config.file_redirect_output:
-        np.array([conf_mat_train, conf_mat_test]) \
-            .dump(file_redirect_name + ".npy")
         sys.stdout.close()
 
 
@@ -108,7 +107,7 @@ def main(dataset, max_iter, nr_cores, training_parameters):
                                                dataset.slice_length,
                                                "TRAIN")
                     X_train.append(slice)
-                    Y_train.append(dataset._get_y_value_for_sequence(seq_addr))
+                    Y_train.append(dataset._get_y_value_for_sequence(seq_addr)[0])
 
     for i, condition in enumerate(test_set):
         for j, trial in enumerate(condition):
@@ -119,7 +118,12 @@ def main(dataset, max_iter, nr_cores, training_parameters):
                                                dataset.slice_length,
                                                "VAL")
                     X_test.append(slice)
-                    Y_test.append(dataset._get_y_value_for_sequence(seq_addr))
+                    Y_test.append(dataset._get_y_value_for_sequence(seq_addr)[0])
+
+    X_test = np.array(X_test)
+    X_train = np.array(X_train)
+    Y_test = np.array(Y_test)
+    Y_train = np.array(Y_train)
 
     configurations = [SVMTrainConfiguration(max_iter,
                                             C,

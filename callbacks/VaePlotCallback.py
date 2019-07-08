@@ -27,45 +27,45 @@ class VaeCallback(Callback):
         self.epoch += 1
 
     def get_interpolations_seed(self):
-        sampler = np.linspace(-3, 3, self.nr_interpolation_samples)
+        sampler = np.linspace(-2, 2, self.nr_interpolation_samples)
         sampler = np.expand_dims(sampler, axis=1)
 
         first_point = np.random.normal(0, 1, self.z_dim)
         second_point = np.random.normal(0, 1, self.z_dim)
 
-        self.interpolations_seed_3 = sampler * first_point + (self.nr_interpolation_samples - sampler) * second_point
+        self.interpolations_seed_2 = sampler * first_point + (1 - sampler) * second_point
 
-        sampler = np.linspace(-15, 15, self.nr_interpolation_samples)
+        sampler = np.linspace(-1, 1, self.nr_interpolation_samples)
         sampler = np.expand_dims(sampler, axis=1)
 
         first_point = np.random.normal(0, 1, self.z_dim)
         second_point = np.random.normal(0, 1, self.z_dim)
 
-        self.interpolations_seed_15 = sampler * first_point + (self.nr_interpolation_samples - sampler) * second_point
+        self.interpolations_seed_1 = sampler * first_point + (1 - sampler) * second_point
 
     def get_samples_seed(self):
         self.samples_seed_1 = np.random.normal(0, 1, (self.nr_samples, self.z_dim)).reshape(
             (self.nr_samples, self.z_dim))
 
-        self.samples_seed_3 = np.random.normal(0, 3, (self.nr_samples, self.z_dim)).reshape(
+        self.samples_seed_11 = np.random.normal(0, 1, (self.nr_samples, self.z_dim)).reshape(
             (self.nr_samples, self.z_dim))
 
     def samples_interpolation(self):
-        generated_images = self.generator.predict(self.interpolations_seed_3)
+        generated_images = self.generator.predict(self.interpolations_seed_2)
         generated_images = np.squeeze(generated_images, axis=3)
 
-        plot_samples(generated_images, self.save_path, "Interpolations_3", self.epoch)
+        plot_samples(generated_images, self.save_path, "Interpolations_2", self.epoch)
 
-        generated_images = self.generator.predict(self.interpolations_seed_15)
+        generated_images = self.generator.predict(self.interpolations_seed_1)
         generated_images = np.squeeze(generated_images, axis=3)
 
-        plot_samples(generated_images, self.save_path, "Interpolations_15", self.epoch)
+        plot_samples(generated_images, self.save_path, "Interpolations_1", self.epoch)
 
     def generate_samples(self):
-        generated_images = self.generator.predict(self.samples_seed_3)
+        generated_images = self.generator.predict(self.samples_seed_11)
         generated_images = np.squeeze(generated_images, axis=3)
 
-        plot_samples(generated_images, self.save_path, "Random Samples_3", self.epoch)
+        plot_samples(generated_images, self.save_path, "Random Samples_11", self.epoch)
 
         generated_images = self.generator.predict(self.samples_seed_1)
         generated_images = np.squeeze(generated_images, axis=3)

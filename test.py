@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 
 from train.TrainingConfiguration import TrainingConfiguration
 
-MY_MODEL_PATH = "/home/pasca/School/Licenta/Naturix/Results_after_refactor/ModelType.BRIGHTNESS-AE/Movies:[0 1 2]/SplitStrategy.SLICES-SlicingStrategy.CONSECUTIVE-WinL:100-Stacked:True/EncL:7_Ep:400_StpEp:4200.0_Perc:0.1_Lr:1e-05_BS:64_Fltrs:32_SkipFltrs:64_ZDim:25_L2:0.001_Loss:MAE_GradClip:None_LPass:None_DecL:[512, 256, 128, 64, 32]_Kl:None/Pid:18571__2019-07-06 12:59_Seed:42"
+MY_MODEL_PATH = "Pid:3428__2019-07-07 03:09_Seed:42"
 
 
 def load_model_from_folder(model_folder):
