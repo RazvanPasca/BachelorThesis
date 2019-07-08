@@ -83,8 +83,9 @@ class TrainingConfiguration:
         self.dataset = self.dataset_class(**self.dataset_args)
 
     def get_model_name(self):
-        return "EncL:{}_Ep:{}_StpEp:{}_Perc:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_ZDim:{}_L2:{}_Loss:{}_GradClip:{}_LPass:{}_DecL:{}_Kl:{}".format(
+        return "EncL:{}_Dil:{}_Ep:{}_StpEp:{}_Perc:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_ZDim:{}_L2:{}_Loss:{}_GradClip:{}_LPass:{}_DecL:{}_Kl:{}".format(
             self.nr_layers,
+            self.use_dil,
             self.n_epochs,
             self.nr_train_steps,
             self.train_coverage_per_epoch,

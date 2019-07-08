@@ -1,3 +1,4 @@
+import multiprocessing
 import sys
 
 import numpy as np
@@ -138,8 +139,9 @@ def main(dataset, max_iter, nr_cores, training_parameters):
 if __name__ == '__main__':
     from training_parameters import training_parameters
 
-    nr_cores = 1
+    nr_cores = multiprocessing.cpu_count() // 2
 
     dataset = CatDataset(**training_parameters["dataset_args"])
     max_iter = 100
     main(dataset, max_iter, nr_cores, training_parameters)
+

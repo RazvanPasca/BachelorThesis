@@ -67,8 +67,12 @@ def get_common_callbacks(model_args):
     metric_callback = MetricsPlotCallback(model_args.model_path, metrics)
     callbacks.append(metric_callback)
 
-    save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_args.model_path),
+    save_val_model_callback = ModelCheckpoint(filepath="{}/best_val_model.h5".format(model_args.model_path),
                                           monitor="val_loss", save_best_only=True)
+    callbacks.append(save_val_model_callback)
+
+    save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_args.model_path),
+                                          monitor="train_loss", save_best_only=True)
     callbacks.append(save_model_callback)
 
     tensorboard_callback = TensorBoard(model_args.model_path,
