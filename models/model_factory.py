@@ -54,8 +54,8 @@ def get_model(model_args: TrainingConfiguration):
             for layer in layers[1:]:
                 generator_output = layer(generator_output)
 
-            generator = Model(decoder_input, generator_output)
-            setattr(model_args, "generator", generator)
+            decoder = Model(decoder_input, generator_output)
+            setattr(model_args, "decoder", decoder)
 
     elif model_args.model_type == ModelType.BRIGHTNESS or model_args.model_type == ModelType.EDGES:
         z_layer = get_z_layer(model_args, encoder_output)

@@ -1,12 +1,12 @@
 from keras.callbacks import CSVLogger, ModelCheckpoint, TensorBoard
 
-from train import TrainingConfiguration
 from callbacks.ConfusionMatrixPlotter import ConfusionMatrixPlotter
 from callbacks.GeneratedSequencePlotCallback import GeneratedSequencePlotCallback
 from callbacks.MetricsPlotCallback import MetricsPlotCallback
 from callbacks.ReconstructImageCallback import ReconstructImageCallback
 from callbacks.VaePlotCallback import VaeCallback
 from datasets.datasets_utils import ModelType
+from train import TrainingConfiguration
 
 
 def get_model_callbacks(model_args: TrainingConfiguration):
@@ -45,7 +45,9 @@ def get_model_callbacks(model_args: TrainingConfiguration):
         callbacks.append(reconstruct_image_callback)
 
     if model_args.use_vae:
-        vae_sampling_callback = VaeCallback(model_args)
+        train_batch = model_args.dataset.get_train_plot_examples(100, )
+        val_batch = model_args.dataset.get_val_plot_examples(100)
+        vae_sampling_callback = VaeCallback(train_batch, val_batch, model_args)
         callbacks.append(vae_sampling_callback)
 
     return callbacks
@@ -72,7 +74,7 @@ def get_common_callbacks(model_args):
     callbacks.append(save_val_model_callback)
 
     save_model_callback = ModelCheckpoint(filepath="{}/best_model.h5".format(model_args.model_path),
-                                          monitor="train_loss", save_best_only=True)
+                                          monitor="loss", save_best_only=True)
     callbacks.append(save_model_callback)
 
     tensorboard_callback = TensorBoard(model_args.model_path,

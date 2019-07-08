@@ -162,7 +162,7 @@ def show_and_plot(plot_save_path, plot_title, show):
     plt.close()
 
 
-def plot_samples(generated_images, save_path, name, epoch):
+def plot_samples(generated_images, save_path, name):
     nr_cols = np.int(np.sqrt(generated_images.shape[0]))
     nr_rows = generated_images.shape[0] // nr_cols
 
@@ -173,5 +173,5 @@ def plot_samples(generated_images, save_path, name, epoch):
 
     plt.tight_layout()
     plt.subplots_adjust(wspace=0, hspace=0)
-    plt.savefig("{}/{}-Epoch:{}.png".format(save_path, name, epoch), format="png")
+    plt.savefig("{}/{}.png".format(save_path, name), format="png")
     plt.close()
