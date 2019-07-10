@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 
 from train.TrainingConfiguration import TrainingConfiguration
 
-MY_MODEL_PATH = "Pid:3428__2019-07-07 03:09_Seed:42"
+MY_MODEL_PATH = "/home/pasca/School/Licenta/Naturix/models_to_test/ModelType.BRIGHTNESS-AE/Movies:[0 1 2]/SplitStrategy.TRIALS-SlicingStrategy.CONSECUTIVE-WinL:100-Stacked:True/EncL:20_Dil:False_Ep:400_StpEp:2100.0_Perc:0.1_Lr:3e-06_BS:128_Fltrs:64_SkipFltrs:64_ZDim:50_L2:0.001_Loss:MAE_GradClip:None_LPass:None_DecL:[512, 256, 128, 64, 32]_Kl:0.001/Pid:25824__2019-07-09 07:54_Seed:42"
 
 
 def load_model_from_folder(model_folder):
@@ -36,6 +36,9 @@ def test_model(nr_samples, model_folder):
         plt.scatter(Y_val_list, Y_pred_list, label=labels[condition])
 
     plt.legend()
+    plt.xlim(0.3, 0.6)
+    plt.ylim(0.3, 0.6)
+
     fontsize = 15
     plt.title("Test prediction MAE:{:.4}, prediction error std:{:.4}".format(np.mean(abs_dif), np.std(abs_dif)),
               fontsize=fontsize)
@@ -59,6 +62,9 @@ def test_model(nr_samples, model_folder):
         plt.scatter(Y_val_list, Y_pred_list, label=labels[condition])
 
     plt.legend()
+    plt.xlim(0.3, 0.6)
+    plt.ylim(0.3, 0.6)
+
     plt.title("Train prediction MAE:{:.4}, prediction error std:{:.4}".format(np.mean(abs_dif), np.std(abs_dif)),
               fontsize=fontsize)
     plt.xlabel("Actual values", fontsize=15)

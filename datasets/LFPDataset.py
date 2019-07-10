@@ -64,7 +64,8 @@ class LFPDataset:
                  number_of_bins,
                  condition_on_gamma,
                  gamma_windows_in_trial,
-                 blur_images):
+                 blur_images,
+                 relative_difference):
         np.random.seed(random_seed)
 
         self.slice_indexes = {}
@@ -90,6 +91,7 @@ class LFPDataset:
         self.slice_length = slice_length
         self.condition_on_gamma = condition_on_gamma
         self.blur_images = blur_images
+        self.relative_difference = relative_difference
 
         self.conditions_to_keep = np.array(conditions_to_keep) if type(conditions_to_keep) is list else None
         self.trials_to_keep = np.array(trials_to_keep) if type(trials_to_keep) is list else None
@@ -291,6 +293,7 @@ self.cached_bin_of_value[value]
                 self.prepared_data["TRAIN"] = new_dataset[:, train_indexes, ...]
 
             elif self.split_by == SplitStrategy.SLICES:
+                # TO DO for each trial use a different set of slices, otherwise we will never see the first slice                  #for any trial  in train/test which might be bad
                 self.slice_indexes["TRAIN"], self.slice_indexes["VAL"] = shuffle_indices(nr_slices_per_channel,
                                                                                          self.val_percentage, False)
                 self.prepared_data["VAL"] = new_dataset[:, :, :, self.slice_indexes["VAL"], :]
@@ -432,10 +435,18 @@ self.cached_bin_of_value[value]
         """
 
         self.regression_actual = np.mean(self.stimuli, axis=(2, 3))
+        if self.relative_difference:
+            relative_regression_actual = np.zeros(self.regression_actual.shape)
+            for i, cond in enumerate(self.regression_actual):
+                for j, regression_actual in enumerate(cond):
+                    relative_regression_actual[i, j] = regression_actual - cond[j - 1] if j > 0 else \
+                        regression_actual
+            self.regression_actual = rescale(relative_regression_actual, relative_regression_actual.max(),
+                                             relative_regression_actual.min(), 1, -1)
 
     def _compute_stimuli_edges(self):
         """
-
+r
         Computes edges from stimuli
 
         """
@@ -456,6 +467,15 @@ self.cached_bin_of_value[value]
                 stimuli_w_edges_extracted[i, j, :, :] = edge_image
 
         self.regression_actual = np.mean(stimuli_w_edges_extracted, axis=(2, 3)) / 255
+        if self.relative_difference:
+            relative_regression_actual = np.zeros(self.regression_actual.shape)
+            for i, cond in enumerate(self.regression_actual):
+                for j, regression_actual in enumerate(cond):
+                    relative_regression_actual[i, j] = regression_actual - cond[j - 1] if j > 0 else \
+                        regression_actual
+            self.regression_actual = rescale(relative_regression_actual, relative_regression_actual.max,
+                                             relative_regression_actual.min, 1, -1)
+
         self.stimuli_w_edges_extracted = stimuli_w_edges_extracted
 
     def _get_y_value_for_sequence(self, seq_addr: SequenceAddress):

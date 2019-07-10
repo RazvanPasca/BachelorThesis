@@ -22,7 +22,8 @@ class CatDataset(LFPDataset):
                  number_of_bins=255,
                  condition_on_gamma=False,
                  gamma_windows_in_trial=None,
-                 blur_images=False):
+                 blur_images=False,
+                 relative_difference=False):
         self.conditions_to_keep = conditions_to_keep
         super().__init__(
             signal_path=CAT_DATASET_SIGNAL_PATH,
@@ -42,7 +43,8 @@ class CatDataset(LFPDataset):
             number_of_bins=number_of_bins,
             condition_on_gamma=condition_on_gamma,
             gamma_windows_in_trial=gamma_windows_in_trial,
-            blur_images=blur_images)
+            blur_images=blur_images,
+            relative_difference=relative_difference)
 
     def plot_stimuli_hist(self, path):
         """

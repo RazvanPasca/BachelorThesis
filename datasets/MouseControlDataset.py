@@ -21,7 +21,8 @@ class MouseControlDataset(LFPDataset):
                  number_of_bins=255,
                  condition_on_gamma=False,
                  gamma_windows_in_trial=None,
-                 blur_images=False):
+                 blur_images=False,
+                 relative_difference=False):
 
         if orientations_to_keep is None:
             orientations_to_keep = list(range(8))
@@ -49,7 +50,8 @@ class MouseControlDataset(LFPDataset):
             number_of_bins=number_of_bins,
             condition_on_gamma=condition_on_gamma,
             gamma_windows_in_trial=gamma_windows_in_trial,
-            blur_images=blur_images)
+            blur_images=blur_images,
+            relative_difference=relative_difference)
 
         self.orientations_to_keep = orientations_to_keep
         self.contrasts_to_keep = contrasts_to_keep
