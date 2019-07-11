@@ -6,8 +6,8 @@ training_parameters = {
     "dataset_args": {
         "random_seed": 42,
         "slice_length": 100,
-        "model_type": ModelType.BRIGHTNESS,
-        "relative_difference": True,
+        "model_type": ModelType.IMAGE_REC,
+        "relative_difference": False,
         # BRIGHTNESS/IMAGE_REC/EDGES/CONDITION_CLASSIFICATION/SCENE_CLASSIFICATION
         "slicing_strategy": SlicingStrategy.CONSECUTIVE,  # CONSECUTIVE or RANDOM
         "split_by": SplitStrategy.TRIALS,  # TRIALS or SLICES
@@ -17,7 +17,7 @@ training_parameters = {
         "val_percentage": 0.2,
         "channels_to_keep": None,
         "conditions_to_keep": [
-            0, 1, 2
+            0,
         ],
         # "orientations_to_keep": None,
         # "contrasts_to_keep": None,  # 0 is 25%, 1 is 100%, 2 is 50%
@@ -45,7 +45,7 @@ training_parameters = {
         ]
     },
     "n_epochs": 400,
-    "batch_size": 64,
+    "batch_size": 32,
     "nr_layers": 7,
     "nr_filters": 16,
     "skip_conn_filters": 16,
@@ -61,7 +61,7 @@ training_parameters = {
     "nr_rec": 18,
     "generative_samples": 49,
     "kl_weight": 0.001,
-    "deconv_layers": [128, 64, 32, 16, 8],
+    "deconv_layers": [64, 32, 16, 8, 4],
     "z_dim": 10,
     "gpu": 0
 }

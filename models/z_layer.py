@@ -10,7 +10,6 @@ class KLDivergenceLayer(Layer):
     """
 
     def __init__(self, kl_weight, *args, **kwargs):
-        self.is_placeholder = True
         self.kl_weight = kl_weight
         self.name = "KL_Loss"
         super(KLDivergenceLayer, self).__init__(*args, **kwargs)
@@ -25,6 +24,11 @@ class KLDivergenceLayer(Layer):
         self.add_loss(K.mean(kl_batch), inputs=inputs)
 
         return inputs
+
+    def get_config(self):
+        config = {'kl_weight': self.kl_weight}
+        base_config = super(KLDivergenceLayer, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 def get_z_layer(model_args: TrainingConfiguration, encoder_output):

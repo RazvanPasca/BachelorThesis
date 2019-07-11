@@ -77,8 +77,7 @@ def get_common_callbacks(model_args):
                                           monitor="loss", save_best_only=True)
     callbacks.append(save_model_callback)
 
-    tensorboard_callback = TensorBoard(model_args.model_path,
-                                       update_freq=3)
+    tensorboard_callback = TensorBoard(model_args.model_path, update_freq=3)
     callbacks.append(tensorboard_callback)
 
     return callbacks

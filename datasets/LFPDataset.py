@@ -473,8 +473,8 @@ r
                 for j, regression_actual in enumerate(cond):
                     relative_regression_actual[i, j] = regression_actual - cond[j - 1] if j > 0 else \
                         regression_actual
-            self.regression_actual = rescale(relative_regression_actual, relative_regression_actual.max,
-                                             relative_regression_actual.min, 1, -1)
+            self.regression_actual = rescale(relative_regression_actual, relative_regression_actual.max(),
+                                             relative_regression_actual.min(), 1, -1)
 
         self.stimuli_w_edges_extracted = stimuli_w_edges_extracted
 

@@ -162,7 +162,7 @@ def show_and_plot(plot_save_path, plot_title, show):
     plt.close()
 
 
-def plot_samples(generated_images, save_path, name):
+def plot_samples(generated_images, save_path, name, show=False):
     nr_cols = np.int(np.sqrt(generated_images.shape[0]))
     nr_rows = generated_images.shape[0] // nr_cols
 
@@ -172,6 +172,9 @@ def plot_samples(generated_images, save_path, name):
         subplot.axis("off")
 
     plt.tight_layout()
+    plt.suptitle(name, fontsize=15)
     plt.subplots_adjust(wspace=0, hspace=0)
     plt.savefig("{}/{}.png".format(save_path, name), format="png")
+    if show:
+        plt.show()
     plt.close()

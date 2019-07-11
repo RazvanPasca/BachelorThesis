@@ -1,30 +1,8 @@
-import matplotlib.pyplot as plt
 import numpy as np
 from keras import callbacks
 
+from model_test_utils.test_ae_model import plot_images_reconstructions
 from utils.system_utils import create_dir_if_not_exists
-
-
-def plot_images_reconstructions(images_reconstr, original_images, save_path, name):
-    if images_reconstr.shape[3] == 1:
-        images_reconstr = np.squeeze(images_reconstr, axis=3)
-    if original_images.shape[3] == 1:
-        original_images = np.squeeze(original_images, axis=3)
-
-    nr_cols = 6
-    nr_rows = images_reconstr.shape[0] // 6 * 2
-    fig, subplots = plt.subplots(nr_rows, nr_cols, sharex=True, figsize=(20, 20), num=name)
-    for i, subplot_row in enumerate(subplots):
-        for j, subplot in enumerate(subplot_row):
-            subplot.imshow(
-                original_images[i // 2 * nr_cols + j] if i % 2 == 0 else images_reconstr[i // 2 * nr_cols + j],
-                cmap="gray")
-            subplot.axis("off")
-    plt.tight_layout()
-    plt.subplots_adjust(wspace=0, hspace=0)
-    plt.title(name)
-    plt.savefig("{}/Epoch:{}.png".format(save_path, name), format="png")
-    plt.close()
 
 
 class ReconstructImageCallback(callbacks.Callback):

@@ -1,77 +1,49 @@
 import os
 
-import numpy as np
 from keras.engine.saving import load_model
-from matplotlib import pyplot as plt
 
+from datasets.datasets_utils import ModelType
+from model_test_utils.test_ae_model import test_ae_model
+from model_test_utils.test_regression_models import test_regression_models
+from model_test_utils.test_vae_model import test_vae_model, test_vae_decoder
+from models.model_factory import reconstruction_loss
+from models.z_layer import KLDivergenceLayer
 from train.TrainingConfiguration import TrainingConfiguration
 
-MY_MODEL_PATH = "/home/pasca/School/Licenta/Naturix/models_to_test/ModelType.BRIGHTNESS-AE/Movies:[0 1 2]/SplitStrategy.TRIALS-SlicingStrategy.CONSECUTIVE-WinL:100-Stacked:True/EncL:20_Dil:False_Ep:400_StpEp:2100.0_Perc:0.1_Lr:3e-06_BS:128_Fltrs:64_SkipFltrs:64_ZDim:50_L2:0.001_Loss:MAE_GradClip:None_LPass:None_DecL:[512, 256, 128, 64, 32]_Kl:0.001/Pid:25824__2019-07-09 07:54_Seed:42"
+
+def load_model_from_folder(params, model_folder, model_name):
+    custom_objects = None
+    if params.use_vae:
+        custom_objects = {"KLDivergenceLayer": KLDivergenceLayer, "reconstruction_loss": reconstruction_loss}
+    model = load_model(os.path.join(model_folder, model_name), custom_objects)
+    return model
 
 
-def load_model_from_folder(model_folder):
-    config_path = os.path.join(model_folder, "config_file.py")
+def load_params_from_folder(folder):
+    config_path = os.path.join(folder, "config_file.py")
     model_parameters = TrainingConfiguration(config_path)
-    model = load_model(os.path.join(model_folder, "best_model.h5"))
-    return model, model_parameters
+    return model_parameters
 
 
-def test_model(nr_samples, model_folder):
-    model, params = load_model_from_folder(model_folder)
-    labels = ["Condition 0", "Condition 1", "Condition 2"]
+def test_model(model_folder):
+    params = load_params_from_folder(model_folder)
 
-    gen = params.dataset.validation_sample_generator(nr_samples, return_address=True)
-    X_val, Y_val, addresses = next(gen)
-    Y_pred = model.predict(X_val)
-    abs_dif = np.abs(Y_pred - Y_val)
+    if params.model_type == ModelType.BRIGHTNESS or params.model_type == ModelType.EDGES:
+        model = load_model_from_folder(params, model_folder, "best_model.h5")
+        test_regression_models(model, nr_samples, params)
 
-    for condition in range(3):
-        Y_val_list = []
-        Y_pred_list = []
-        for i, address in enumerate(addresses):
-            if address.condition == condition:
-                Y_val_list.append(Y_val[i])
-                Y_pred_list.append(Y_pred[i])
-
-        plt.scatter(Y_val_list, Y_pred_list, label=labels[condition])
-
-    plt.legend()
-    plt.xlim(0.3, 0.6)
-    plt.ylim(0.3, 0.6)
-
-    fontsize = 15
-    plt.title("Test prediction MAE:{:.4}, prediction error std:{:.4}".format(np.mean(abs_dif), np.std(abs_dif)),
-              fontsize=fontsize)
-    plt.xlabel("Actual values", fontsize=15)
-    plt.ylabel("Predicted values", fontsize=15)
-    plt.show()
-
-    gen = params.dataset.train_sample_generator(nr_samples, return_address=True)
-    X_val, Y_val, addresses = next(gen)
-    Y_pred = model.predict(X_val)
-    abs_dif = np.abs(Y_pred - Y_val)
-
-    for condition in range(3):
-        Y_val_list = []
-        Y_pred_list = []
-        for i, address in enumerate(addresses):
-            if address.condition == condition:
-                Y_val_list.append(Y_val[i])
-                Y_pred_list.append(Y_pred[i])
-
-        plt.scatter(Y_val_list, Y_pred_list, label=labels[condition])
-
-    plt.legend()
-    plt.xlim(0.3, 0.6)
-    plt.ylim(0.3, 0.6)
-
-    plt.title("Train prediction MAE:{:.4}, prediction error std:{:.4}".format(np.mean(abs_dif), np.std(abs_dif)),
-              fontsize=fontsize)
-    plt.xlabel("Actual values", fontsize=15)
-    plt.ylabel("Predicted values", fontsize=15)
-    plt.show()
+    if params.model_type == ModelType.IMAGE_REC:
+        model = load_model_from_folder(params, model_folder, "best_model.h5")
+        if params.use_vae:
+            test_vae_model(model, params)
+            model = load_model_from_folder(params, model_folder, "decoder.h5", )
+            test_vae_decoder(model, params)
+        else:
+            test_ae_model(model, params)
 
 
 if __name__ == "__main__":
     nr_samples = 3000
-    test_model(nr_samples, MY_MODEL_PATH)
+    MY_MODEL_PATH = "/home/pasca/School/Licenta/Naturix/Results_after_refactor/ModelType.IMAGE_REC-VAE/Movies:[0]/SplitStrategy.TRIALS-SlicingStrategy.CONSECUTIVE-WinL:100-Stacked:True/EncL:7_Dil:False_Ep:400_StpEp:84.0_Perc:0.003_Lr:1e-05_BS:32_Fltrs:16_SkipFltrs:16_ZDim:10_L2:0.001_Loss:MAE_GradClip:None_LPass:None_DecL:[64, 32, 16, 8, 4]_Kl:0.001_RelDif:False/Pid:21854__2019-07-11 15:32_Seed:42"
+
+    test_model(MY_MODEL_PATH)

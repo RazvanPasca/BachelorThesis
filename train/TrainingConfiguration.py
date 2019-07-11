@@ -31,6 +31,7 @@ class TrainingConfiguration:
         self.loss = None
         self.deconv_layers = None
         self.kl_weight = None
+        self.use_dil = False
 
         for k, v in params_dictionary.items():
             setattr(self, k, v)
@@ -51,12 +52,13 @@ class TrainingConfiguration:
         self.gamma_windows_in_trial = self.dataset_args["gamma_windows_in_trial"]
         self.output_image_size = self.dataset.stimuli_width
         self.stack_channels = self.dataset_args["stack_channels"]
+        self.relative_difference = self.dataset_args["relative_difference"]
 
         self.check_model_loss_type()
 
         self.nr_train_steps = self.dataset.get_training_dataset_size() * self.train_coverage_per_epoch // self.batch_size
         self.nr_val_steps = self.dataset.get_validation_dataset_size() * self.val_coverage_per_epoch // self.batch_size
-        
+
         if self.model_type == ModelType.CONDITION_CLASSIFICATION:
             self.set_classes_names()
         self._compute_model_path()
@@ -83,7 +85,7 @@ class TrainingConfiguration:
         self.dataset = self.dataset_class(**self.dataset_args)
 
     def get_model_name(self):
-        return "EncL:{}_Dil:{}_Ep:{}_StpEp:{}_Perc:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_ZDim:{}_L2:{}_Loss:{}_GradClip:{}_LPass:{}_DecL:{}_Kl:{}".format(
+        return "EncL:{}_Dil:{}_Ep:{}_StpEp:{}_Perc:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_ZDim:{}_L2:{}_Loss:{}_GradClip:{}_LPass:{}_DecL:{}_Kl:{}_RelDif:{}".format(
             self.nr_layers,
             self.use_dil,
             self.n_epochs,
@@ -99,7 +101,8 @@ class TrainingConfiguration:
             self.clip_grad_by_value,
             self.dataset.cutoff_freq,
             self.deconv_layers,
-            self.kl_weight)
+            self.kl_weight,
+            self.relative_difference)
 
     def _compute_model_path(self):
         self.model_path = os.path.abspath(os.path.join(
