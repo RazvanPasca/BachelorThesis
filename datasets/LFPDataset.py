@@ -1,16 +1,16 @@
 import csv
 import json
-import numpy as np
 import os
 
-from matplotlib import pyplot
+import numpy as np
 
-from signal_utils import butter_lowpass_filter, rescale, mu_law_fn
+from signal_analysis.signal_utils import butter_pass_filter
 
 
 class LFPDataset:
 
-    def __init__(self, dataset_path, saved_as_npy=True, normalization=None, cutoff_freq=20, random_seed=42):
+    def __init__(self, dataset_path, saved_as_npy=True, normalization=None, cutoff_freq=[2], random_seed=42,
+                 white_noise_dev=-1, nr_bins=256):
         self.description_file_path = dataset_path
         if saved_as_npy:
             self.load_from_npy(dataset_path)
@@ -36,35 +36,26 @@ class LFPDataset:
         self.random_seed = random_seed
         self.cutoff_freq = cutoff_freq
         self.nr_channels = len(self.channels)
-        self.low_pass_filter = cutoff_freq > 0
+        self.filtering = cutoff_freq[0] > 0
+        self.white_noise = white_noise_dev > 0
+        self.white_noise_dev = white_noise_dev
+        self.nr_bins = nr_bins
+        self.normalization = normalization
 
-        if self.low_pass_filter:
-            for i, channel in enumerate(self.channels):
-                self.channels[i] = butter_lowpass_filter(channel, self.cutoff_freq, 1000)
+        if self.filtering:
+            self._filter_input()
 
-        self.mu_law = False
-        if normalization is not None:
-            if normalization == "Zsc":
-                mean = np.mean(self.channels, axis=1, keepdims=True)
-                std = np.std(self.channels, axis=1, keepdims=True)
-                self.channels -= mean
-                self.channels /= std
+        if self.white_noise:
+            self._add_noise_to_input()
 
-            elif normalization == "Brute":
-                self.channels -= np.min(self.channels, axis=1, keepdims=True)
-                self.channels /= np.max(self.channels, axis=1, keepdims=True)
+    def _add_noise_to_input(self):
+        noise = np.random.normal(0, self.white_noise_dev, self.channels.shape)
+        self.channels += noise
 
-            elif normalization == "MuLaw":
-                """The signal is brought to [-1,1] through rescale->[-1,1] mu_law and then encoded using np.digitize"""
-                self.limits = {}
-                self.mu_law = True
-
-                for i, channel in enumerate(self.channels):
-                    np_min = np.min(channel)
-                    np_max = np.max(channel)
-                    self.limits[i] = (np_min, np_max)
-                    self.channels[i] = mu_law_fn(
-                        rescale(channel, old_max=np_max, old_min=np_min, new_max=1, new_min=-1))
+    def _filter_input(self):
+        filter_type = "band" if len(self.cutoff_freq) > 1 else "low"
+        for i, channel in enumerate(self.channels):
+            self.channels[i] = butter_pass_filter(channel, self.cutoff_freq, 1000, filter_type)
 
     def _parse_stimulus_data(self, condition_file_path):
         with open(os.path.join(os.path.dirname(self.description_file_path), condition_file_path),
@@ -138,11 +129,26 @@ class LFPDataset:
         else:
             raise ValueError("Please pick a valid partition from: TRAIN, VAL and TEST")
 
-    def _compute_values_range(self, channels_to_keep=None):
-        if channels_to_keep is None:
-            min_val = np.min(self.channels)
-            max_val = np.max(self.channels)
-        else:
-            min_val = np.min(self.channels[channels_to_keep])
-            max_val = np.max(self.channels[channels_to_keep])
+    def _compute_values_range(self):
+        min_val = min(np.min(self.train), np.min(self.validation))
+        max_val = max(np.max(self.train), np.max(self.validation))
         self.values_range = min_val, max_val
+
+    def _get_dataset_keep_indexes(self, channels_to_keep, conditions_to_keep, trials_to_keep, noisy_channels):
+        if channels_to_keep[0] == -1:
+            self.channels_to_keep = np.array(range(self.nr_channels))
+            self.channels_to_keep = np.delete(self.channels_to_keep, noisy_channels)
+        else:
+            self.channels_to_keep = np.array(channels_to_keep)
+
+        if conditions_to_keep[0] == -1:
+            self.conditions_to_keep = np.array(range(self.number_of_conditions))
+        else:
+            self.conditions_to_keep = np.array(conditions_to_keep) - 1
+            self.number_of_conditions = len(conditions_to_keep)
+
+        if trials_to_keep[0] == -1:
+            self.trials_to_keep = np.array(range(self.trials_per_condition))
+        else:
+            self.trials_to_keep = np.array(trials_to_keep)
+            self.trials_per_condition = len(self.trials_to_keep)

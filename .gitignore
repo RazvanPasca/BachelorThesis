@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 datasets/__pycache__/
+datasets/paths.py
 
 # C extensions
 *.so

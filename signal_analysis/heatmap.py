@@ -5,9 +5,9 @@ from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import linkage
 from scipy.spatial.distance import pdist, squareform
 
-from datasets.DATASET_PATHS import GABI_CAT_DATASET_PATH as CAT_DATASET_PATH
-from datasets.DATASET_PATHS import GABI_MOUSEACH_DATASET_PATH as MOUSEACH_DATASET_PATH
-from datasets.DATASET_PATHS import GABI_MOUSE_DATASET_PATH as MOUSE_DATASET_PATH
+from datasets.paths import CAT_DATASET_PATH
+from datasets.paths import MOUSEACH_DATASET_PATH
+from datasets.paths import MOUSE_DATASET_PATH
 from datasets.LFPDataset import LFPDataset
 
 

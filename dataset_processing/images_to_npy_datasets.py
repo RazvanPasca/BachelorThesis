@@ -1,12 +1,9 @@
-from PIL import Image
-from scipy import misc
-from matplotlib import pyplot as plt
-from numpy import genfromtxt
-import ntpath
-import scipy
-import numpy as np
 import os
 import random
+
+import numpy as np
+from PIL import Image
+from numpy import genfromtxt
 
 SOURCE_FOLDER = "/home/pasca/School/Licenta/Datasets/all_movies_frames"
 DESTINATION_FOLDER = "/home/pasca/School/Licenta/Datasets/all_movies_numpy"

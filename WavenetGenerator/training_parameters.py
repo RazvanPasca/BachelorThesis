@@ -1,13 +1,14 @@
-import os
 import datetime
 import json
+import os
+
 import numpy as np
 
 LOCAL_CONFIG_PATH = "train_params_cfg.json"
 
 
 class ModelTrainingParameters:
-    def __init__(self, model_path=None):
+    def __init__(self, model_path=None, local_config_path="train_params_cfg.json"):
         self.save_path = None
         self.clip_grad_by_value = None
         self.loss = None
@@ -22,7 +23,7 @@ class ModelTrainingParameters:
         self.nr_bins = None
         self.channels_to_keep = None
         self.conditions_to_keep = None
-        self.movies_to_keep = None
+        self.conditions_to_keep = None
         self.n_epochs = None
         self.random_seed = 42
 
@@ -31,9 +32,9 @@ class ModelTrainingParameters:
             if os.path.exists(config_path):
                 self._load_configuration_from_json(config_path)
             else:
-                self._load_configuration_from_json(LOCAL_CONFIG_PATH)
+                self._load_configuration_from_json(local_config_path)
         else:
-            self._load_configuration_from_json(LOCAL_CONFIG_PATH)
+            self._load_configuration_from_json(local_config_path)
 
         self.frame_size = 2 ** self.nr_layers
 
@@ -48,20 +49,16 @@ class ModelTrainingParameters:
         self._compute_model_path(model_path)
 
     def _prepare_dataset(self, klass):
-        if "CatLFP" == self.dataset:
-            self.dataset = klass(movies_to_keep=self.movies_to_keep,
-                                 channels_to_keep=self.channels_to_keep,
-                                 nr_bins=self.nr_bins,
-                                 normalization=self.normalization,
-                                 cutoff_freq=self.cutoff_freq,
-                                 random_seed=self.random_seed)
-        else:
-            self.dataset = klass(conditions_to_keep=self.conditions_to_keep,
-                                 channels_to_keep=self.channels_to_keep,
-                                 nr_bins=self.nr_bins,
-                                 normalization=self.normalization,
-                                 cutoff_freq=self.cutoff_freq,
-                                 random_seed=self.random_seed)
+        self.dataset = klass(conditions_to_keep=self.conditions_to_keep,
+                             channels_to_keep=self.channels_to_keep,
+                             trials_to_keep=self.trials_to_keep,
+                             nr_bins=self.nr_bins,
+                             normalization=self.normalization,
+                             cutoff_freq=self.cutoff_freq,
+                             random_seed=self.random_seed,
+                             white_noise_dev=self.white_noise_dev,
+                             gamma_windows_in_trial=self.gamma_windows_in_trial,
+                             condition_on_gamma=self.condition_on_gamma)
 
     def _load_configuration_from_json(self, config_path):
         with open(config_path, 'r') as f:
@@ -78,7 +75,7 @@ class ModelTrainingParameters:
             loss = self.loss + ":{}".format(self.nr_bins)
         else:
             loss = self.loss
-        return "WvNet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_Norm:{}_Loss:{}_GradClip:{}_LPass:{}".format(
+        return "WvNet_L:{}_Ep:{}_StpEp:{}_Lr:{}_BS:{}_Fltrs:{}_SkipFltrs:{}_L2:{}_Norm:{}_Loss:{}_GradClip:{}_LPass:{}_WNz:{}_Gamma:{}".format(
             self.nr_layers,
             self.n_epochs,
             self.nr_train_steps,
@@ -91,21 +88,21 @@ class ModelTrainingParameters:
             loss,
             self.clip_grad_by_value,
             self.cutoff_freq,
-        )
+            self.white_noise_dev,
+            self.condition_on_gamma)
 
     def _compute_model_path(self, model_path):
         if model_path is None:
-            self.model_path = os.path.abspath(os.path.join(self.save_path,
-                                                           "{}/Movies:{}/Channels:{}/{}/Pid:{}_{}_Seed:{}".format(
-                                                               type(self.dataset).__name__,
-                                                               str(self.movies_to_keep),
-                                                               str(self.channels_to_keep),
-                                                               self.get_model_name(),
-                                                               os.getpid(),
-                                                               datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                                                               self.random_seed)
-                                                           )
-                                              )
+            self.model_path = os.path.abspath(os.path.join(
+                self.save_path, "{}/Conditions:{}/Trials:{}/Channels:{}/{}/Pid:{}_{}_Seed:{}".format(
+                    type(self.dataset).__name__,
+                    str(self.conditions_to_keep),
+                    str(self.trials_to_keep),
+                    str(self.channels_to_keep),
+                    self.get_model_name(),
+                    os.getpid(),
+                    datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    self.random_seed)))
         else:
             self.model_path = model_path
 
